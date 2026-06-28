@@ -4,3 +4,8 @@ dist
 *.local
 .env
 vite-dev.*.log
+
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
