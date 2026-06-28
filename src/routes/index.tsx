@@ -1,7 +1,26 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { PrivateRoute } from "@/components/layout/PrivateRoute";
+import { Login } from "@/pages/auth/Login";
+import { Register } from "@/pages/auth/Register";
 
 function EmptyRoute() {
   return null;
+}
+
+function Dashboard() {
+  return (
+    <main className="min-h-screen bg-[#0f0f0f] p-6 text-white">
+      <h1 className="text-2xl font-semibold">Dashboard</h1>
+    </main>
+  );
+}
+
+function Onboarding() {
+  return (
+    <main className="min-h-screen bg-[#0f0f0f] p-6 text-white">
+      <h1 className="text-2xl font-semibold">Onboarding</h1>
+    </main>
+  );
 }
 
 const router = createBrowserRouter([
@@ -11,19 +30,29 @@ const router = createBrowserRouter([
   },
   {
     path: "/login",
-    element: <EmptyRoute />,
+    element: <Login />,
   },
   {
     path: "/cadastro",
-    element: <EmptyRoute />,
+    element: <Register />,
   },
   {
-    path: "/onboarding",
-    element: <EmptyRoute />,
+    element: <PrivateRoute requireStudio={false} />,
+    children: [
+      {
+        path: "/onboarding",
+        element: <Onboarding />,
+      },
+    ],
   },
   {
-    path: "/dashboard",
-    element: <EmptyRoute />,
+    element: <PrivateRoute />,
+    children: [
+      {
+        path: "/dashboard",
+        element: <Dashboard />,
+      },
+    ],
   },
   {
     path: "/:slug",
