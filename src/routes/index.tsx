@@ -1,5 +1,6 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { PrivateRoute } from "@/components/layout/PrivateRoute";
+import { AuthCallback } from "@/pages/auth/AuthCallback";
 import { Login } from "@/pages/auth/Login";
 import { Register } from "@/pages/auth/Register";
 
@@ -35,6 +36,10 @@ const router = createBrowserRouter([
   {
     path: "/cadastro",
     element: <Register />,
+  },
+  {
+    path: "/auth/callback",
+    element: <AuthCallback />,
   },
   {
     element: <PrivateRoute requireStudio={false} />,
