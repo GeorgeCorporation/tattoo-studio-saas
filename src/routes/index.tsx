@@ -5,6 +5,8 @@ import { AuthCallback } from "@/pages/auth/AuthCallback";
 import { Login } from "@/pages/auth/Login";
 import { Register } from "@/pages/auth/Register";
 import { AgendaPage } from "@/pages/agenda/AgendaPage";
+import { ArtistProfile as DashboardArtistProfile } from "@/pages/artists/ArtistProfile";
+import { ArtistsPage } from "@/pages/artists/ArtistsPage";
 import { ClientProfile } from "@/pages/clients/ClientProfile";
 import { ClientsPage } from "@/pages/clients/ClientsPage";
 import { Dashboard } from "@/pages/dashboard/Dashboard";
@@ -83,7 +85,11 @@ const router = createBrowserRouter([
           },
           {
             path: "/tatuadores",
-            element: <EmptyPanel title="Tatuadores" />,
+            element: <ArtistsPage />,
+          },
+          {
+            path: "/dashboard/tatuadores/:artistId",
+            element: <DashboardArtistProfile />,
           },
           {
             path: "/servicos",
