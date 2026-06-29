@@ -13,6 +13,7 @@ import { Dashboard } from "@/pages/dashboard/Dashboard";
 import { ArtistPage } from "@/pages/public/ArtistPage";
 import { BookingPage } from "@/pages/public/BookingPage";
 import { StudioPage } from "@/pages/public/StudioPage";
+import { ServicesPage } from "@/pages/services/ServicesPage";
 
 function EmptyRoute() {
   return null;
@@ -93,7 +94,7 @@ const router = createBrowserRouter([
           },
           {
             path: "/servicos",
-            element: <EmptyPanel title="Servicos" />,
+            element: <ServicesPage />,
           },
           {
             path: "/galeria",
