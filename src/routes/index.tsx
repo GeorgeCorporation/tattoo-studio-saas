@@ -13,6 +13,7 @@ import { Dashboard } from "@/pages/dashboard/Dashboard";
 import { ArtistPage } from "@/pages/public/ArtistPage";
 import { BookingPage } from "@/pages/public/BookingPage";
 import { StudioPage } from "@/pages/public/StudioPage";
+import { FinancialPage } from "@/pages/financial/FinancialPage";
 import { ServicesPage } from "@/pages/services/ServicesPage";
 
 function EmptyRoute() {
@@ -102,7 +103,7 @@ const router = createBrowserRouter([
           },
           {
             path: "/financeiro",
-            element: <EmptyPanel title="Financeiro" />,
+            element: <FinancialPage />,
           },
           {
             path: "/configuracoes",
