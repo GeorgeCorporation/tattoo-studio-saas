@@ -3,6 +3,8 @@ import { PrivateRoute } from "@/components/layout/PrivateRoute";
 import { AuthCallback } from "@/pages/auth/AuthCallback";
 import { Login } from "@/pages/auth/Login";
 import { Register } from "@/pages/auth/Register";
+import { ArtistPage } from "@/pages/public/ArtistPage";
+import { StudioPage } from "@/pages/public/StudioPage";
 
 function EmptyRoute() {
   return null;
@@ -61,11 +63,11 @@ const router = createBrowserRouter([
   },
   {
     path: "/:slug",
-    element: <EmptyRoute />,
+    element: <StudioPage />,
   },
   {
     path: "/:slug/:artistSlug",
-    element: <EmptyRoute />,
+    element: <ArtistPage />,
   },
 ]);
 
