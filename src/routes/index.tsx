@@ -14,6 +14,7 @@ import { ArtistPage } from "@/pages/public/ArtistPage";
 import { BookingPage } from "@/pages/public/BookingPage";
 import { StudioPage } from "@/pages/public/StudioPage";
 import { FinancialPage } from "@/pages/financial/FinancialPage";
+import { GalleryPage } from "@/pages/gallery/GalleryPage";
 import { ServicesPage } from "@/pages/services/ServicesPage";
 
 function EmptyRoute() {
@@ -99,7 +100,7 @@ const router = createBrowserRouter([
           },
           {
             path: "/galeria",
-            element: <EmptyPanel title="Galeria" />,
+            element: <GalleryPage />,
           },
           {
             path: "/financeiro",
