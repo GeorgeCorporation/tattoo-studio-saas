@@ -400,6 +400,10 @@ insert into storage.buckets (id, name, public)
 values ('gallery', 'gallery', true)
 on conflict (id) do nothing;
 
+insert into storage.buckets (id, name, public)
+values ('logos', 'logos', true)
+on conflict (id) do nothing;
+
 drop policy if exists "Public can read booking references" on storage.objects;
 drop policy if exists "Public can upload booking references" on storage.objects;
 
@@ -416,6 +420,9 @@ with check (bucket_id = 'booking-references');
 drop policy if exists "Public can read artist media" on storage.objects;
 drop policy if exists "Authenticated can upload artist media" on storage.objects;
 drop policy if exists "Authenticated can delete artist media" on storage.objects;
+drop policy if exists "Public can read studio logos" on storage.objects;
+drop policy if exists "Authenticated can upload studio logos" on storage.objects;
+drop policy if exists "Authenticated can delete studio logos" on storage.objects;
 
 create policy "Public can read artist media"
 on storage.objects for select
@@ -431,3 +438,18 @@ create policy "Authenticated can delete artist media"
 on storage.objects for delete
 to authenticated
 using (bucket_id in ('artists', 'gallery'));
+
+create policy "Public can read studio logos"
+on storage.objects for select
+to anon, authenticated
+using (bucket_id = 'logos');
+
+create policy "Authenticated can upload studio logos"
+on storage.objects for insert
+to authenticated
+with check (bucket_id = 'logos');
+
+create policy "Authenticated can delete studio logos"
+on storage.objects for delete
+to authenticated
+using (bucket_id = 'logos');

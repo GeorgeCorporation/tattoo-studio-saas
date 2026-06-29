@@ -5,6 +5,7 @@ import { AuthCallback } from "@/pages/auth/AuthCallback";
 import { Login } from "@/pages/auth/Login";
 import { Register } from "@/pages/auth/Register";
 import { AgendaPage } from "@/pages/agenda/AgendaPage";
+import { Settings } from "@/pages/dashboard/Settings";
 import { ArtistProfile as DashboardArtistProfile } from "@/pages/artists/ArtistProfile";
 import { ArtistsPage } from "@/pages/artists/ArtistsPage";
 import { ClientProfile } from "@/pages/clients/ClientProfile";
@@ -15,6 +16,7 @@ import { BookingPage } from "@/pages/public/BookingPage";
 import { StudioPage } from "@/pages/public/StudioPage";
 import { FinancialPage } from "@/pages/financial/FinancialPage";
 import { GalleryPage } from "@/pages/gallery/GalleryPage";
+import LandingPage from "@/pages/landing/LandingPage";
 import { ServicesPage } from "@/pages/services/ServicesPage";
 
 function EmptyRoute() {
@@ -41,7 +43,7 @@ function Onboarding() {
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <EmptyRoute />,
+    element: <LandingPage />,
   },
   {
     path: "/login",
@@ -108,7 +110,7 @@ const router = createBrowserRouter([
           },
           {
             path: "/configuracoes",
-            element: <EmptyPanel title="Configuracoes" />,
+            element: <Settings />,
           },
         ],
       },
