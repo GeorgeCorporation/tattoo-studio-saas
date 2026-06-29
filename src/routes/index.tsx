@@ -5,6 +5,8 @@ import { AuthCallback } from "@/pages/auth/AuthCallback";
 import { Login } from "@/pages/auth/Login";
 import { Register } from "@/pages/auth/Register";
 import { AgendaPage } from "@/pages/agenda/AgendaPage";
+import { ClientProfile } from "@/pages/clients/ClientProfile";
+import { ClientsPage } from "@/pages/clients/ClientsPage";
 import { Dashboard } from "@/pages/dashboard/Dashboard";
 import { ArtistPage } from "@/pages/public/ArtistPage";
 import { BookingPage } from "@/pages/public/BookingPage";
@@ -73,7 +75,11 @@ const router = createBrowserRouter([
           },
           {
             path: "/clientes",
-            element: <EmptyPanel title="Clientes" />,
+            element: <ClientsPage />,
+          },
+          {
+            path: "/clientes/:clientId",
+            element: <ClientProfile />,
           },
           {
             path: "/tatuadores",
