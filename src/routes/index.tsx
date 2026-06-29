@@ -4,6 +4,7 @@ import { PrivateRoute } from "@/components/layout/PrivateRoute";
 import { AuthCallback } from "@/pages/auth/AuthCallback";
 import { Login } from "@/pages/auth/Login";
 import { Register } from "@/pages/auth/Register";
+import { AgendaPage } from "@/pages/agenda/AgendaPage";
 import { Dashboard } from "@/pages/dashboard/Dashboard";
 import { ArtistPage } from "@/pages/public/ArtistPage";
 import { BookingPage } from "@/pages/public/BookingPage";
@@ -68,7 +69,7 @@ const router = createBrowserRouter([
           },
           {
             path: "/agenda",
-            element: <EmptyPanel title="Agenda" />,
+            element: <AgendaPage />,
           },
           {
             path: "/clientes",
