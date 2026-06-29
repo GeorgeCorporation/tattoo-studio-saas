@@ -259,6 +259,18 @@ with check (
   )
 );
 
+drop policy if exists "Public can create clients" on public.clients;
+
+create policy "Public can create clients"
+on public.clients for insert
+to anon, authenticated
+with check (
+  exists (
+    select 1 from public.studios
+    where studios.id = clients.studio_id
+  )
+);
+
 -- Appointments policies
 drop policy if exists "Users can manage own appointments" on public.appointments;
 
@@ -277,6 +289,28 @@ with check (
     select 1 from public.studios
     where studios.id = appointments.studio_id
     and studios.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "Public can create appointments" on public.appointments;
+
+create policy "Public can create appointments"
+on public.appointments for insert
+to anon, authenticated
+with check (
+  exists (
+    select 1 from public.studios
+    where studios.id = appointments.studio_id
+  )
+  and exists (
+    select 1 from public.tattoo_artists
+    where tattoo_artists.id = appointments.artist_id
+    and tattoo_artists.studio_id = appointments.studio_id
+  )
+  and exists (
+    select 1 from public.services
+    where services.id = appointments.service_id
+    and services.studio_id = appointments.studio_id
   )
 );
 
@@ -352,3 +386,21 @@ with check (
     and studios.user_id = auth.uid()
   )
 );
+
+-- Public booking reference photos
+insert into storage.buckets (id, name, public)
+values ('booking-references', 'booking-references', true)
+on conflict (id) do nothing;
+
+drop policy if exists "Public can read booking references" on storage.objects;
+drop policy if exists "Public can upload booking references" on storage.objects;
+
+create policy "Public can read booking references"
+on storage.objects for select
+to anon, authenticated
+using (bucket_id = 'booking-references');
+
+create policy "Public can upload booking references"
+on storage.objects for insert
+to anon, authenticated
+with check (bucket_id = 'booking-references');

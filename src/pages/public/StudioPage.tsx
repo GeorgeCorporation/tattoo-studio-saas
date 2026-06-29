@@ -120,9 +120,9 @@ export function StudioPage() {
               </a>
             ) : null}
             {whatsApp ? (
-              <a className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold text-white" href={whatsApp}>
+              <Link className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold text-white" to={`/${studio.slug}/agendar`}>
                 Agendar agora
-              </a>
+              </Link>
             ) : (
               <button className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold text-white">Agendar agora</button>
             )}
@@ -175,7 +175,7 @@ export function StudioPage() {
           <h2 className="text-xl font-semibold">Localizacao</h2>
           <p className="mt-2 text-zinc-300">{address || "Endereco ainda nao informado."}</p>
           {whatsApp ? (
-            <a className="mt-5 inline-flex rounded-xl bg-[#E8650A] px-5 py-3 font-semibold" href={whatsApp}>
+            <a className="mt-5 inline-flex rounded-xl border border-white/10 px-5 py-3 font-semibold" href={whatsApp}>
               WhatsApp
             </a>
           ) : null}

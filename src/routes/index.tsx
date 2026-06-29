@@ -4,6 +4,7 @@ import { AuthCallback } from "@/pages/auth/AuthCallback";
 import { Login } from "@/pages/auth/Login";
 import { Register } from "@/pages/auth/Register";
 import { ArtistPage } from "@/pages/public/ArtistPage";
+import { BookingPage } from "@/pages/public/BookingPage";
 import { StudioPage } from "@/pages/public/StudioPage";
 
 function EmptyRoute() {
@@ -64,6 +65,14 @@ const router = createBrowserRouter([
   {
     path: "/:slug",
     element: <StudioPage />,
+  },
+  {
+    path: "/:slug/agendar",
+    element: <BookingPage />,
+  },
+  {
+    path: "/:slug/:artistSlug/agendar",
+    element: <BookingPage />,
   },
   {
     path: "/:slug/:artistSlug",
