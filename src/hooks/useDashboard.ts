@@ -4,11 +4,13 @@ import {
   getCurrentUserStudio,
   getMonthRevenue,
   getNextAppointments,
+  getSetupStatus,
   getTodayAppointments,
   getTotalClients,
   getWeekAppointments,
   updateAppointmentStatus,
   type DashboardAppointment,
+  type DashboardSetupStatus,
   type DashboardStudio,
 } from "@/services/dashboard.service";
 
@@ -29,6 +31,7 @@ export function useDashboard() {
     totalClients: 0,
   });
   const [nextAppointments, setNextAppointments] = useState<DashboardAppointment[]>([]);
+  const [setupStatus, setSetupStatus] = useState<DashboardSetupStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -44,13 +47,14 @@ export function useDashboard() {
 
       if (!foundStudio) return;
 
-      const [todayAppointments, weekAppointments, monthRevenue, totalClients, appointments] =
+      const [todayAppointments, weekAppointments, monthRevenue, totalClients, appointments, setup] =
         await Promise.all([
           getTodayAppointments(foundStudio.id),
           getWeekAppointments(foundStudio.id),
           getMonthRevenue(foundStudio.id),
           getTotalClients(foundStudio.id),
           getNextAppointments(foundStudio.id, 5),
+          getSetupStatus(foundStudio.id),
         ]);
 
       setSummary({
@@ -60,6 +64,7 @@ export function useDashboard() {
         totalClients,
       });
       setNextAppointments(appointments);
+      setSetupStatus(setup);
     } catch {
       setError("Nao foi possivel carregar o dashboard.");
     } finally {
@@ -80,6 +85,7 @@ export function useDashboard() {
     studio,
     summary,
     nextAppointments,
+    setupStatus,
     loading,
     error,
     setAppointmentStatus,

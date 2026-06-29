@@ -3,6 +3,8 @@ import { supabase } from "@/lib/supabase";
 export type DashboardStudio = {
   id: string;
   name: string;
+  slug: string;
+  logo_url: string | null;
 };
 
 export type DashboardAppointment = {
@@ -15,16 +17,61 @@ export type DashboardAppointment = {
   services: { name: string } | null;
 };
 
+export type DashboardSetupStatus = {
+  hasLogo: boolean;
+  artistsCount: number;
+  servicesCount: number;
+  galleryCount: number;
+  appointmentsCount: number;
+};
+
 export async function getCurrentUserStudio(userId: string) {
   const { data, error } = await supabase
     .from("studios")
-    .select("id, name")
+    .select("id, name, slug, logo_url")
     .eq("user_id", userId)
     .limit(1)
     .maybeSingle<DashboardStudio>();
 
   if (error) throw error;
   return data;
+}
+
+export async function getSetupStatus(studioId: string) {
+  const [artists, services, gallery, appointments, studio] = await Promise.all([
+    supabase
+      .from("tattoo_artists")
+      .select("id", { count: "exact", head: true })
+      .eq("studio_id", studioId),
+    supabase
+      .from("services")
+      .select("id", { count: "exact", head: true })
+      .eq("studio_id", studioId),
+    supabase
+      .from("gallery")
+      .select("id", { count: "exact", head: true })
+      .eq("studio_id", studioId),
+    supabase
+      .from("appointments")
+      .select("id", { count: "exact", head: true })
+      .eq("studio_id", studioId),
+    supabase
+      .from("studios")
+      .select("logo_url")
+      .eq("id", studioId)
+      .maybeSingle<{ logo_url: string | null }>(),
+  ]);
+
+  const error = artists.error || services.error || gallery.error || appointments.error || studio.error;
+  if (error) throw error;
+
+  return {
+    hasLogo: Boolean(studio.data?.logo_url),
+    artistsCount: artists.count ?? 0,
+    servicesCount: services.count ?? 0,
+    galleryCount: gallery.count ?? 0,
+    appointmentsCount: appointments.count ?? 0,
+  } satisfies DashboardSetupStatus;
 }
 
 export async function getTodayAppointments(studioId: string) {
