@@ -17,11 +17,8 @@ import { StudioPage } from "@/pages/public/StudioPage";
 import { FinancialPage } from "@/pages/financial/FinancialPage";
 import { GalleryPage } from "@/pages/gallery/GalleryPage";
 import LandingPage from "@/pages/landing/LandingPage";
+import { OnboardingPage } from "@/pages/onboarding/OnboardingPage";
 import { ServicesPage } from "@/pages/services/ServicesPage";
-
-function EmptyRoute() {
-  return null;
-}
 
 function EmptyPanel({ title }: { title: string }) {
   return (
@@ -29,14 +26,6 @@ function EmptyPanel({ title }: { title: string }) {
       <h1 className="text-3xl font-semibold">{title}</h1>
       <p className="mt-2 text-sm text-zinc-400">Tela em construcao.</p>
     </section>
-  );
-}
-
-function Onboarding() {
-  return (
-    <main className="min-h-screen bg-[#0f0f0f] p-6 text-white">
-      <h1 className="text-2xl font-semibold">Onboarding</h1>
-    </main>
   );
 }
 
@@ -62,7 +51,7 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/onboarding",
-        element: <Onboarding />,
+        element: <OnboardingPage />,
       },
     ],
   },

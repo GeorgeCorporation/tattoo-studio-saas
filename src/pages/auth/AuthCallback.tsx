@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
+import { getUserStudio } from "@/services/onboarding.service";
 
 export function AuthCallback() {
   const navigate = useNavigate();
@@ -10,9 +11,12 @@ export function AuthCallback() {
   useEffect(() => {
     if (errorDescription) return;
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        navigate("/onboarding", { replace: true });
+    supabase.auth.getSession().then(async ({ data }) => {
+      const user = data.session?.user;
+
+      if (user) {
+        const studio = await getUserStudio(user.id);
+        navigate(studio ? "/dashboard" : "/onboarding", { replace: true });
         return;
       }
 

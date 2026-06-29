@@ -115,6 +115,7 @@ create table if not exists public.reviews (
 create index if not exists studios_user_id_idx on public.studios(user_id);
 create index if not exists studios_slug_idx on public.studios(slug);
 create index if not exists working_hours_studio_id_idx on public.working_hours(studio_id);
+create unique index if not exists working_hours_studio_day_unique_idx on public.working_hours(studio_id, day_of_week);
 create index if not exists tattoo_artists_studio_id_idx on public.tattoo_artists(studio_id);
 create index if not exists tattoo_artists_slug_idx on public.tattoo_artists(slug);
 create index if not exists services_studio_id_idx on public.services(studio_id);
