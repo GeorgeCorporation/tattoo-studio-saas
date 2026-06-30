@@ -8,20 +8,15 @@ import {
   type PublicStudio,
 } from "@/services/public.service";
 import {
+  BookingAvailabilityError,
   createAppointment,
   createClient,
+  getAvailableTimeSlots,
+  getMinimumBookingDate,
   getServicesByStudio,
   uploadReferencePhotos,
   type BookingService,
 } from "@/services/booking.service";
-
-const times = Array.from({ length: 11 }, (_, index) => `${String(index + 9).padStart(2, "0")}:00`);
-
-function tomorrow() {
-  const date = new Date();
-  date.setDate(date.getDate() + 1);
-  return date.toISOString().split("T")[0];
-}
 
 function cleanPhone(phone: string) {
   return phone.replace(/\D/g, "");
@@ -47,13 +42,15 @@ function NotFound() {
 
 export function BookingPage() {
   const { slug, artistSlug } = useParams();
+  const minimumDate = useMemo(() => getMinimumBookingDate(), []);
   const [studio, setStudio] = useState<PublicStudio | null>(null);
   const [artists, setArtists] = useState<PublicArtist[]>([]);
   const [services, setServices] = useState<BookingService[]>([]);
   const [selectedArtistId, setSelectedArtistId] = useState("");
   const [selectedServiceId, setSelectedServiceId] = useState("");
-  const [date, setDate] = useState(tomorrow());
-  const [time, setTime] = useState("09:00");
+  const [date, setDate] = useState(minimumDate);
+  const [time, setTime] = useState("");
+  const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const [clientName, setClientName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [instagram, setInstagram] = useState("");
@@ -62,9 +59,11 @@ export function BookingPage() {
   const [referenceFiles, setReferenceFiles] = useState<File[]>([]);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [loading, setLoading] = useState(true);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState("");
+  const [availabilityError, setAvailabilityError] = useState("");
 
   useEffect(() => {
     if (!slug) return;
@@ -106,6 +105,44 @@ export function BookingPage() {
     loadBookingData();
   }, [slug, artistSlug]);
 
+  useEffect(() => {
+    if (!studio?.id || !selectedArtistId || !date) {
+      setAvailableTimes([]);
+      setTime("");
+      return;
+    }
+
+    const studioId = studio.id;
+    let active = true;
+
+    async function loadAvailability() {
+      try {
+        setAvailabilityLoading(true);
+        setAvailabilityError("");
+
+        const slots = await getAvailableTimeSlots(studioId, selectedArtistId, date);
+
+        if (!active) return;
+
+        setAvailableTimes(slots);
+        setTime((currentTime) => (slots.includes(currentTime) ? currentTime : slots[0] ?? ""));
+      } catch {
+        if (!active) return;
+        setAvailableTimes([]);
+        setTime("");
+        setAvailabilityError("Nao foi possivel carregar os horarios desse dia.");
+      } finally {
+        if (active) setAvailabilityLoading(false);
+      }
+    }
+
+    loadAvailability();
+
+    return () => {
+      active = false;
+    };
+  }, [date, selectedArtistId, studio?.id]);
+
   const selectedArtist = useMemo(
     () => artists.find((artist) => artist.id === selectedArtistId) ?? null,
     [artists, selectedArtistId],
@@ -141,6 +178,16 @@ export function BookingPage() {
 
     if (!selectedArtistId || !selectedServiceId || !date || !time) {
       setError("Preencha tatuador, servico, data e horario.");
+      return;
+    }
+
+    if (availabilityLoading) {
+      setError("Aguarde os horarios carregarem.");
+      return;
+    }
+
+    if (!availableTimes.includes(time)) {
+      setError("Escolha um horario disponivel.");
       return;
     }
 
@@ -185,8 +232,13 @@ export function BookingPage() {
       });
 
       setStep(3);
-    } catch {
-      setError("Nao foi possivel salvar o agendamento. Verifique Storage/RLS no Supabase.");
+    } catch (caughtError) {
+      if (caughtError instanceof BookingAvailabilityError) {
+        setStep(1);
+        setError(caughtError.message);
+      } else {
+        setError("Nao foi possivel salvar o agendamento. Verifique Storage/RLS no Supabase.");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -225,6 +277,7 @@ export function BookingPage() {
                 onChange={(event) => setSelectedArtistId(event.target.value)}
                 required
               >
+                {artists.length === 0 ? <option value="">Nenhum tatuador ativo</option> : null}
                 {artists.map((artist) => (
                   <option key={artist.id} value={artist.id}>
                     {artist.name}
@@ -241,6 +294,7 @@ export function BookingPage() {
                 onChange={(event) => setSelectedServiceId(event.target.value)}
                 required
               >
+                {services.length === 0 ? <option value="">Nenhum servico ativo</option> : null}
                 {services.map((service) => (
                   <option key={service.id} value={service.id}>
                     {service.name}
@@ -254,7 +308,7 @@ export function BookingPage() {
                 <label className="mb-2 block text-sm font-medium">Data</label>
                 <input
                   className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                  min={tomorrow()}
+                  min={minimumDate}
                   type="date"
                   value={date}
                   onChange={(event) => setDate(event.target.value)}
@@ -265,11 +319,16 @@ export function BookingPage() {
                 <label className="mb-2 block text-sm font-medium">Horario</label>
                 <select
                   className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
+                  disabled={availabilityLoading || availableTimes.length === 0}
                   value={time}
                   onChange={(event) => setTime(event.target.value)}
                   required
                 >
-                  {times.map((slot) => (
+                  {availabilityLoading ? <option value="">Carregando horarios...</option> : null}
+                  {!availabilityLoading && availableTimes.length === 0 ? (
+                    <option value="">Nenhum horario disponivel</option>
+                  ) : null}
+                  {availableTimes.map((slot) => (
                     <option key={slot} value={slot}>
                       {slot}
                     </option>
@@ -278,6 +337,12 @@ export function BookingPage() {
               </div>
             </div>
 
+            {availabilityError ? <p className="text-sm text-red-400">{availabilityError}</p> : null}
+            {!availabilityError && !availabilityLoading && availableTimes.length === 0 ? (
+              <p className="text-sm text-zinc-400">
+                Esse dia esta fechado ou todos os horarios desse tatuador ja foram ocupados.
+              </p>
+            ) : null}
             {error ? <p className="text-sm text-red-400">{error}</p> : null}
 
             <button className="w-full rounded-xl bg-[#E8650A] px-4 py-3 font-semibold" type="submit">

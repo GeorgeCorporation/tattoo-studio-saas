@@ -235,7 +235,18 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      get_booked_appointment_times: {
+        Args: {
+          p_studio_id: string;
+          p_artist_id: string;
+          p_date: string;
+        };
+        Returns: {
+          booked_time: string;
+        }[];
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

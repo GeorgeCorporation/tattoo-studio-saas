@@ -123,9 +123,42 @@ create index if not exists clients_studio_id_idx on public.clients(studio_id);
 create index if not exists appointments_studio_id_idx on public.appointments(studio_id);
 create index if not exists appointments_artist_id_idx on public.appointments(artist_id);
 create index if not exists appointments_client_id_idx on public.appointments(client_id);
+create unique index if not exists appointments_active_slot_unique_idx
+on public.appointments(studio_id, artist_id, date, time)
+where artist_id is not null and status in ('pending', 'confirmed');
 create index if not exists payments_studio_id_idx on public.payments(studio_id);
 create index if not exists gallery_studio_id_idx on public.gallery(studio_id);
 create index if not exists reviews_studio_id_idx on public.reviews(studio_id);
+
+-- Public availability helper
+create or replace function public.get_booked_appointment_times(
+  p_studio_id uuid,
+  p_artist_id uuid,
+  p_date date
+)
+returns table(booked_time time)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select appointments.time as booked_time
+  from public.appointments
+  where appointments.studio_id = p_studio_id
+    and appointments.artist_id = p_artist_id
+    and appointments.date = p_date
+    and appointments.status in ('pending', 'confirmed')
+    and exists (
+      select 1
+      from public.tattoo_artists
+      where tattoo_artists.id = p_artist_id
+        and tattoo_artists.studio_id = p_studio_id
+        and tattoo_artists.is_active = true
+    );
+$$;
+
+revoke all on function public.get_booked_appointment_times(uuid, uuid, date) from public;
+grant execute on function public.get_booked_appointment_times(uuid, uuid, date) to anon, authenticated;
 
 -- Row Level Security
 alter table public.studios enable row level security;
@@ -167,7 +200,13 @@ to authenticated
 using (user_id = auth.uid());
 
 -- Working hours policies
+drop policy if exists "Public can read working hours" on public.working_hours;
 drop policy if exists "Users can manage own working hours" on public.working_hours;
+
+create policy "Public can read working hours"
+on public.working_hours for select
+to anon, authenticated
+using (true);
 
 create policy "Users can manage own working hours"
 on public.working_hours for all
@@ -307,12 +346,16 @@ with check (
     select 1 from public.tattoo_artists
     where tattoo_artists.id = appointments.artist_id
     and tattoo_artists.studio_id = appointments.studio_id
+    and tattoo_artists.is_active = true
   )
   and exists (
     select 1 from public.services
     where services.id = appointments.service_id
     and services.studio_id = appointments.studio_id
+    and services.is_active = true
   )
+  and appointments.status = 'pending'
+  and appointments.date > current_date
 );
 
 -- Payments policies
