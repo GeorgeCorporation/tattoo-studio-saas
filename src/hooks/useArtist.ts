@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import { getFriendlyErrorMessage } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import {
   addArtistPhoto,
   deleteArtistPhoto,
@@ -38,8 +40,9 @@ export function useArtist(artistId?: string) {
         setGallery(foundGallery);
         setAppointments(foundAppointments);
       }
-    } catch {
-      setError("Nao foi possivel carregar tatuador.");
+    } catch (caughtError) {
+      logger.error("Falha ao carregar perfil do tatuador", caughtError, { artistId });
+      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel carregar tatuador."));
     } finally {
       setLoading(false);
     }

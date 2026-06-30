@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { logger } from "@/lib/logger";
 import {
   getArtistBySlug,
   getArtistGallery,
@@ -70,7 +71,11 @@ export function ArtistPage() {
         setStudio(foundStudio);
         setArtist(foundArtist);
         setGallery(foundGallery);
-      } catch {
+      } catch (caughtError) {
+        logger.error("Falha ao carregar pagina publica do tatuador", caughtError, {
+          slug: studioSlug,
+          artistSlug: currentArtistSlug,
+        });
         setNotFound(true);
       } finally {
         setLoading(false);

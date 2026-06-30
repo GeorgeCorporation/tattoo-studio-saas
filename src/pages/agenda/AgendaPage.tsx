@@ -1,6 +1,8 @@
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { getFriendlyErrorMessage } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import { getCurrentUserStudio } from "@/services/dashboard.service";
 import {
   getAppointmentsByDate,
@@ -50,8 +52,9 @@ export function AgendaPage() {
 
       setStudioId(studio.id);
       setAppointments(await getAppointmentsByDate(studio.id, selectedDateInput));
-    } catch {
-      setError("Nao foi possivel carregar agenda.");
+    } catch (caughtError) {
+      logger.error("Falha ao carregar agenda", caughtError, { selectedDate: selectedDateInput });
+      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel carregar agenda."));
     } finally {
       setLoading(false);
     }
@@ -70,8 +73,13 @@ export function AgendaPage() {
   }
 
   async function handleStatusChange(id: string, status: AgendaAppointmentStatus) {
-    await updateAppointmentStatus(id, status);
-    await loadAppointments();
+    try {
+      await updateAppointmentStatus(id, status);
+      await loadAppointments();
+    } catch (caughtError) {
+      logger.error("Falha ao atualizar status da agenda", caughtError, { appointmentId: id, status });
+      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel atualizar o agendamento."));
+    }
   }
 
   return (

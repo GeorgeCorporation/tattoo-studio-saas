@@ -2,6 +2,8 @@ import { ArrowLeft, ArrowRight, Check, Loader2, Scissors } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { getFriendlyErrorMessage } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import { createStudioOnboarding, getUserStudio, slugify } from "@/services/onboarding.service";
 
 const brStates = [
@@ -68,8 +70,9 @@ export function OnboardingPage() {
           navigate("/dashboard", { replace: true });
           return;
         }
-      } catch {
-        setError("Nao foi possivel verificar seu estudio.");
+      } catch (caughtError) {
+        logger.error("Falha ao verificar estudio no onboarding", caughtError, { userId: user.id });
+        setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel verificar seu estudio."));
       } finally {
         setCheckingStudio(false);
       }
@@ -137,8 +140,9 @@ export function OnboardingPage() {
       });
 
       navigate("/dashboard", { replace: true });
-    } catch {
-      setError("Nao foi possivel criar o estudio. Tente novamente.");
+    } catch (caughtError) {
+      logger.error("Falha ao criar estudio no onboarding", caughtError, { userId: user.id });
+      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel criar o estudio. Tente novamente."));
     } finally {
       setSaving(false);
     }

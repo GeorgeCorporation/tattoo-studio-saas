@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { getFriendlyErrorMessage } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import {
   getCurrentUserStudio,
   getMonthRevenue,
@@ -65,8 +67,9 @@ export function useDashboard() {
       });
       setNextAppointments(appointments);
       setSetupStatus(setup);
-    } catch {
-      setError("Nao foi possivel carregar o dashboard.");
+    } catch (caughtError) {
+      logger.error("Falha ao carregar dashboard", caughtError);
+      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel carregar o dashboard."));
     } finally {
       setLoading(false);
     }

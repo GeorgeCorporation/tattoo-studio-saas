@@ -1,5 +1,7 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { getFriendlyErrorMessage } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import {
   getArtistBySlug,
   getStudioArtists,
@@ -96,7 +98,8 @@ export function BookingPage() {
           const foundArtist = await getArtistBySlug(foundStudio.id, currentArtistSlug);
           if (foundArtist) setSelectedArtistId(foundArtist.id);
         }
-      } catch {
+      } catch (caughtError) {
+        logger.error("Falha ao carregar dados do booking publico", caughtError, { slug: studioSlug });
         setNotFound(true);
       } finally {
         setLoading(false);
@@ -127,8 +130,13 @@ export function BookingPage() {
 
         setAvailableTimes(slots);
         setTime((currentTime) => (slots.includes(currentTime) ? currentTime : slots[0] ?? ""));
-      } catch {
+      } catch (caughtError) {
         if (!active) return;
+        logger.error("Falha ao carregar disponibilidade", caughtError, {
+          studioId,
+          artistId: selectedArtistId,
+          date,
+        });
         setAvailableTimes([]);
         setTime("");
         setAvailabilityError("Nao foi possivel carregar os horarios desse dia.");
@@ -237,7 +245,10 @@ export function BookingPage() {
         setStep(1);
         setError(caughtError.message);
       } else {
-        setError("Nao foi possivel salvar o agendamento. Verifique Storage/RLS no Supabase.");
+        logger.error("Falha ao salvar booking publico", caughtError, { studioId: studio.id });
+        setError(
+          getFriendlyErrorMessage(caughtError, "Nao foi possivel salvar o agendamento. Tente novamente."),
+        );
       }
     } finally {
       setSubmitting(false);

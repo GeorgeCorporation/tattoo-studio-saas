@@ -2,6 +2,8 @@ import { Loader2, Lock, LogOut, Save, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
+import { getFriendlyErrorMessage } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import { useAuth } from "@/hooks/useAuth";
 import { createStoragePath, getStoragePathFromPublicUrl } from "@/services/storage.service";
 
@@ -150,8 +152,12 @@ export function Settings() {
           const merged = makeDefaultHours().map((item) => hours.find((hour) => hour.day_of_week === item.day_of_week) ?? item);
           setWorkingHours(merged);
         }
-      } catch {
-        setToast({ type: "error", message: "Nao foi possivel carregar configuracoes." });
+      } catch (caughtError) {
+        logger.error("Falha ao carregar configuracoes", caughtError, { userId: user.id });
+        setToast({
+          type: "error",
+          message: getFriendlyErrorMessage(caughtError, "Nao foi possivel carregar configuracoes."),
+        });
       } finally {
         setLoading(false);
       }
@@ -260,8 +266,12 @@ export function Settings() {
 
       setWorkingHours(nextWorkingHours);
       setToast({ type: "success", message: "Configuracoes salvas com sucesso." });
-    } catch {
-      setToast({ type: "error", message: "Erro ao salvar configuracoes." });
+    } catch (caughtError) {
+      logger.error("Falha ao salvar configuracoes", caughtError, { studioId });
+      setToast({
+        type: "error",
+        message: getFriendlyErrorMessage(caughtError, "Erro ao salvar configuracoes."),
+      });
     } finally {
       setSaving(false);
     }
@@ -332,8 +342,12 @@ export function Settings() {
                       try {
                         await uploadLogo(file);
                         setToast({ type: "success", message: "Logo enviada com sucesso." });
-                      } catch {
-                        setToast({ type: "error", message: "Erro ao enviar logo." });
+                      } catch (caughtError) {
+                        logger.error("Falha ao enviar logo", caughtError, { studioId });
+                        setToast({
+                          type: "error",
+                          message: getFriendlyErrorMessage(caughtError, "Erro ao enviar logo."),
+                        });
                       }
                       event.target.value = "";
                     }}

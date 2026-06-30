@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { logger } from "@/lib/logger";
 import {
   getStudioArtists,
   getStudioBySlug,
@@ -65,7 +66,8 @@ export function StudioPage() {
         setStudio(foundStudio);
         setArtists(foundArtists);
         setGallery(foundGallery);
-      } catch {
+      } catch (caughtError) {
+        logger.error("Falha ao carregar pagina publica do estudio", caughtError, { slug: studioSlug });
         setNotFound(true);
       } finally {
         setLoading(false);

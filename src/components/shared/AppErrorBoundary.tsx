@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { logger } from "@/lib/logger";
 
 type AppErrorBoundaryProps = {
   children: ReactNode;
@@ -18,9 +19,7 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    if (import.meta.env.DEV) {
-      console.error("Erro inesperado no app:", error, info);
-    }
+    logger.error("Erro inesperado no app", error, { componentStack: info.componentStack });
   }
 
   render() {

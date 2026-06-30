@@ -2,6 +2,8 @@ import { Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { getFriendlyErrorMessage } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import { ArtistModal } from "@/pages/artists/ArtistModal";
 import { getArtists, toggleArtistStatus, type Artist } from "@/services/artists.service";
 import { getCurrentUserStudio } from "@/services/dashboard.service";
@@ -28,8 +30,9 @@ export function ArtistsPage() {
       }
       setStudioId(studio.id);
       setArtists(await getArtists(studio.id));
-    } catch {
-      setError("Nao foi possivel carregar tatuadores.");
+    } catch (caughtError) {
+      logger.error("Falha ao carregar tatuadores", caughtError);
+      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel carregar tatuadores."));
     } finally {
       setLoading(false);
     }
@@ -41,8 +44,13 @@ export function ArtistsPage() {
 
   async function handleToggle(artist: Artist) {
     if (artist.is_active && !window.confirm("Desativar este tatuador?")) return;
-    await toggleArtistStatus(artist.id, !artist.is_active);
-    await loadArtists();
+    try {
+      await toggleArtistStatus(artist.id, !artist.is_active);
+      await loadArtists();
+    } catch (caughtError) {
+      logger.error("Falha ao alternar status do tatuador", caughtError, { artistId: artist.id });
+      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel atualizar o tatuador."));
+    }
   }
 
   return (

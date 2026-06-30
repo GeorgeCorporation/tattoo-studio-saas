@@ -1,6 +1,8 @@
 import { Filter, ImageIcon, Plus, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { getFriendlyErrorMessage } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import { UploadModal } from "@/pages/gallery/UploadModal";
 import { getArtists, type Artist } from "@/services/artists.service";
 import { getCurrentUserStudio } from "@/services/dashboard.service";
@@ -44,8 +46,9 @@ export function GalleryPage() {
       const [artistList, gallery] = await Promise.all([getArtists(studio.id), getGallery(studio.id)]);
       setArtists(artistList);
       setPhotos(gallery);
-    } catch {
-      setError("Nao foi possivel carregar a galeria.");
+    } catch (caughtError) {
+      logger.error("Falha ao carregar galeria", caughtError);
+      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel carregar a galeria."));
     } finally {
       setLoading(false);
     }
@@ -68,8 +71,9 @@ export function GalleryPage() {
     try {
       await deletePhoto(photo.id, photo.url);
       await loadGallery();
-    } catch {
-      setError("Nao foi possivel remover a foto.");
+    } catch (caughtError) {
+      logger.error("Falha ao remover foto da galeria", caughtError, { photoId: photo.id });
+      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel remover a foto."));
     }
   }
 

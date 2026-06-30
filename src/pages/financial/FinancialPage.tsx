@@ -1,6 +1,8 @@
 import { Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { getFriendlyErrorMessage } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import { getCurrentUserStudio } from "@/services/dashboard.service";
 import {
   getMonthSummary,
@@ -78,8 +80,9 @@ export function FinancialPage() {
 
       setPayments(foundPayments);
       setSummary(foundSummary);
-    } catch {
-      setError("Nao foi possivel carregar financeiro.");
+    } catch (caughtError) {
+      logger.error("Falha ao carregar financeiro", caughtError, { year, month });
+      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel carregar financeiro."));
     } finally {
       setLoading(false);
     }

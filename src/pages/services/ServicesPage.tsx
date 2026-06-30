@@ -1,6 +1,8 @@
 import { Edit, Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { getFriendlyErrorMessage } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import { getCurrentUserStudio } from "@/services/dashboard.service";
 import {
   createService,
@@ -53,8 +55,9 @@ export function ServicesPage() {
 
       setStudioId(studio.id);
       setServices(await getServices(studio.id));
-    } catch {
-      setError("Nao foi possivel carregar servicos.");
+    } catch (caughtError) {
+      logger.error("Falha ao carregar servicos", caughtError);
+      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel carregar servicos."));
     } finally {
       setLoading(false);
     }
@@ -75,18 +78,29 @@ export function ServicesPage() {
   }
 
   async function handleSave(data: ServiceFormData) {
-    if (selectedService) {
-      await updateService(selectedService.id, data);
-    } else {
-      await createService(data);
-    }
+    try {
+      if (selectedService) {
+        await updateService(selectedService.id, data);
+      } else {
+        await createService(data);
+      }
 
-    await loadServices();
+      await loadServices();
+    } catch (caughtError) {
+      logger.error("Falha ao salvar servico", caughtError, { serviceId: selectedService?.id });
+      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel salvar o servico."));
+      throw caughtError;
+    }
   }
 
   async function handleToggle(service: StudioService) {
-    await toggleServiceStatus(service.id, !service.is_active);
-    await loadServices();
+    try {
+      await toggleServiceStatus(service.id, !service.is_active);
+      await loadServices();
+    } catch (caughtError) {
+      logger.error("Falha ao alternar status do servico", caughtError, { serviceId: service.id });
+      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel atualizar o servico."));
+    }
   }
 
   return (
