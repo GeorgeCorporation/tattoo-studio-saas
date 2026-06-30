@@ -1,3 +1,4 @@
+import { assertAppointmentStatus, type AppointmentStatus } from "@/lib/appointment-domain";
 import { supabase } from "@/lib/supabase";
 
 export type DashboardStudio = {
@@ -147,7 +148,9 @@ export async function getNextAppointments(studioId: string, limit: number) {
   return data ?? [];
 }
 
-export async function updateAppointmentStatus(appointmentId: string, status: string) {
+export async function updateAppointmentStatus(appointmentId: string, status: AppointmentStatus) {
+  assertAppointmentStatus(status);
+
   const { error } = await supabase
     .from("appointments")
     .update({ status })

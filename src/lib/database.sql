@@ -111,6 +111,18 @@ create table if not exists public.reviews (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.appointment_reminders (
+  id uuid primary key default gen_random_uuid(),
+  studio_id uuid not null references public.studios(id) on delete cascade,
+  appointment_id uuid not null references public.appointments(id) on delete cascade,
+  channel text not null default 'whatsapp' check (channel in ('whatsapp')),
+  scheduled_for timestamptz not null,
+  status text not null default 'pending' check (status in ('pending', 'sent', 'failed', 'cancelled')),
+  sent_at timestamptz,
+  error_message text,
+  created_at timestamptz not null default now()
+);
+
 -- Indexes
 create index if not exists studios_user_id_idx on public.studios(user_id);
 create index if not exists studios_slug_idx on public.studios(slug);
@@ -129,6 +141,45 @@ where artist_id is not null and status in ('pending', 'confirmed');
 create index if not exists payments_studio_id_idx on public.payments(studio_id);
 create index if not exists gallery_studio_id_idx on public.gallery(studio_id);
 create index if not exists reviews_studio_id_idx on public.reviews(studio_id);
+create index if not exists appointment_reminders_studio_id_idx on public.appointment_reminders(studio_id);
+create index if not exists appointment_reminders_due_idx on public.appointment_reminders(status, scheduled_for);
+
+-- Product guardrails
+do $$
+begin
+  alter table public.appointments
+  add constraint appointments_status_check
+  check (status in ('pending', 'confirmed', 'cancelled', 'completed')) not valid;
+exception when duplicate_object then
+  null;
+end $$;
+
+do $$
+begin
+  alter table public.appointments
+  add constraint appointments_signal_paid_non_negative_check
+  check (signal_paid >= 0) not valid;
+exception when duplicate_object then
+  null;
+end $$;
+
+do $$
+begin
+  alter table public.appointments
+  add constraint appointments_total_price_non_negative_check
+  check (total_price is null or total_price >= 0) not valid;
+exception when duplicate_object then
+  null;
+end $$;
+
+do $$
+begin
+  alter table public.payments
+  add constraint payments_amount_positive_check
+  check (amount > 0) not valid;
+exception when duplicate_object then
+  null;
+end $$;
 
 -- Public availability helper
 create or replace function public.get_booked_appointment_times(
@@ -188,6 +239,7 @@ alter table public.appointments enable row level security;
 alter table public.payments enable row level security;
 alter table public.gallery enable row level security;
 alter table public.reviews enable row level security;
+alter table public.appointment_reminders enable row level security;
 
 -- Helpers: a row belongs to the signed-in user when its studio belongs to auth.uid().
 
@@ -445,6 +497,26 @@ with check (
   exists (
     select 1 from public.studios
     where studios.id = reviews.studio_id
+    and studios.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "Users can manage own appointment reminders" on public.appointment_reminders;
+
+create policy "Users can manage own appointment reminders"
+on public.appointment_reminders for all
+to authenticated
+using (
+  exists (
+    select 1 from public.studios
+    where studios.id = appointment_reminders.studio_id
+    and studios.user_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1 from public.studios
+    where studios.id = appointment_reminders.studio_id
     and studios.user_id = auth.uid()
   )
 );

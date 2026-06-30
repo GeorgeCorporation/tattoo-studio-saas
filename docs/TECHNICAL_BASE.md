@@ -118,10 +118,15 @@ Paths padrao:
 - Horarios ja ocupados pelo mesmo tatuador sao removidos da lista publica.
 - O banco tem indice unico parcial para impedir duplicidade em appointments com status `pending` ou `confirmed`.
 - A funcao `get_booked_appointment_times` devolve somente horarios ocupados, sem expor dados de clientes.
+- Status de agendamento e labels ficam centralizados em `src/lib/appointment-domain.ts`.
+- Banco valida status, valores negativos e pagamentos invalidos com constraints.
+- Base para lembretes por WhatsApp fica em `appointment_reminders`.
+- Service de lembretes fica em `src/services/reminders.service.ts`.
+- Mensagem padrao de lembrete fica em `buildWhatsAppReminderMessage`.
 
 Sempre que `src/lib/database.sql` mudar, rode o SQL atualizado no Supabase antes de testar em producao.
 
 ## Proximos Reforcos Recomendados
 
-- Adicionar testes de integracao para onboarding e agendamento com mocks do Supabase.
-- Configurar branch protection no GitHub exigindo CI verde antes de merge.
+- Rodar `npm run db:types` depois de aplicar SQL novo no Supabase.
+- Ligar um provedor real de WhatsApp quando quiser envio automatico de lembretes.

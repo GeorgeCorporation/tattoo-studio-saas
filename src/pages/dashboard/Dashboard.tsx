@@ -1,29 +1,12 @@
 import { CalendarPlus, Check, Copy, ExternalLink, Image, Palette, Scissors, Settings, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useDashboard } from "@/hooks/useDashboard";
+import { getAppointmentStatusClass, getAppointmentStatusLabel } from "@/lib/appointment-domain";
 
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
 });
-
-const statusClasses: Record<string, string> = {
-  pending: "bg-yellow-500/15 text-yellow-300",
-  confirmed: "bg-green-500/15 text-green-300",
-  completed: "bg-blue-500/15 text-blue-300",
-  cancelled: "bg-red-500/15 text-red-300",
-};
-
-function statusLabel(status: string) {
-  const labels: Record<string, string> = {
-    pending: "Pendente",
-    confirmed: "Confirmado",
-    completed: "Concluido",
-    cancelled: "Cancelado",
-  };
-
-  return labels[status] ?? status;
-}
 
 export function Dashboard() {
   const { studio, summary, nextAppointments, setupStatus, loading, error, setAppointmentStatus } = useDashboard();
@@ -216,10 +199,10 @@ export function Dashboard() {
                     <span
                       className={[
                         "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
-                        statusClasses[appointment.status] ?? "bg-zinc-500/15 text-zinc-300",
+                        getAppointmentStatusClass(appointment.status),
                       ].join(" ")}
                     >
-                      {statusLabel(appointment.status)}
+                      {getAppointmentStatusLabel(appointment.status)}
                     </span>
                   </td>
                   <td className="px-5 py-4">

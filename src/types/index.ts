@@ -1,3 +1,5 @@
+import type { AppointmentStatus, PaymentMethod, PaymentType } from "@/lib/appointment-domain";
+
 export interface Studio {
   id: string;
   name: string;
@@ -57,7 +59,7 @@ export interface Appointment {
   serviceId?: string;
   startsAt: string;
   endsAt: string;
-  status: "scheduled" | "confirmed" | "completed" | "cancelled" | "no_show";
+  status: AppointmentStatus;
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -69,7 +71,8 @@ export interface Payment {
   appointmentId?: string;
   clientId?: string;
   amountCents: number;
-  method: "cash" | "credit_card" | "debit_card" | "pix" | "bank_transfer" | "other";
+  type: PaymentType;
+  method: PaymentMethod;
   status: "pending" | "paid" | "refunded" | "cancelled";
   paidAt?: string;
   createdAt: string;

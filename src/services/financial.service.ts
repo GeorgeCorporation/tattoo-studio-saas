@@ -1,7 +1,7 @@
+import type { PaymentMethod, PaymentType } from "@/lib/appointment-domain";
 import { supabase } from "@/lib/supabase";
 
-export type PaymentType = "signal" | "final";
-export type PaymentMethod = "pix" | "cash" | "card";
+export type { PaymentMethod, PaymentType };
 
 export type FinancialPayment = {
   id: string;

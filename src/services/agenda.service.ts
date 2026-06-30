@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
+import { assertAppointmentStatus, type AppointmentStatus } from "@/lib/appointment-domain";
 
-export type AgendaAppointmentStatus = "pending" | "confirmed" | "cancelled" | "completed";
+export type AgendaAppointmentStatus = AppointmentStatus;
 
 export type AgendaAppointment = {
   id: string;
@@ -45,6 +46,8 @@ export async function getAppointmentsByDate(studioId: string, date: string) {
 }
 
 export async function updateAppointmentStatus(id: string, status: AgendaAppointmentStatus) {
+  assertAppointmentStatus(status);
+
   const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
 
   if (error) throw error;

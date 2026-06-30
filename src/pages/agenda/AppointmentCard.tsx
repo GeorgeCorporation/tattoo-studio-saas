@@ -1,24 +1,11 @@
 import { ChevronDown, ChevronUp, Check, CircleCheck, Phone, X } from "lucide-react";
 import { useMemo, useState } from "react";
+import { getAppointmentStatusClass, getAppointmentStatusLabel } from "@/lib/appointment-domain";
 import type { AgendaAppointment, AgendaAppointmentStatus } from "@/services/agenda.service";
 
 type AppointmentCardProps = {
   appointment: AgendaAppointment;
   onStatusChange: (id: string, status: AgendaAppointmentStatus) => void;
-};
-
-const statusStyles: Record<AgendaAppointmentStatus, string> = {
-  pending: "bg-yellow-500/15 text-yellow-300",
-  confirmed: "bg-green-500/15 text-green-300",
-  cancelled: "bg-red-500/15 text-red-300",
-  completed: "bg-zinc-500/15 text-zinc-300",
-};
-
-const statusLabels: Record<AgendaAppointmentStatus, string> = {
-  pending: "Pendente",
-  confirmed: "Confirmado",
-  cancelled: "Cancelado",
-  completed: "Finalizado",
 };
 
 function referenceLinks(notes?: string | null) {
@@ -46,10 +33,10 @@ export function AppointmentCard({ appointment, onStatusChange }: AppointmentCard
             <span
               className={[
                 "rounded-full px-2.5 py-1 text-xs font-semibold",
-                statusStyles[appointment.status] ?? statusStyles.pending,
+                getAppointmentStatusClass(appointment.status),
               ].join(" ")}
             >
-              {statusLabels[appointment.status] ?? appointment.status}
+              {getAppointmentStatusLabel(appointment.status)}
             </span>
           </div>
 

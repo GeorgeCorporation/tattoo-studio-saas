@@ -3,6 +3,32 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      appointment_reminders: {
+        Row: {
+          id: string;
+          studio_id: string;
+          appointment_id: string;
+          channel: string;
+          scheduled_for: string;
+          status: string;
+          sent_at: string | null;
+          error_message: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          studio_id: string;
+          appointment_id: string;
+          channel?: string;
+          scheduled_for: string;
+          status?: string;
+          sent_at?: string | null;
+          error_message?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["appointment_reminders"]["Insert"]>;
+        Relationships: [];
+      };
       appointments: {
         Row: {
           id: string;

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import type { AppointmentStatus } from "@/lib/appointment-domain";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import {
@@ -79,7 +80,7 @@ export function useDashboard() {
     loadDashboard();
   }, [loadDashboard]);
 
-  async function setAppointmentStatus(appointmentId: string, status: string) {
+  async function setAppointmentStatus(appointmentId: string, status: AppointmentStatus) {
     await updateAppointmentStatus(appointmentId, status);
     await loadDashboard();
   }

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { paymentMethodLabels, paymentTypeLabels } from "@/lib/appointment-domain";
 import { getCurrentUserStudio } from "@/services/dashboard.service";
 import {
   getMonthSummary,
@@ -30,17 +31,6 @@ const monthNames = [
   "Novembro",
   "Dezembro",
 ];
-
-const methodLabels: Record<string, string> = {
-  pix: "PIX",
-  cash: "Dinheiro",
-  card: "Cartao",
-};
-
-const typeLabels: Record<string, string> = {
-  signal: "Sinal",
-  final: "Final",
-};
 
 export function FinancialPage() {
   const { user } = useAuth();
@@ -174,9 +164,11 @@ export function FinancialPage() {
                   <td className="px-5 py-4">{payment.appointments?.clients?.name ?? "-"}</td>
                   <td className="px-5 py-4">{payment.appointments?.tattoo_artists?.name ?? "-"}</td>
                   <td className="px-5 py-4">{payment.appointments?.services?.name ?? "-"}</td>
-                  <td className="px-5 py-4">{typeLabels[payment.type ?? ""] ?? "-"}</td>
+                  <td className="px-5 py-4">{payment.type ? paymentTypeLabels[payment.type] : "-"}</td>
                   <td className="px-5 py-4 font-semibold">{currency.format(Number(payment.amount ?? 0))}</td>
-                  <td className="px-5 py-4">{methodLabels[payment.method ?? ""] ?? "-"}</td>
+                  <td className="px-5 py-4">
+                    {payment.method ? paymentMethodLabels[payment.method] : "-"}
+                  </td>
                 </tr>
               ))}
               {!loading && !payments.length ? (
