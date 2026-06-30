@@ -40,6 +40,36 @@ npm run test:coverage
 - Output: `dist`
 - Cloudflare usa SPA fallback pelo `wrangler.jsonc`
 
+## CI GitHub
+
+Todo push em `main` roda jobs separados:
+
+- `TypeScript`: `npm run typecheck`
+- `ESLint`: `npm run lint`
+- `Vitest coverage`: `npm run test:coverage`
+- `Production build`: `npm run build`
+- `Security audit`: `npm audit --audit-level=high`
+
+O job de testes envia `coverage/` como artifact do GitHub Actions.
+
+Branch protection recomendada no GitHub:
+
+1. Abrir repositório no GitHub.
+2. Ir em `Settings`.
+3. Ir em `Branches`.
+4. Clicar em `Add branch protection rule`.
+5. Em `Branch name pattern`, colocar `main`.
+6. Ativar `Require status checks to pass before merging`.
+7. Selecionar checks:
+   - `TypeScript`
+   - `ESLint`
+   - `Vitest coverage`
+   - `Production build`
+   - `Security audit`
+8. Salvar.
+
+Assim, erro de tipo, lint, teste, build ou vulnerabilidade alta bloqueia merge/entrega.
+
 ## Variaveis De Ambiente
 
 Obrigatorias:
