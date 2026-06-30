@@ -110,6 +110,7 @@ Paths padrao:
 - `artists/{studioId}/{artistId}/arquivo`
 - `gallery/{studioId}/arquivo`
 - `booking-references/{studioId}/{appointmentId}/arquivo`
+- `client-deliveries/{studioId}/{deliveryId}/arquivo`
 
 ## Agenda Confiavel
 
@@ -125,6 +126,16 @@ Paths padrao:
 - Mensagem padrao de lembrete fica em `buildWhatsAppReminderMessage`.
 
 Sempre que `src/lib/database.sql` mudar, rode o SQL atualizado no Supabase antes de testar em producao.
+
+## Entrega De Fotos Ao Cliente
+
+- Painel: `/entregas`.
+- Link publico: `/entrega/:token`.
+- Bucket: `client-deliveries`.
+- Tabelas: `client_deliveries` e `client_delivery_photos`.
+- Cliente baixa fotos pelo link publico.
+- Dados da entrega publica saem pela function `get_client_delivery_by_token`, nao por select aberto nas tabelas.
+- Admin cria entrega e faz upload apenas quando o `studioId` do path pertence ao usuario logado.
 
 ## Proximos Reforcos Recomendados
 

@@ -87,6 +87,52 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["clients"]["Insert"]>;
         Relationships: [];
       };
+      client_deliveries: {
+        Row: {
+          id: string;
+          studio_id: string;
+          client_id: string;
+          appointment_id: string | null;
+          token: string;
+          title: string;
+          message: string | null;
+          expires_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          studio_id: string;
+          client_id: string;
+          appointment_id?: string | null;
+          token?: string;
+          title?: string;
+          message?: string | null;
+          expires_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["client_deliveries"]["Insert"]>;
+        Relationships: [];
+      };
+      client_delivery_photos: {
+        Row: {
+          id: string;
+          delivery_id: string;
+          studio_id: string;
+          url: string;
+          file_name: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          delivery_id: string;
+          studio_id: string;
+          url: string;
+          file_name?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["client_delivery_photos"]["Insert"]>;
+        Relationships: [];
+      };
       gallery: {
         Row: {
           id: string;
@@ -278,6 +324,12 @@ export type Database = {
           p_notes: string;
         };
         Returns: undefined;
+      };
+      get_client_delivery_by_token: {
+        Args: {
+          p_token: string;
+        };
+        Returns: Json;
       };
     };
     Enums: Record<string, never>;

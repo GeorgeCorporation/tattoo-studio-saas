@@ -1,4 +1,4 @@
-export type PublicBucket = "artists" | "booking-references" | "gallery" | "logos";
+export type PublicBucket = "artists" | "booking-references" | "client-deliveries" | "gallery" | "logos";
 
 export function safeFileName(name: string) {
   return name

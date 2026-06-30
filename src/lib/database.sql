@@ -123,6 +123,27 @@ create table if not exists public.appointment_reminders (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.client_deliveries (
+  id uuid primary key default gen_random_uuid(),
+  studio_id uuid not null references public.studios(id) on delete cascade,
+  client_id uuid not null references public.clients(id) on delete cascade,
+  appointment_id uuid references public.appointments(id) on delete set null,
+  token uuid not null default gen_random_uuid() unique,
+  title text not null default 'Fotos da sua tatuagem',
+  message text,
+  expires_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.client_delivery_photos (
+  id uuid primary key default gen_random_uuid(),
+  delivery_id uuid not null references public.client_deliveries(id) on delete cascade,
+  studio_id uuid not null references public.studios(id) on delete cascade,
+  url text not null,
+  file_name text,
+  created_at timestamptz not null default now()
+);
+
 -- Indexes
 create index if not exists studios_user_id_idx on public.studios(user_id);
 create index if not exists studios_slug_idx on public.studios(slug);
@@ -143,6 +164,11 @@ create index if not exists gallery_studio_id_idx on public.gallery(studio_id);
 create index if not exists reviews_studio_id_idx on public.reviews(studio_id);
 create index if not exists appointment_reminders_studio_id_idx on public.appointment_reminders(studio_id);
 create index if not exists appointment_reminders_due_idx on public.appointment_reminders(status, scheduled_for);
+create index if not exists client_deliveries_studio_id_idx on public.client_deliveries(studio_id);
+create index if not exists client_deliveries_client_id_idx on public.client_deliveries(client_id);
+create index if not exists client_deliveries_token_idx on public.client_deliveries(token);
+create index if not exists client_delivery_photos_delivery_id_idx on public.client_delivery_photos(delivery_id);
+create index if not exists client_delivery_photos_studio_id_idx on public.client_delivery_photos(studio_id);
 
 -- Product guardrails
 do $$
@@ -240,6 +266,8 @@ alter table public.payments enable row level security;
 alter table public.gallery enable row level security;
 alter table public.reviews enable row level security;
 alter table public.appointment_reminders enable row level security;
+alter table public.client_deliveries enable row level security;
+alter table public.client_delivery_photos enable row level security;
 
 -- Helpers: a row belongs to the signed-in user when its studio belongs to auth.uid().
 
@@ -521,6 +549,88 @@ with check (
   )
 );
 
+drop policy if exists "Users can manage own client deliveries" on public.client_deliveries;
+drop policy if exists "Users can manage own client delivery photos" on public.client_delivery_photos;
+
+create policy "Users can manage own client deliveries"
+on public.client_deliveries for all
+to authenticated
+using (
+  exists (
+    select 1 from public.studios
+    where studios.id = client_deliveries.studio_id
+    and studios.user_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1 from public.studios
+    where studios.id = client_deliveries.studio_id
+    and studios.user_id = auth.uid()
+  )
+);
+
+create policy "Users can manage own client delivery photos"
+on public.client_delivery_photos for all
+to authenticated
+using (
+  exists (
+    select 1 from public.studios
+    where studios.id = client_delivery_photos.studio_id
+    and studios.user_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1 from public.studios
+    where studios.id = client_delivery_photos.studio_id
+    and studios.user_id = auth.uid()
+  )
+);
+
+create or replace function public.get_client_delivery_by_token(p_token uuid)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select jsonb_build_object(
+    'id', client_deliveries.id,
+    'title', client_deliveries.title,
+    'message', client_deliveries.message,
+    'studio', jsonb_build_object(
+      'name', studios.name,
+      'logo_url', studios.logo_url,
+      'whatsapp', studios.whatsapp
+    ),
+    'client', jsonb_build_object(
+      'name', clients.name
+    ),
+    'photos', coalesce(
+      jsonb_agg(
+        jsonb_build_object(
+          'id', client_delivery_photos.id,
+          'url', client_delivery_photos.url,
+          'file_name', client_delivery_photos.file_name
+        )
+        order by client_delivery_photos.created_at asc
+      ) filter (where client_delivery_photos.id is not null),
+      '[]'::jsonb
+    )
+  )
+  from public.client_deliveries
+  join public.studios on studios.id = client_deliveries.studio_id
+  join public.clients on clients.id = client_deliveries.client_id
+  left join public.client_delivery_photos on client_delivery_photos.delivery_id = client_deliveries.id
+  where client_deliveries.token = p_token
+    and (client_deliveries.expires_at is null or client_deliveries.expires_at > now())
+  group by client_deliveries.id, studios.id, clients.id;
+$$;
+
+revoke all on function public.get_client_delivery_by_token(uuid) from public;
+grant execute on function public.get_client_delivery_by_token(uuid) to anon, authenticated;
+
 -- Public booking reference photos
 insert into storage.buckets (id, name, public)
 values ('booking-references', 'booking-references', true)
@@ -536,6 +646,10 @@ on conflict (id) do nothing;
 
 insert into storage.buckets (id, name, public)
 values ('logos', 'logos', true)
+on conflict (id) do nothing;
+
+insert into storage.buckets (id, name, public)
+values ('client-deliveries', 'client-deliveries', true)
 on conflict (id) do nothing;
 
 -- Storage ownership helpers
@@ -617,6 +731,9 @@ drop policy if exists "Authenticated can delete artist media" on storage.objects
 drop policy if exists "Public can read studio logos" on storage.objects;
 drop policy if exists "Authenticated can upload studio logos" on storage.objects;
 drop policy if exists "Authenticated can delete studio logos" on storage.objects;
+drop policy if exists "Public can read client deliveries" on storage.objects;
+drop policy if exists "Authenticated can upload client deliveries" on storage.objects;
+drop policy if exists "Authenticated can delete client deliveries" on storage.objects;
 
 create policy "Public can read artist media"
 on storage.objects for select
@@ -657,5 +774,26 @@ on storage.objects for delete
 to authenticated
 using (
   bucket_id = 'logos'
+  and public.user_owns_storage_studio(name)
+);
+
+create policy "Public can read client deliveries"
+on storage.objects for select
+to anon, authenticated
+using (bucket_id = 'client-deliveries');
+
+create policy "Authenticated can upload client deliveries"
+on storage.objects for insert
+to authenticated
+with check (
+  bucket_id = 'client-deliveries'
+  and public.user_owns_storage_studio(name)
+);
+
+create policy "Authenticated can delete client deliveries"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'client-deliveries'
   and public.user_owns_storage_studio(name)
 );

@@ -11,8 +11,10 @@ import { ArtistsPage } from "@/pages/artists/ArtistsPage";
 import { ClientProfile } from "@/pages/clients/ClientProfile";
 import { ClientsPage } from "@/pages/clients/ClientsPage";
 import { Dashboard } from "@/pages/dashboard/Dashboard";
+import { DeliveriesPage } from "@/pages/deliveries/DeliveriesPage";
 import { ArtistPage } from "@/pages/public/ArtistPage";
 import { BookingPage } from "@/pages/public/BookingPage";
+import { ClientDeliveryPage } from "@/pages/public/ClientDeliveryPage";
 import { NotFoundPage } from "@/pages/public/NotFoundPage";
 import { StudioPage } from "@/pages/public/StudioPage";
 import { FinancialPage } from "@/pages/financial/FinancialPage";
@@ -86,6 +88,10 @@ const router = createBrowserRouter([
             element: <GalleryPage />,
           },
           {
+            path: "/entregas",
+            element: <DeliveriesPage />,
+          },
+          {
             path: "/financeiro",
             element: <FinancialPage />,
           },
@@ -96,6 +102,10 @@ const router = createBrowserRouter([
         ],
       },
     ],
+  },
+  {
+    path: "/entrega/:token",
+    element: <ClientDeliveryPage />,
   },
   {
     path: "/:slug",

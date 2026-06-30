@@ -2,6 +2,7 @@ import {
   Banknote,
   CalendarDays,
   Camera,
+  Images,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -27,6 +28,7 @@ const items = [
   { label: "Tatuadores", href: "/tatuadores", icon: Scissors },
   { label: "Servicos", href: "/servicos", icon: Palette },
   { label: "Galeria", href: "/galeria", icon: Camera },
+  { label: "Entregas", href: "/entregas", icon: Images },
   { label: "Financeiro", href: "/financeiro", icon: Banknote },
   { label: "Configuracoes", href: "/configuracoes", icon: Settings },
 ];
