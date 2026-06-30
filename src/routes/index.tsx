@@ -13,21 +13,13 @@ import { ClientsPage } from "@/pages/clients/ClientsPage";
 import { Dashboard } from "@/pages/dashboard/Dashboard";
 import { ArtistPage } from "@/pages/public/ArtistPage";
 import { BookingPage } from "@/pages/public/BookingPage";
+import { NotFoundPage } from "@/pages/public/NotFoundPage";
 import { StudioPage } from "@/pages/public/StudioPage";
 import { FinancialPage } from "@/pages/financial/FinancialPage";
 import { GalleryPage } from "@/pages/gallery/GalleryPage";
 import LandingPage from "@/pages/landing/LandingPage";
 import { OnboardingPage } from "@/pages/onboarding/OnboardingPage";
 import { ServicesPage } from "@/pages/services/ServicesPage";
-
-function EmptyPanel({ title }: { title: string }) {
-  return (
-    <section>
-      <h1 className="text-3xl font-semibold">{title}</h1>
-      <p className="mt-2 text-sm text-zinc-400">Tela em construcao.</p>
-    </section>
-  );
-}
 
 const router = createBrowserRouter([
   {
@@ -120,6 +112,10 @@ const router = createBrowserRouter([
   {
     path: "/:slug/:artistSlug",
     element: <ArtistPage />,
+  },
+  {
+    path: "*",
+    element: <NotFoundPage />,
   },
 ]);
 

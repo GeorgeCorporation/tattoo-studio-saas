@@ -59,7 +59,7 @@ function storagePathFromUrl(url: string, bucket: string) {
 }
 
 async function ensureUniqueSlug(studioId: string, slug: string, ignoreArtistId?: string) {
-  let base = slugify(slug) || "tatuador";
+  const base = slugify(slug) || "tatuador";
   let nextSlug = base;
   let suffix = 2;
 

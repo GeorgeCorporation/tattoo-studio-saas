@@ -227,7 +227,9 @@ export function Settings() {
 
       if (studioError) throw studioError;
 
-      for (const day of workingHours) {
+      const nextWorkingHours = workingHours.map((day) => ({ ...day }));
+
+      for (const day of nextWorkingHours) {
         if (day.id) {
           const { error } = await supabase
             .from("working_hours")
@@ -257,6 +259,7 @@ export function Settings() {
         }
       }
 
+      setWorkingHours(nextWorkingHours);
       setToast({ type: "success", message: "Configuracoes salvas com sucesso." });
     } catch {
       setToast({ type: "error", message: "Erro ao salvar configuracoes." });
