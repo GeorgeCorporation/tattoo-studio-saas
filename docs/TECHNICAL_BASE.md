@@ -16,6 +16,23 @@ O comando `npm run check` valida:
 - Vitest
 - Build de producao
 
+## Testes Automatizados
+
+Cobertura atual inclui:
+
+- Regras de onboarding: slug, estudio existente, criacao de estudio e 7 horarios.
+- Regras de booking: dias fechados, horarios ocupados, criacao e conflito de appointment.
+- Paths de Storage: logo, artista, galeria e referencias por `studioId`.
+- Dashboard: checklist pendente/concluido e lista de proximos agendamentos.
+- Pagina publica: estudio vazio e estudio inexistente.
+
+Comandos:
+
+```bash
+npm run test
+npm run test:coverage
+```
+
 ## Deploy
 
 - Node.js: 22.x
