@@ -37,7 +37,15 @@ Essas chaves sao publicas do frontend. Nunca adicionar service role key no proje
 - RLS ativo em todas as tabelas principais.
 - Dados privados dependem do `studio_id` pertencer ao usuario logado.
 - Paginas publicas leem apenas dados publicos de estudio, tatuadores, galeria e reviews.
-- Storage tem buckets publicos para imagens; uploads administrativos exigem usuario autenticado.
+- Storage tem buckets publicos para imagens; uploads administrativos exigem usuario autenticado e path com `studioId`.
+- Policies de Storage validam ownership pelo primeiro segmento do path.
+
+Paths padrao:
+
+- `logos/{studioId}/arquivo`
+- `artists/{studioId}/{artistId}/arquivo`
+- `gallery/{studioId}/arquivo`
+- `booking-references/{studioId}/{appointmentId}/arquivo`
 
 ## Agenda Confiavel
 
@@ -52,6 +60,5 @@ Sempre que `src/lib/database.sql` mudar, rode o SQL atualizado no Supabase antes
 ## Proximos Reforcos Recomendados
 
 - Gerar tipos do Supabase automaticamente via CLI quando houver token de acesso.
-- Reforcar policies de Storage validando o caminho com `studioId`.
 - Adicionar testes de integracao para onboarding e agendamento com mocks do Supabase.
 - Configurar branch protection no GitHub exigindo CI verde antes de merge.

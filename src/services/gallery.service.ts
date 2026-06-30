@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { createStoragePath, getStoragePathFromPublicUrl } from "@/services/storage.service";
 
 export type GalleryPhoto = {
   id: string;
@@ -9,16 +10,6 @@ export type GalleryPhoto = {
   created_at: string;
   tattoo_artists: { name: string } | null;
 };
-
-function safeFileName(name: string) {
-  return name.replace(/[^a-zA-Z0-9.-]/g, "_");
-}
-
-function storagePathFromUrl(url: string) {
-  const marker = "/storage/v1/object/public/gallery/";
-  const [, path] = url.split(marker);
-  return path ? decodeURIComponent(path) : null;
-}
 
 export async function getGallery(studioId: string, artistId?: string) {
   let query = supabase
@@ -38,7 +29,7 @@ export async function getGallery(studioId: string, artistId?: string) {
 }
 
 export async function uploadPhoto(file: File, studioId: string, artistId?: string) {
-  const path = `${studioId}/${Date.now()}_${safeFileName(file.name)}`;
+  const path = createStoragePath(studioId, file.name);
 
   const { error: uploadError } = await supabase.storage.from("gallery").upload(path, file, {
     cacheControl: "3600",
@@ -65,7 +56,7 @@ export async function uploadPhoto(file: File, studioId: string, artistId?: strin
 }
 
 export async function deletePhoto(id: string, url: string) {
-  const path = storagePathFromUrl(url);
+  const path = getStoragePathFromPublicUrl(url, "gallery");
 
   if (path) {
     const { error: storageError } = await supabase.storage.from("gallery").remove([path]);

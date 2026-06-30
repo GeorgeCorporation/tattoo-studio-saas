@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { createStoragePath, getStoragePathFromPublicUrl } from "@/services/storage.service";
 
 export type Artist = {
   id: string;
@@ -50,12 +51,6 @@ function slugify(value: string) {
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-}
-
-function storagePathFromUrl(url: string, bucket: string) {
-  const marker = `/storage/v1/object/public/${bucket}/`;
-  const [, path] = url.split(marker);
-  return path ? decodeURIComponent(path) : null;
 }
 
 async function ensureUniqueSlug(studioId: string, slug: string, ignoreArtistId?: string) {
@@ -160,15 +155,14 @@ export async function toggleArtistStatus(id: string, isActive: boolean) {
 }
 
 export async function deleteStorageFile(url: string, bucket: "artists" | "gallery") {
-  const path = storagePathFromUrl(url, bucket);
+  const path = getStoragePathFromPublicUrl(url, bucket);
   if (!path) return;
 
   await supabase.storage.from(bucket).remove([path]);
 }
 
 export async function uploadArtistPhoto(file: File, studioId: string, artistId: string) {
-  const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-  const path = `${studioId}/${artistId}/${Date.now()}_${safeName}`;
+  const path = createStoragePath(studioId, file.name, [artistId]);
 
   const { error } = await supabase.storage.from("artists").upload(path, file, {
     cacheControl: "3600",
@@ -194,8 +188,7 @@ export async function getArtistGallery(artistId: string) {
 }
 
 export async function addArtistPhoto(file: File, studioId: string, artistId: string) {
-  const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-  const path = `${studioId}/${artistId}/${Date.now()}_${safeName}`;
+  const path = createStoragePath(studioId, file.name);
 
   const { error: uploadError } = await supabase.storage.from("gallery").upload(path, file, {
     cacheControl: "3600",

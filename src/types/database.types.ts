@@ -246,6 +246,13 @@ export type Database = {
           booked_time: string;
         }[];
       };
+      update_public_appointment_notes: {
+        Args: {
+          p_appointment_id: string;
+          p_notes: string;
+        };
+        Returns: undefined;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

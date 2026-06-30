@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { createStoragePath, getStoragePathFromPublicUrl } from "@/services/storage.service";
 
 type WorkingHour = {
   id?: string;
@@ -174,14 +175,12 @@ export function Settings() {
   async function uploadLogo(file: File) {
     if (!studioId) return;
 
-    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const path = `${studioId}/${Date.now()}_${safeName}`;
+    const path = createStoragePath(studioId, file.name);
 
     if (logoUrl) {
-      const marker = "/storage/v1/object/public/logos/";
-      const [, previousPath] = logoUrl.split(marker);
+      const previousPath = getStoragePathFromPublicUrl(logoUrl, "logos");
       if (previousPath) {
-        await supabase.storage.from("logos").remove([decodeURIComponent(previousPath)]);
+        await supabase.storage.from("logos").remove([previousPath]);
       }
     }
 

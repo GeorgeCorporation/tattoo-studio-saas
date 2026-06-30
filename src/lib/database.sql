@@ -160,6 +160,24 @@ $$;
 revoke all on function public.get_booked_appointment_times(uuid, uuid, date) from public;
 grant execute on function public.get_booked_appointment_times(uuid, uuid, date) to anon, authenticated;
 
+create or replace function public.update_public_appointment_notes(
+  p_appointment_id uuid,
+  p_notes text
+)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update public.appointments
+  set notes = p_notes
+  where id = p_appointment_id
+    and created_at > now() - interval '30 minutes';
+$$;
+
+revoke all on function public.update_public_appointment_notes(uuid, text) from public;
+grant execute on function public.update_public_appointment_notes(uuid, text) to anon, authenticated;
+
 -- Row Level Security
 alter table public.studios enable row level security;
 alter table public.working_hours enable row level security;
@@ -448,8 +466,57 @@ insert into storage.buckets (id, name, public)
 values ('logos', 'logos', true)
 on conflict (id) do nothing;
 
+-- Storage ownership helpers
+create or replace function public.storage_path_part(object_name text, part_index int)
+returns text
+language sql
+stable
+security definer
+set search_path = public, storage
+as $$
+  select (storage.foldername(object_name))[part_index];
+$$;
+
+create or replace function public.user_owns_storage_studio(object_name text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, storage
+as $$
+  select exists (
+    select 1
+    from public.studios
+    where studios.id::text = public.storage_path_part(object_name, 1)
+      and studios.user_id = auth.uid()
+  );
+$$;
+
+create or replace function public.valid_public_booking_reference_path(object_name text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, storage
+as $$
+  select exists (
+    select 1
+    from public.studios
+    where studios.id::text = public.storage_path_part(object_name, 1)
+  )
+  and coalesce(public.storage_path_part(object_name, 2), '') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
+$$;
+
+revoke all on function public.storage_path_part(text, int) from public;
+revoke all on function public.user_owns_storage_studio(text) from public;
+revoke all on function public.valid_public_booking_reference_path(text) from public;
+grant execute on function public.storage_path_part(text, int) to anon, authenticated;
+grant execute on function public.user_owns_storage_studio(text) to anon, authenticated;
+grant execute on function public.valid_public_booking_reference_path(text) to anon, authenticated;
+
 drop policy if exists "Public can read booking references" on storage.objects;
 drop policy if exists "Public can upload booking references" on storage.objects;
+drop policy if exists "Authenticated can delete booking references" on storage.objects;
 
 create policy "Public can read booking references"
 on storage.objects for select
@@ -459,7 +526,18 @@ using (bucket_id = 'booking-references');
 create policy "Public can upload booking references"
 on storage.objects for insert
 to anon, authenticated
-with check (bucket_id = 'booking-references');
+with check (
+  bucket_id = 'booking-references'
+  and public.valid_public_booking_reference_path(name)
+);
+
+create policy "Authenticated can delete booking references"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'booking-references'
+  and public.user_owns_storage_studio(name)
+);
 
 drop policy if exists "Public can read artist media" on storage.objects;
 drop policy if exists "Authenticated can upload artist media" on storage.objects;
@@ -476,12 +554,18 @@ using (bucket_id in ('artists', 'gallery'));
 create policy "Authenticated can upload artist media"
 on storage.objects for insert
 to authenticated
-with check (bucket_id in ('artists', 'gallery'));
+with check (
+  bucket_id in ('artists', 'gallery')
+  and public.user_owns_storage_studio(name)
+);
 
 create policy "Authenticated can delete artist media"
 on storage.objects for delete
 to authenticated
-using (bucket_id in ('artists', 'gallery'));
+using (
+  bucket_id in ('artists', 'gallery')
+  and public.user_owns_storage_studio(name)
+);
 
 create policy "Public can read studio logos"
 on storage.objects for select
@@ -491,9 +575,15 @@ using (bucket_id = 'logos');
 create policy "Authenticated can upload studio logos"
 on storage.objects for insert
 to authenticated
-with check (bucket_id = 'logos');
+with check (
+  bucket_id = 'logos'
+  and public.user_owns_storage_studio(name)
+);
 
 create policy "Authenticated can delete studio logos"
 on storage.objects for delete
 to authenticated
-using (bucket_id = 'logos');
+using (
+  bucket_id = 'logos'
+  and public.user_owns_storage_studio(name)
+);

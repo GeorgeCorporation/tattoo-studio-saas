@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { createBookingReferencePath } from "@/services/storage.service";
 
 export type BookingService = {
   id: string;
@@ -205,9 +206,17 @@ export async function createAppointment(data: CreateAppointmentData) {
   return appointment;
 }
 
-export async function uploadReference(file: File, studioId: string) {
-  const extension = file.name.split(".").pop() ?? "jpg";
-  const path = `${studioId}/${crypto.randomUUID()}.${extension}`;
+export async function updateAppointmentNotes(appointmentId: string, notes: string) {
+  const { error } = await supabase.rpc("update_public_appointment_notes", {
+    p_appointment_id: appointmentId,
+    p_notes: notes,
+  });
+
+  if (error) throw error;
+}
+
+export async function uploadReference(file: File, studioId: string, appointmentId: string) {
+  const path = createBookingReferencePath(studioId, appointmentId, file.name);
 
   const { error } = await supabase.storage.from("booking-references").upload(path, file, {
     cacheControl: "3600",
@@ -220,6 +229,6 @@ export async function uploadReference(file: File, studioId: string) {
   return data.publicUrl;
 }
 
-export async function uploadReferencePhotos(studioId: string, files: File[]) {
-  return Promise.all(files.slice(0, 3).map((file) => uploadReference(file, studioId)));
+export async function uploadReferencePhotos(studioId: string, appointmentId: string, files: File[]) {
+  return Promise.all(files.slice(0, 3).map((file) => uploadReference(file, studioId, appointmentId)));
 }

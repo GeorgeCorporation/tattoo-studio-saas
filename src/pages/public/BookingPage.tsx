@@ -14,6 +14,7 @@ import {
   getAvailableTimeSlots,
   getMinimumBookingDate,
   getServicesByStudio,
+  updateAppointmentNotes,
   uploadReferencePhotos,
   type BookingService,
 } from "@/services/booking.service";
@@ -207,20 +208,15 @@ export function BookingPage() {
     try {
       setSubmitting(true);
 
-      const referenceUrls = referenceFiles.length
-        ? await uploadReferencePhotos(studio.id, referenceFiles)
-        : [];
-
       const client = await createClient({
         studioId: studio.id,
         name: clientName,
         phone: whatsapp,
         email,
         instagram,
-        notes: referenceUrls.length ? `Referencias: ${referenceUrls.join(", ")}` : undefined,
       });
 
-      await createAppointment({
+      const appointment = await createAppointment({
         studioId: studio.id,
         artistId: selectedArtist.id,
         clientId: client.id,
@@ -228,8 +224,12 @@ export function BookingPage() {
         date,
         time,
         description,
-        notes: referenceUrls.length ? `Referencias: ${referenceUrls.join(", ")}` : undefined,
       });
+
+      if (referenceFiles.length) {
+        const referenceUrls = await uploadReferencePhotos(studio.id, appointment.id, referenceFiles);
+        await updateAppointmentNotes(appointment.id, `Referencias: ${referenceUrls.join(", ")}`);
+      }
 
       setStep(3);
     } catch (caughtError) {
