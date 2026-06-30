@@ -76,8 +76,25 @@ Obrigatorias:
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
+- `SUPABASE_PROJECT_ID` para gerar tipos via CLI
 
 Essas chaves sao publicas do frontend. Nunca adicionar service role key no projeto.
+
+## Tipos Supabase
+
+Tipos do banco ficam em `src/types/database.types.ts`.
+
+Depois de rodar SQL novo no Supabase, atualize tipos:
+
+```bash
+npx supabase login
+npm run db:types
+npm run typecheck
+```
+
+O script `npm run db:types` usa `SUPABASE_PROJECT_ID`. Se essa variavel nao existir, tenta extrair o project id de `VITE_SUPABASE_URL`.
+
+Nunca gere tipos usando service role key no frontend.
 
 ## Seguranca Supabase
 
@@ -106,6 +123,5 @@ Sempre que `src/lib/database.sql` mudar, rode o SQL atualizado no Supabase antes
 
 ## Proximos Reforcos Recomendados
 
-- Gerar tipos do Supabase automaticamente via CLI quando houver token de acesso.
 - Adicionar testes de integracao para onboarding e agendamento com mocks do Supabase.
 - Configurar branch protection no GitHub exigindo CI verde antes de merge.
