@@ -1,7 +1,17 @@
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { getFriendlyAuthErrorMessage, getFriendlyErrorMessage } from "@/lib/errors";
 import { supabase } from "@/lib/supabase";
+
+function withTimeout<T>(promise: PromiseLike<T>, ms: number, message: string) {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      window.setTimeout(() => reject(new Error(message)), ms);
+    }),
+  ]);
+}
 
 export function Login() {
   const navigate = useNavigate();
@@ -16,28 +26,35 @@ export function Login() {
     setError("");
     setLoading(true);
 
-    const { data, error: signInError } = await signIn({ email, password });
+    try {
+      const { data, error: signInError } = await signIn({ email, password });
 
-    if (signInError || !data.user) {
-      setError(signInError?.message ?? "Não foi possível entrar.");
+      if (signInError || !data.user) {
+        setError(getFriendlyAuthErrorMessage(signInError, "Não foi possível entrar."));
+        return;
+      }
+
+      const { data: studios, error: studioError } = await withTimeout(
+        supabase
+          .from("studios")
+          .select("id")
+          .eq("user_id", data.user.id)
+          .limit(1),
+        8000,
+        "Tempo limite ao verificar estúdio.",
+      );
+
+      if (studioError || !studios?.length) {
+        navigate("/onboarding", { replace: true });
+        return;
+      }
+
+      navigate("/dashboard", { replace: true });
+    } catch (caughtError) {
+      setError(getFriendlyErrorMessage(caughtError, "Não foi possível verificar sua conta agora."));
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const { data: studios, error: studioError } = await supabase
-      .from("studios")
-      .select("id")
-      .eq("user_id", data.user.id)
-      .limit(1);
-
-    setLoading(false);
-
-    if (studioError || !studios?.length) {
-      navigate("/onboarding", { replace: true });
-      return;
-    }
-
-    navigate("/dashboard", { replace: true });
   }
 
   return (
@@ -52,24 +69,24 @@ export function Login() {
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-zinc-200">Email</span>
             <input
+              autoComplete="email"
               className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3 text-white outline-none transition focus:border-[#E8650A] focus:ring-2 focus:ring-[#E8650A]/30"
+              onChange={(event) => setEmail(event.target.value)}
+              required
               type="email"
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              autoComplete="email"
-              required
             />
           </label>
 
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-zinc-200">Senha</span>
             <input
+              autoComplete="current-password"
               className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3 text-white outline-none transition focus:border-[#E8650A] focus:ring-2 focus:ring-[#E8650A]/30"
+              onChange={(event) => setPassword(event.target.value)}
+              required
               type="password"
               value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              autoComplete="current-password"
-              required
             />
           </label>
 
@@ -77,8 +94,8 @@ export function Login() {
 
           <button
             className="w-full rounded-xl bg-[#E8650A] px-4 py-3 font-semibold text-white transition hover:bg-[#ff781c] disabled:cursor-not-allowed disabled:opacity-70"
-            type="submit"
             disabled={loading}
+            type="submit"
           >
             {loading ? "Entrando..." : "Entrar"}
           </button>

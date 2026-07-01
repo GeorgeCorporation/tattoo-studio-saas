@@ -109,6 +109,7 @@ export function OnboardingPage() {
   const [startingPrice, setStartingPrice] = useState("");
   const [durationMinutes, setDurationMinutes] = useState("120");
   const [checkingStudio, setCheckingStudio] = useState(true);
+  const [startupWaitExpired, setStartupWaitExpired] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingLabel, setSavingLabel] = useState("Finalizando configuração...");
   const [error, setError] = useState("");
@@ -164,6 +165,25 @@ export function OnboardingPage() {
       isMounted = false;
     };
   }, [authLoading, navigate, user]);
+
+  useEffect(() => {
+    if (!authLoading && !checkingStudio) {
+      setStartupWaitExpired(false);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setStartupWaitExpired(true);
+      if (checkingStudio) {
+        setCheckingStudio(false);
+        setError(
+          "Supabase demorou para responder. Você pode continuar configurando o estúdio, mas se algo falhar, recarregue e tente novamente.",
+        );
+      }
+    }, 9000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [authLoading, checkingStudio]);
 
   function handleNameChange(value: string) {
     setName(value);
@@ -266,10 +286,31 @@ export function OnboardingPage() {
     }
   }
 
-  if (authLoading || checkingStudio) {
+  if ((authLoading || checkingStudio) && !startupWaitExpired) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#0f0f0f] px-4 text-sm text-zinc-300">
-        <span className="rounded-xl border border-white/10 bg-[#1a1a1a] px-5 py-4">Preparando seu estúdio...</span>
+        <span className="rounded-xl border border-white/10 bg-[#1a1a1a] px-5 py-4">Verificando sessão e estúdio...</span>
+      </main>
+    );
+  }
+
+  if (authLoading && startupWaitExpired) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#0f0f0f] px-4 text-white">
+        <section className="w-full max-w-md rounded-2xl border border-white/10 bg-[#1a1a1a] p-6 text-center shadow-2xl shadow-black/30">
+          <h1 className="text-2xl font-semibold">Supabase demorou para responder</h1>
+          <p className="mt-3 text-sm text-zinc-400">
+            Pode ser instabilidade temporária. Recarregue a página ou entre novamente para continuar.
+          </p>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <button className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold" onClick={() => window.location.reload()} type="button">
+              Recarregar
+            </button>
+            <button className="rounded-xl border border-white/10 px-4 py-3 font-semibold" onClick={() => navigate("/login", { replace: true })} type="button">
+              Ir para login
+            </button>
+          </div>
+        </section>
       </main>
     );
   }

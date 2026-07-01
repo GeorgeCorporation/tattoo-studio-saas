@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { getFriendlyAuthErrorMessage } from "@/lib/errors";
 
 export function Register() {
   const navigate = useNavigate();
@@ -22,13 +23,11 @@ export function Register() {
     }
 
     setLoading(true);
-
     const { error: signUpError } = await signUp({ fullName, email, password });
-
     setLoading(false);
 
     if (signUpError) {
-      setError(signUpError.message);
+      setError(getFriendlyAuthErrorMessage(signUpError, "Não foi possível criar sua conta."));
       return;
     }
 
@@ -47,50 +46,50 @@ export function Register() {
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-zinc-200">Nome completo</span>
             <input
+              autoComplete="name"
               className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3 text-white outline-none transition focus:border-[#E8650A] focus:ring-2 focus:ring-[#E8650A]/30"
+              onChange={(event) => setFullName(event.target.value)}
+              required
               type="text"
               value={fullName}
-              onChange={(event) => setFullName(event.target.value)}
-              autoComplete="name"
-              required
             />
           </label>
 
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-zinc-200">Email</span>
             <input
+              autoComplete="email"
               className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3 text-white outline-none transition focus:border-[#E8650A] focus:ring-2 focus:ring-[#E8650A]/30"
+              onChange={(event) => setEmail(event.target.value)}
+              required
               type="email"
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              autoComplete="email"
-              required
             />
           </label>
 
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-zinc-200">Senha</span>
             <input
+              autoComplete="new-password"
               className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3 text-white outline-none transition focus:border-[#E8650A] focus:ring-2 focus:ring-[#E8650A]/30"
+              minLength={6}
+              onChange={(event) => setPassword(event.target.value)}
+              required
               type="password"
               value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              autoComplete="new-password"
-              minLength={6}
-              required
             />
           </label>
 
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-zinc-200">Confirmar senha</span>
             <input
+              autoComplete="new-password"
               className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3 text-white outline-none transition focus:border-[#E8650A] focus:ring-2 focus:ring-[#E8650A]/30"
+              minLength={6}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              required
               type="password"
               value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              autoComplete="new-password"
-              minLength={6}
-              required
             />
           </label>
 
@@ -98,8 +97,8 @@ export function Register() {
 
           <button
             className="w-full rounded-xl bg-[#E8650A] px-4 py-3 font-semibold text-white transition hover:bg-[#ff781c] disabled:cursor-not-allowed disabled:opacity-70"
-            type="submit"
             disabled={loading}
+            type="submit"
           >
             {loading ? "Criando..." : "Criar conta grátis"}
           </button>

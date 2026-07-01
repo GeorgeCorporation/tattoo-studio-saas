@@ -14,6 +14,38 @@ function isErrorLike(error: unknown): error is ErrorLike {
   return Boolean(error && typeof error === "object");
 }
 
+export function getFriendlyAuthErrorMessage(error: unknown, fallback = "Não foi possível concluir a autenticação.") {
+  if (!isErrorLike(error)) return fallback;
+
+  const message = error.message?.toLowerCase() ?? "";
+
+  if (message.includes("user already registered") || message.includes("already registered")) {
+    return "Este email já está cadastrado. Clique em Entrar para acessar sua conta.";
+  }
+
+  if (message.includes("invalid login credentials")) {
+    return "Email ou senha incorretos. Confira os dados e tente novamente.";
+  }
+
+  if (message.includes("email not confirmed")) {
+    return "Email ainda não confirmado. Abra seu email e clique no link de confirmação.";
+  }
+
+  if (message.includes("email rate limit exceeded") || message.includes("rate limit")) {
+    return "Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente novamente.";
+  }
+
+  if (message.includes("password") && message.includes("weak")) {
+    return "Senha fraca. Use pelo menos 6 caracteres e evite senhas muito simples.";
+  }
+
+  if (message.includes("signup disabled")) {
+    return "Cadastro temporariamente indisponível. Tente novamente mais tarde.";
+  }
+
+  return getFriendlyErrorMessage(error, fallback);
+}
+
 export function getFriendlyErrorMessage(error: unknown, fallback = "Não foi possível concluir a ação.") {
   if (!isErrorLike(error)) return fallback;
 
@@ -26,6 +58,10 @@ export function getFriendlyErrorMessage(error: unknown, fallback = "Não foi pos
   if (error.status === 404) return "Registro não encontrado.";
 
   const message = error.message?.toLowerCase() ?? "";
+
+  if (message.includes("tempo limite")) {
+    return "Supabase demorou para responder. Pode ser instabilidade temporária. Recarregue ou tente novamente em alguns minutos.";
+  }
 
   if (message.includes("failed to fetch") || message.includes("network")) {
     return "Falha de conexão. Verifique sua internet e tente novamente.";
