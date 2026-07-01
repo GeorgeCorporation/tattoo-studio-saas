@@ -71,6 +71,15 @@ function useFilePreview(file: File | null) {
   return preview;
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string) {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      window.setTimeout(() => reject(new Error(message)), ms);
+    }),
+  ]);
+}
+
 export function OnboardingPage() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -134,7 +143,7 @@ export function OnboardingPage() {
       }
 
       try {
-        const studio = await getUserStudio(user.id);
+        const studio = await withTimeout(getUserStudio(user.id), 8000, "Tempo limite ao verificar estúdio.");
         if (studio && isMounted) {
           navigate("/dashboard", { replace: true });
           return;

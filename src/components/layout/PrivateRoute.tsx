@@ -9,6 +9,15 @@ type PrivateRouteProps = {
   requireStudio?: boolean;
 };
 
+function withTimeout<T>(promise: PromiseLike<T>, ms: number, message: string) {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      window.setTimeout(() => reject(new Error(message)), ms);
+    }),
+  ]);
+}
+
 export function PrivateRoute({ requireStudio = true }: PrivateRouteProps) {
   const location = useLocation();
   const { user, loading } = useAuth();
@@ -29,24 +38,35 @@ export function PrivateRoute({ requireStudio = true }: PrivateRouteProps) {
       setCheckingStudio(true);
       setRouteError("");
 
-      const { data, error } = await supabase
-        .from("studios")
-        .select("id")
-        .eq("user_id", userId)
-        .limit(1);
+      try {
+        const { data, error } = await withTimeout(
+          supabase
+            .from("studios")
+            .select("id")
+            .eq("user_id", userId)
+            .limit(1),
+          8000,
+          "Tempo limite ao verificar estúdio.",
+        );
 
-      if (!isMounted) return;
+        if (!isMounted) return;
 
-      if (error) {
-        logger.error("Falha ao verificar estúdio na rota privada", error, { userId });
-        setRouteError(getFriendlyErrorMessage(error, "Não foi possível verificar seu estúdio."));
+        if (error) {
+          logger.error("Falha ao verificar estúdio na rota privada", error, { userId });
+          setRouteError(getFriendlyErrorMessage(error, "Não foi possível verificar seu estúdio."));
+          setHasStudio(false);
+          return;
+        }
+
+        setHasStudio(Boolean(data?.length));
+      } catch (caughtError) {
+        if (!isMounted) return;
+        logger.error("Falha ao verificar estúdio na rota privada", caughtError, { userId });
+        setRouteError(getFriendlyErrorMessage(caughtError, "Não foi possível verificar seu estúdio."));
         setHasStudio(false);
-        setCheckingStudio(false);
-        return;
+      } finally {
+        if (isMounted) setCheckingStudio(false);
       }
-
-      setHasStudio(Boolean(data?.length));
-      setCheckingStudio(false);
     }
 
     checkStudio();
@@ -83,11 +103,11 @@ export function PrivateRoute({ requireStudio = true }: PrivateRouteProps) {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    return <Navigate replace state={{ from: location }} to="/login" />;
   }
 
   if (requireStudio && !hasStudio) {
-    return <Navigate to="/onboarding" replace />;
+    return <Navigate replace to="/onboarding" />;
   }
 
   return <Outlet />;

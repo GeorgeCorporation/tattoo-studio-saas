@@ -18,14 +18,31 @@ export function useAuth() {
 
   useEffect(() => {
     let isMounted = true;
-
-    supabase.auth.getSession().then(({ data }) => {
+    const timeout = window.setTimeout(() => {
       if (!isMounted) return;
-
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
+      setSession(null);
+      setUser(null);
       setLoading(false);
-    });
+    }, 7000);
+
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (!isMounted) return;
+
+        window.clearTimeout(timeout);
+        setSession(data.session);
+        setUser(data.session?.user ?? null);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+
+        window.clearTimeout(timeout);
+        setSession(null);
+        setUser(null);
+        setLoading(false);
+      });
 
     const {
       data: { subscription },
@@ -37,6 +54,7 @@ export function useAuth() {
 
     return () => {
       isMounted = false;
+      window.clearTimeout(timeout);
       subscription.unsubscribe();
     };
   }, []);
