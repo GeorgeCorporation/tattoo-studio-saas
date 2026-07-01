@@ -27,7 +27,7 @@ function NotFound() {
     <main className="flex min-h-screen items-center justify-center bg-[#0f0f0f] px-4 text-white">
       <section className="max-w-md text-center">
         <p className="text-3xl font-semibold">404</p>
-        <p className="mt-3 text-zinc-400">Estudio nao encontrado.</p>
+        <p className="mt-3 text-zinc-400">Estúdio não encontrado.</p>
         <Link className="mt-6 inline-flex rounded-xl bg-[#E8650A] px-5 py-3 font-semibold" to="/">
           Voltar
         </Link>
@@ -67,7 +67,7 @@ export function StudioPage() {
         setArtists(foundArtists);
         setGallery(foundGallery);
       } catch (caughtError) {
-        logger.error("Falha ao carregar pagina publica do estudio", caughtError, { slug: studioSlug });
+        logger.error("Falha ao carregar página pública do estúdio", caughtError, { slug: studioSlug });
         setNotFound(true);
       } finally {
         setLoading(false);
@@ -151,7 +151,7 @@ export function StudioPage() {
                   </div>
                   <div>
                     <p className="font-semibold">{artist.name}</p>
-                    <p className="mt-1 text-sm text-zinc-400">{artist.specialty ?? "Tattoo artist"}</p>
+                    <p className="mt-1 text-sm text-zinc-400">{artist.specialty ?? "Tatuador"}</p>
                   </div>
                 </div>
               </Link>
@@ -174,8 +174,8 @@ export function StudioPage() {
         </section>
 
         <section className="rounded-xl border border-white/10 bg-[#1a1a1a] p-5">
-          <h2 className="text-xl font-semibold">Localizacao</h2>
-          <p className="mt-2 text-zinc-300">{address || "Endereco ainda nao informado."}</p>
+          <h2 className="text-xl font-semibold">Localização</h2>
+          <p className="mt-2 text-zinc-300">{address || "Endereço ainda não informado."}</p>
           {whatsApp ? (
             <a className="mt-5 inline-flex rounded-xl border border-white/10 px-5 py-3 font-semibold" href={whatsApp}>
               WhatsApp

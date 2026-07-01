@@ -29,7 +29,7 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
           <section className="max-w-md rounded-xl border border-white/10 bg-[#1a1a1a] p-6 text-center">
             <p className="text-2xl font-semibold">Algo saiu do esperado</p>
             <p className="mt-3 text-sm leading-6 text-zinc-400">
-              Recarregue a pagina. Se continuar, tente sair e entrar novamente.
+              Recarregue a página. Se continuar, tente sair e entrar novamente.
             </p>
             <button
               className="mt-6 rounded-xl bg-[#E8650A] px-5 py-3 font-semibold"

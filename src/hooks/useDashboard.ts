@@ -70,7 +70,7 @@ export function useDashboard() {
       setSetupStatus(setup);
     } catch (caughtError) {
       logger.error("Falha ao carregar dashboard", caughtError);
-      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel carregar o dashboard."));
+      setError(getFriendlyErrorMessage(caughtError, "Não foi possível carregar o dashboard."));
     } finally {
       setLoading(false);
     }

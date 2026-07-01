@@ -82,7 +82,7 @@ export function NewAppointmentModal({
       onCreated();
       onClose();
     } catch {
-      setError("Nao foi possivel criar agendamento.");
+      setError("Não foi possível criar agendamento.");
     } finally {
       setSaving(false);
     }
@@ -96,7 +96,7 @@ export function NewAppointmentModal({
         <header className="flex items-center justify-between border-b border-white/10 p-5">
           <div>
             <h2 className="text-xl font-semibold">Novo agendamento</h2>
-            <p className="mt-1 text-sm text-zinc-400">Crie um horario manualmente.</p>
+            <p className="mt-1 text-sm text-zinc-400">Crie um horário manualmente.</p>
           </div>
           <button className="rounded-lg p-2 hover:bg-white/5" onClick={onClose} type="button">
             <X size={20} />
@@ -137,7 +137,7 @@ export function NewAppointmentModal({
           </div>
 
           <label>
-            <span className="mb-2 block text-sm font-medium">Servico</span>
+            <span className="mb-2 block text-sm font-medium">Serviço</span>
             <select
               className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
               value={serviceId}
@@ -162,7 +162,7 @@ export function NewAppointmentModal({
               />
             </label>
             <label>
-              <span className="mb-2 block text-sm font-medium">Horario</span>
+              <span className="mb-2 block text-sm font-medium">Horário</span>
               <select
                 className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
                 value={time}
@@ -178,7 +178,7 @@ export function NewAppointmentModal({
           </div>
 
           <label>
-            <span className="mb-2 block text-sm font-medium">Descricao</span>
+            <span className="mb-2 block text-sm font-medium">Descrição</span>
             <textarea
               className="min-h-28 w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
               value={description}

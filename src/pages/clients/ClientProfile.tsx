@@ -52,7 +52,7 @@ export function ClientProfile() {
       setClient(foundClient);
       setAppointments(foundAppointments);
     } catch {
-      setError("Nao foi possivel carregar cliente.");
+      setError("Não foi possível carregar cliente.");
     } finally {
       setLoading(false);
     }
@@ -84,7 +84,7 @@ export function ClientProfile() {
   if (!client) {
     return (
       <section className="rounded-xl border border-white/10 bg-[#1a1a1a] p-8 text-center">
-        <p className="text-lg font-semibold">Cliente nao encontrado.</p>
+        <p className="text-lg font-semibold">Cliente não encontrado.</p>
         <button className="mt-4 rounded-xl bg-[#E8650A] px-4 py-3 font-semibold" onClick={() => navigate("/clientes")}>
           Voltar
         </button>
@@ -155,7 +155,7 @@ export function ClientProfile() {
                     {appointment.date} as {appointment.time.slice(0, 5)}
                   </p>
                   <p className="mt-1 text-sm text-zinc-400">
-                    {appointment.services?.name ?? "Servico"} com {appointment.tattoo_artists?.name ?? "Tatuador"}
+                    {appointment.services?.name ?? "Serviço"} com {appointment.tattoo_artists?.name ?? "Tatuador"}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2 text-sm">

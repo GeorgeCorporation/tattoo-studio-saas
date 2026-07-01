@@ -14,36 +14,38 @@ import {
   Zap,
 } from "lucide-react";
 import { useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const problemCards = [
-  { icon: CalendarX, title: "Agenda baguncada", text: "Horarios perdidos, mensagens espalhadas e encaixes que viram dor de cabeca." },
-  { icon: UserX, title: "Clientes que somem", text: "Sem processo claro, muita gente pede e desaparece antes de fechar." },
-  { icon: DollarSign, title: "Financeiro no escuro", text: "Sinal, final, caixa e cancelamentos ficam sem controle real." },
-  { icon: Globe, title: "Sem presenca profissional", text: "O estudio fica dependente de perfil social e sem pagina propria." },
-  { icon: MessageCircle, title: "WhatsApp sobrecarregado", text: "Tudo cai no mesmo numero e responder vira um caos." },
-  { icon: Users, title: "Tatuadores desorganizados", text: "Cada artista resolve do seu jeito e o estudio perde padrao." },
+  { icon: CalendarX, title: "Agenda bagunçada", text: "Horários perdidos, mensagens espalhadas e encaixes que viram dor de cabeça." },
+  { icon: UserX, title: "Clientes que somem", text: "Sem processo claro, muita gente pede orçamento e desaparece antes de fechar." },
+  { icon: DollarSign, title: "Financeiro no escuro", text: "Sinal, pagamento final, caixa e cancelamentos ficam sem controle real." },
+  { icon: Globe, title: "Sem presença profissional", text: "O estúdio fica dependente de perfil social e sem página própria para vender melhor." },
+  { icon: MessageCircle, title: "WhatsApp sobrecarregado", text: "Tudo cai no mesmo número e responder cada pedido vira um caos." },
+  { icon: Users, title: "Tatuadores desorganizados", text: "Cada artista resolve do seu jeito e o estúdio perde padrão." },
 ];
 
 const steps = [
-  { icon: UserPlus, number: "01", title: "Crie sua conta gratis", text: "Entre em poucos minutos e comece sem complicacao." },
-  { icon: Settings, number: "02", title: "Configure seu estudio", text: "Ajuste servicos, artistas, horarios e sua pagina publica." },
-  { icon: Share2, number: "03", title: "Compartilhe seu link", text: "Receba pedidos com uma presenca profissional de verdade." },
+  { icon: UserPlus, number: "01", title: "Crie sua conta grátis", text: "Entre em poucos minutos e comece sem complicação." },
+  { icon: Settings, number: "02", title: "Configure seu estúdio", text: "Ajuste serviços, artistas, horários e sua página pública." },
+  { icon: Share2, number: "03", title: "Compartilhe seu link", text: "Receba pedidos com uma presença profissional de verdade." },
 ];
 
 const features = [
-  { icon: Calendar, title: "Agenda inteligente", text: "Centralize horarios, status e proximos atendimentos.", wide: true },
-  { icon: Globe, title: "Pagina publica", text: "Seu estudio com cara profissional, pronto para divulgar.", wide: false },
-  { icon: Users, title: "Gestao de tatuadores", text: "Cada artista com perfil, galeria e link proprio.", wide: false },
+  { icon: Calendar, title: "Agenda inteligente", text: "Centralize horários, status e próximos atendimentos.", wide: true },
+  { icon: Globe, title: "Página pública", text: "Seu estúdio com cara profissional, pronto para divulgar.", wide: false },
+  { icon: Users, title: "Gestão de tatuadores", text: "Cada artista com perfil, galeria e link próprio.", wide: false },
   { icon: DollarSign, title: "Controle financeiro", text: "Entradas, sinais e pagamentos finais no mesmo painel.", wide: true },
-  { icon: Image, title: "Galeria de fotos", text: "Exiba trabalhos do estudio e do artista com organizacao.", wide: false },
+  { icon: Image, title: "Galeria de fotos", text: "Exiba trabalhos do estúdio e do artista com organização.", wide: false },
 ];
 
 const testimonials = [
-  { name: "Carlos Silva", city: "Sao Paulo/SP", text: "Antes eu perdia cliente no WhatsApp. Agora tudo ficou muito mais claro e profissional." },
-  { name: "Ana Rodrigues", city: "Recife/PE", text: "Consegui organizar meu estudio e mostrar melhor o trabalho de cada tatuador." },
-  { name: "Roberto Costa", city: "Belo Horizonte/MG", text: "O sistema deixou o atendimento rapido e a agenda bem mais confiavel." },
+  { name: "Carlos Silva", city: "São Paulo/SP", text: "Antes eu perdia cliente no WhatsApp. Agora tudo ficou muito mais claro e profissional." },
+  { name: "Ana Rodrigues", city: "Recife/PE", text: "Consegui organizar meu estúdio e mostrar melhor o trabalho de cada tatuador." },
+  { name: "Roberto Costa", city: "Belo Horizonte/MG", text: "O sistema deixou o atendimento rápido e a agenda bem mais confiável." },
 ];
+
+const glassClass = "rounded-2xl border border-white/10 bg-[rgba(255,255,255,0.03)] backdrop-blur-[12px]";
 
 function AuroraBackground() {
   return (
@@ -64,45 +66,37 @@ function FadeSection({ children, className = "", id }: { children: React.ReactNo
 }
 
 export default function LandingPage() {
+  const navigate = useNavigate();
+
   useEffect(() => {
     const style = document.createElement("style");
     style.innerHTML = `
-      .fade-in-up {
-        opacity: 0;
-        transform: translateY(20px);
-        transition: opacity 0.6s ease, transform 0.6s ease;
-      }
-      .fade-in-up.visible {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      .fade-in-up { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
+      .fade-in-up.visible { opacity: 1; transform: translateY(0); }
     `;
     document.head.appendChild(style);
 
     const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("visible");
-          }
-        });
-      },
+      (entries) => entries.forEach((entry) => entry.isIntersecting && entry.target.classList.add("visible")),
       { threshold: 0.18 },
     );
 
     document.querySelectorAll("[data-animate]").forEach((element) => observer.observe(element));
-
     return () => {
       observer.disconnect();
       style.remove();
     };
   }, []);
 
+  function goHome() {
+    navigate("/", { replace: false });
+    window.history.replaceState(null, "", "/");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function scrollToHowItWorks() {
     document.getElementById("como-funciona")?.scrollIntoView({ behavior: "smooth" });
   }
-
-  const glassClass = "border border-white/10 bg-[rgba(255,255,255,0.03)] backdrop-blur-[12px] rounded-2xl";
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#0a0a0a] text-white">
@@ -110,15 +104,15 @@ export default function LandingPage() {
 
       <header className="fixed inset-x-0 top-0 z-20 border-b border-[#1f1f1f] bg-[#0a0a0a]/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
-          <Link className="flex items-center gap-2 text-lg font-semibold" to="/">
+          <button className="flex items-center gap-2 text-lg font-semibold" onClick={goHome} type="button">
             <Zap className="text-[#E8650A]" size={22} />
             <span>Ideal Tattoo</span>
-          </Link>
+          </button>
 
           <nav className="hidden items-center gap-8 text-sm text-[#A0A0A0] md:flex">
-            <a href="#como-funciona">Como funciona</a>
-            <a href="#funcionalidades">Funcionalidades</a>
-            <a href="#planos">Planos</a>
+            <a className="hover:text-white" href="#como-funciona">Como funciona</a>
+            <a className="hover:text-white" href="#funcionalidades">Funcionalidades</a>
+            <a className="hover:text-white" href="#planos">Planos</a>
           </nav>
 
           <div className="hidden items-center gap-3 md:flex">
@@ -126,7 +120,7 @@ export default function LandingPage() {
               Entrar
             </Link>
             <Link className="rounded-xl bg-[#E8650A] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#FF7A1A]" to="/cadastro">
-              Comecar gratis
+              Começar grátis
             </Link>
           </div>
         </div>
@@ -137,32 +131,24 @@ export default function LandingPage() {
           <div className="mx-auto grid max-w-7xl gap-14 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
             <div>
               <div className="inline-flex rounded-full bg-[#E8650A]/15 px-4 py-2 text-sm font-medium text-[#FF9A3C]">
-                ✦ Feito para estudios de tatuagem
+                ✦ Feito para estúdios de tatuagem
               </div>
 
               <h1 className="mt-6 text-[40px] font-bold leading-[1.02] tracking-tight md:text-[72px]">
-                <span className="block">Seu estudio.</span>
-                <span
-                  className="block"
-                  style={{
-                    background: "linear-gradient(135deg, #E8650A, #FF9A3C)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                  }}
-                >
+                <span className="block">Seu estúdio.</span>
+                <span className="block" style={{ background: "linear-gradient(135deg, #E8650A, #FF9A3C)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                   Profissional.
                 </span>
                 <span className="block">Do jeito que merece.</span>
               </h1>
 
               <p className="mt-6 max-w-[560px] text-base leading-7 text-[#A0A0A0] md:text-lg">
-                Pare de perder cliente por desorganizacao. Tenha sua agenda, pagina profissional e controle financeiro
-                - tudo num so lugar. De graca.
+                Pare de perder cliente por desorganização. Tenha sua agenda, página profissional e controle financeiro — tudo num só lugar. De graça.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link className="rounded-xl bg-[#E8650A] px-6 py-4 text-center font-semibold text-white transition hover:bg-[#FF7A1A]" to="/cadastro">
-                  Comecar agora, e gratis
+                  Começar agora, é grátis
                 </Link>
                 <button className="rounded-xl border border-white/10 px-6 py-4 font-semibold text-white hover:border-[#E8650A]" onClick={scrollToHowItWorks} type="button">
                   Ver como funciona
@@ -172,7 +158,7 @@ export default function LandingPage() {
 
             <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
               {[
-                ["0", "reais para comecar"],
+                ["0", "reais para começar"],
                 ["5", "minutos para configurar"],
                 ["100%", "feito para tatuadores"],
               ].map(([value, label]) => (
@@ -187,7 +173,7 @@ export default function LandingPage() {
 
         <FadeSection className="px-4 py-24 sm:px-6">
           <div className="mx-auto max-w-7xl">
-            <h2 className="max-w-2xl text-3xl font-semibold md:text-5xl">Voce se identifica com algum desses problemas?</h2>
+            <h2 className="max-w-2xl text-3xl font-semibold md:text-5xl">Você se identifica com algum desses problemas?</h2>
             <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {problemCards.map((card) => {
                 const Icon = card.icon;
@@ -207,14 +193,14 @@ export default function LandingPage() {
           <div className="mx-auto max-w-7xl">
             <h2 className="text-3xl font-semibold md:text-5xl">Simples assim. Em 3 passos.</h2>
             <div className="mt-10 grid gap-4 lg:grid-cols-3">
-              {steps.map((step) => {
-                const Icon = step.icon;
+              {steps.map((item) => {
+                const Icon = item.icon;
                 return (
-                  <article className={`${glassClass} p-6`} key={step.number}>
-                    <p className="text-5xl font-bold text-[#E8650A]">{step.number}</p>
+                  <article className={`${glassClass} p-6`} key={item.number}>
+                    <p className="text-5xl font-bold text-[#E8650A]">{item.number}</p>
                     <Icon className="mt-6 text-[#E8650A]" size={28} />
-                    <h3 className="mt-4 text-xl font-semibold">{step.title}</h3>
-                    <p className="mt-3 text-sm leading-6 text-[#A0A0A0]">{step.text}</p>
+                    <h3 className="mt-4 text-xl font-semibold">{item.title}</h3>
+                    <p className="mt-3 text-sm leading-6 text-[#A0A0A0]">{item.text}</p>
                   </article>
                 );
               })}
@@ -224,7 +210,7 @@ export default function LandingPage() {
 
         <FadeSection className="px-4 py-24 sm:px-6" id="funcionalidades">
           <div className="mx-auto max-w-7xl">
-            <h2 className="text-3xl font-semibold md:text-5xl">Tudo que seu estudio precisa</h2>
+            <h2 className="text-3xl font-semibold md:text-5xl">Tudo que seu estúdio precisa</h2>
             <div className="mt-10 grid gap-4 lg:grid-cols-3">
               {features.map((feature) => {
                 const Icon = feature.icon;
@@ -242,7 +228,7 @@ export default function LandingPage() {
 
         <FadeSection className="px-4 py-24 sm:px-6">
           <div className="mx-auto max-w-7xl">
-            <h2 className="text-3xl font-semibold md:text-5xl">O que os estudios estao dizendo</h2>
+            <h2 className="text-3xl font-semibold md:text-5xl">O que os estúdios estão dizendo</h2>
             <div className="mt-10 grid gap-4 lg:grid-cols-3">
               {testimonials.map((item) => (
                 <article className={`${glassClass} p-6`} key={item.name}>
@@ -250,11 +236,7 @@ export default function LandingPage() {
                   <p className="mt-4 text-sm leading-7 text-[#A0A0A0]">{item.text}</p>
                   <div className="mt-6 flex items-center gap-3">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#E8650A] font-semibold">
-                      {item.name
-                        .split(" ")
-                        .slice(0, 2)
-                        .map((part) => part[0])
-                        .join("")}
+                      {item.name.split(" ").slice(0, 2).map((part) => part[0]).join("")}
                     </div>
                     <div>
                       <p className="font-semibold">{item.name}</p>
@@ -276,15 +258,7 @@ export default function LandingPage() {
               </div>
               <p className="mt-6 text-6xl font-bold text-white">R$ 0</p>
               <div className="mx-auto mt-8 grid max-w-2xl gap-3 text-left sm:grid-cols-2">
-                {[
-                  "Pagina publica",
-                  "Links por tatuador",
-                  "Agenda",
-                  "Clientes",
-                  "Financeiro",
-                  "Galeria",
-                  "Suporte WhatsApp",
-                ].map((item) => (
+                {["Página pública", "Links por tatuador", "Agenda", "Clientes", "Financeiro", "Galeria", "Suporte WhatsApp"].map((item) => (
                   <div className="flex items-center gap-3" key={item}>
                     <Check className="text-[#E8650A]" size={18} />
                     <span className="text-sm text-[#EDEDED]">{item}</span>
@@ -292,7 +266,7 @@ export default function LandingPage() {
                 ))}
               </div>
               <Link className="mt-8 inline-flex w-full items-center justify-center rounded-xl bg-[#E8650A] px-6 py-4 font-semibold text-white transition hover:bg-[#FF7A1A]" to="/cadastro">
-                Criar minha conta gratis
+                Criar minha conta grátis
               </Link>
             </div>
           </div>
@@ -302,24 +276,24 @@ export default function LandingPage() {
           <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[28px] border border-[#1f1f1f] bg-[#111111] p-8 text-center md:p-14">
             <AuroraBackground />
             <div className="relative z-10">
-              <h2 className="text-3xl font-semibold md:text-5xl">Seu estudio profissional comeca agora.</h2>
+              <h2 className="text-3xl font-semibold md:text-5xl">Seu estúdio profissional começa agora.</h2>
               <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-[#A0A0A0]">
-                Organize atendimento, artistas, agenda e financeiro em um unico lugar.
+                Organize atendimento, artistas, agenda e financeiro em um único lugar.
               </p>
               <Link className="mt-8 inline-flex rounded-xl bg-[#E8650A] px-7 py-4 font-semibold text-white transition hover:bg-[#FF7A1A]" to="/cadastro">
-                Criar minha conta gratis
+                Criar minha conta grátis
               </Link>
-              <p className="mt-4 text-sm text-[#A0A0A0]">Configuracao em menos de 5 minutos</p>
+              <p className="mt-4 text-sm text-[#A0A0A0]">Configuração em menos de 5 minutos</p>
             </div>
           </div>
         </FadeSection>
 
         <footer className="relative z-10 border-t border-[#1f1f1f] px-4 py-8 text-sm text-[#A0A0A0] sm:px-6">
           <div className="mx-auto flex max-w-7xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-2 text-white">
+            <button className="flex items-center gap-2 text-white" onClick={goHome} type="button">
               <Zap className="text-[#E8650A]" size={18} />
               <span>Ideal Tattoo</span>
-            </div>
+            </button>
             <p>© 2026 Ideal Tattoo. Todos os direitos reservados.</p>
             <div className="flex gap-5">
               <a href="/">Privacidade</a>

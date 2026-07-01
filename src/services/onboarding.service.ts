@@ -1,4 +1,29 @@
 import { supabase } from "@/lib/supabase";
+import { createStoragePath } from "@/services/storage.service";
+
+export type OnboardingWorkingHour = {
+  day_of_week: number;
+  open_time: string | null;
+  close_time: string | null;
+  is_open: boolean;
+};
+
+export type OnboardingFirstArtistData = {
+  name: string;
+  slug?: string;
+  specialty?: string;
+  instagram?: string;
+  whatsapp?: string;
+  photoFile?: File | null;
+};
+
+export type OnboardingFirstServiceData = {
+  name: string;
+  category?: string;
+  description?: string;
+  starting_price?: number | null;
+  avg_duration_minutes?: number | null;
+};
 
 export type OnboardingStudioData = {
   userId: string;
@@ -11,12 +36,21 @@ export type OnboardingStudioData = {
   address?: string;
   city: string;
   state: string;
+  logoFile?: File | null;
+  workingHours?: OnboardingWorkingHour[];
+  firstArtist?: OnboardingFirstArtistData;
+  firstService?: OnboardingFirstServiceData;
 };
 
 export type UserStudio = {
   id: string;
   name: string;
   slug: string;
+};
+
+export type OnboardingValidationData = Partial<OnboardingStudioData> & {
+  firstArtist?: Partial<OnboardingFirstArtistData>;
+  firstService?: Partial<OnboardingFirstServiceData>;
 };
 
 export function slugify(value: string) {
@@ -29,14 +63,55 @@ export function slugify(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-export function makeDefaultWorkingHours(studioId: string) {
+export function buildDefaultWorkingHours(): OnboardingWorkingHour[] {
   return Array.from({ length: 7 }, (_, day) => ({
-    studio_id: studioId,
     day_of_week: day,
     open_time: day === 0 ? null : "09:00",
     close_time: day === 0 ? null : "18:00",
     is_open: day !== 0,
   }));
+}
+
+export function makeDefaultWorkingHours(studioId: string) {
+  return buildDefaultWorkingHours().map((hour) => ({
+    studio_id: studioId,
+    ...hour,
+  }));
+}
+
+export function validateOnboardingStep(step: number, data: OnboardingValidationData) {
+  if (step === 1) {
+    if (!data.name?.trim()) return "Informe o nome do estúdio.";
+    if (!slugify(data.slug || data.name)) return "Defina um link público válido para seu estúdio.";
+  }
+
+  if (step === 2) {
+    if (!/^\d{11}$/.test(data.whatsapp ?? "")) {
+      return "Informe um WhatsApp válido com 11 números. Ex: 11999999999.";
+    }
+
+    if (!data.city?.trim() || !data.state) {
+      return "Preencha cidade e estado para continuar.";
+    }
+  }
+
+  if (step === 3) {
+    const invalidHour = data.workingHours?.find(
+      (hour) => hour.is_open && (!hour.open_time || !hour.close_time || hour.open_time >= hour.close_time),
+    );
+
+    if (invalidHour) return "Confira os horários: abertura precisa ser antes do fechamento.";
+  }
+
+  if (step === 4 && !data.firstArtist?.name?.trim()) {
+    return "Informe o nome do primeiro tatuador.";
+  }
+
+  if (step === 5 && !data.firstService?.name?.trim()) {
+    return "Informe o nome do primeiro serviço.";
+  }
+
+  return "";
 }
 
 export async function getUserStudio(userId: string) {
@@ -71,6 +146,55 @@ export async function ensureUniqueStudioSlug(slug: string) {
   }
 }
 
+export async function ensureUniqueArtistSlug(studioId: string, slug: string) {
+  const base = slugify(slug) || "tatuador";
+  let nextSlug = base;
+  let suffix = 2;
+
+  while (true) {
+    const { data, error } = await supabase
+      .from("tattoo_artists")
+      .select("id")
+      .eq("studio_id", studioId)
+      .eq("slug", nextSlug)
+      .limit(1);
+
+    if (error) throw error;
+    if (!data?.length) return nextSlug;
+
+    nextSlug = `${base}-${suffix}`;
+    suffix += 1;
+  }
+}
+
+export async function uploadStudioLogo(file: File, studioId: string) {
+  const path = createStoragePath(studioId, file.name);
+
+  const { error } = await supabase.storage.from("logos").upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+  });
+
+  if (error) throw error;
+
+  const { data } = supabase.storage.from("logos").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+export async function uploadFirstArtistPhoto(file: File, studioId: string, artistId: string) {
+  const path = createStoragePath(studioId, file.name, [artistId]);
+
+  const { error } = await supabase.storage.from("artists").upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+  });
+
+  if (error) throw error;
+
+  const { data } = supabase.storage.from("artists").getPublicUrl(path);
+  return data.publicUrl;
+}
+
 export async function createStudioOnboarding(data: OnboardingStudioData) {
   const existingStudio = await getUserStudio(data.userId);
   if (existingStudio) return existingStudio;
@@ -96,8 +220,62 @@ export async function createStudioOnboarding(data: OnboardingStudioData) {
 
   if (studioError) throw studioError;
 
-  const { error: hoursError } = await supabase.from("working_hours").insert(makeDefaultWorkingHours(studio.id));
+  const hours = (data.workingHours?.length ? data.workingHours : buildDefaultWorkingHours()).map((hour) => ({
+    studio_id: studio.id,
+    day_of_week: hour.day_of_week,
+    open_time: hour.is_open ? hour.open_time : null,
+    close_time: hour.is_open ? hour.close_time : null,
+    is_open: hour.is_open,
+  }));
+
+  const { error: hoursError } = await supabase.from("working_hours").insert(hours);
   if (hoursError) throw hoursError;
+
+  if (data.logoFile) {
+    const logoUrl = await uploadStudioLogo(data.logoFile, studio.id);
+    const { error } = await supabase.from("studios").update({ logo_url: logoUrl }).eq("id", studio.id);
+    if (error) throw error;
+  }
+
+  if (data.firstArtist?.name?.trim()) {
+    const artistSlug = await ensureUniqueArtistSlug(studio.id, data.firstArtist.slug || data.firstArtist.name);
+
+    const { data: artist, error: artistError } = await supabase
+      .from("tattoo_artists")
+      .insert({
+        studio_id: studio.id,
+        name: data.firstArtist.name.trim(),
+        slug: artistSlug,
+        specialty: data.firstArtist.specialty?.trim() || null,
+        instagram: data.firstArtist.instagram ? `@${data.firstArtist.instagram.replace("@", "")}` : null,
+        whatsapp: data.firstArtist.whatsapp?.replace(/\D/g, "") || null,
+        is_active: true,
+      })
+      .select("id")
+      .single<{ id: string }>();
+
+    if (artistError) throw artistError;
+
+    if (data.firstArtist.photoFile) {
+      const photoUrl = await uploadFirstArtistPhoto(data.firstArtist.photoFile, studio.id, artist.id);
+      const { error } = await supabase.from("tattoo_artists").update({ photo_url: photoUrl }).eq("id", artist.id);
+      if (error) throw error;
+    }
+  }
+
+  if (data.firstService?.name?.trim()) {
+    const { error: serviceError } = await supabase.from("services").insert({
+      studio_id: studio.id,
+      name: data.firstService.name.trim(),
+      category: data.firstService.category || "Outro",
+      description: data.firstService.description?.trim() || null,
+      starting_price: data.firstService.starting_price ?? null,
+      avg_duration_minutes: data.firstService.avg_duration_minutes ?? null,
+      is_active: true,
+    });
+
+    if (serviceError) throw serviceError;
+  }
 
   return studio;
 }

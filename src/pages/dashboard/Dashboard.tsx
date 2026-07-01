@@ -12,10 +12,10 @@ export function Dashboard() {
   const { studio, summary, nextAppointments, setupStatus, loading, error, setAppointmentStatus } = useDashboard();
 
   const cards = [
-    { label: "Agendamentos hoje", value: summary.todayAppointments },
+    { label: "Agendamentos de hoje", value: summary.todayAppointments },
     { label: "Agendamentos da semana", value: summary.weekAppointments },
-    { label: "Receita do mes", value: currency.format(summary.monthRevenue) },
-    { label: "Total de clientes", value: summary.totalClients },
+    { label: "Receita do mês", value: currency.format(summary.monthRevenue) },
+    { label: "Clientes cadastrados", value: summary.totalClients },
   ];
 
   const setupItems = [
@@ -24,38 +24,38 @@ export function Dashboard() {
       done: Boolean(setupStatus && setupStatus.artistsCount > 0),
       href: "/tatuadores",
       icon: Scissors,
-      action: "Abrir tatuadores",
+      action: "Abrir módulo de tatuadores",
     },
     {
-      label: "Cadastrar primeiro servico",
+      label: "Cadastrar primeiro serviço",
       done: Boolean(setupStatus && setupStatus.servicesCount > 0),
       href: "/servicos",
       icon: Palette,
-      action: "Abrir servicos",
+      action: "Abrir catálogo de serviços",
     },
     {
-      label: "Adicionar logo do estudio",
+      label: "Adicionar logo do estúdio",
       done: Boolean(setupStatus?.hasLogo),
       href: "/configuracoes",
       icon: Settings,
-      action: "Editar logo",
+      action: "Personalizar identidade visual",
     },
     {
-      label: "Adicionar fotos na galeria",
+      label: "Publicar fotos na galeria",
       done: Boolean(setupStatus && setupStatus.galleryCount > 0),
       href: "/galeria",
       icon: Image,
-      action: "Abrir galeria",
+      action: "Enviar primeiras imagens",
     },
     {
-      label: "Copiar link publico do estudio",
+      label: "Validar link público do estúdio",
       done: Boolean(studio?.slug),
       href: studio?.slug ? `/${studio.slug}` : "/configuracoes",
       icon: ExternalLink,
-      action: "Ver pagina",
+      action: "Abrir página pública",
     },
     {
-      label: "Fazer primeiro agendamento",
+      label: "Registrar primeiro agendamento",
       done: Boolean(setupStatus && setupStatus.appointmentsCount > 0),
       href: "/agenda",
       icon: CalendarPlus,
@@ -72,14 +72,14 @@ export function Dashboard() {
   }
 
   if (loading) {
-    return <p className="text-sm text-zinc-400">Carregando dashboard...</p>;
+    return <p className="text-sm text-zinc-400">Carregando visão geral do estúdio...</p>;
   }
 
   return (
     <section className="space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold">Dashboard</h1>
-        <p className="mt-2 text-sm text-zinc-400">Resumo do estudio e proximos agendamentos.</p>
+        <h1 className="text-3xl font-semibold">Visão geral</h1>
+        <p className="mt-2 text-sm text-zinc-400">Acompanhe operação, faturamento e próximos atendimentos em um só lugar.</p>
       </div>
 
       {error ? <p className="rounded-xl bg-red-500/10 p-4 text-sm text-red-300">{error}</p> : null}
@@ -87,9 +87,9 @@ export function Dashboard() {
       <section className="rounded-xl border border-white/10 bg-[#1a1a1a] p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h2 className="text-xl font-semibold">Primeiros passos</h2>
+            <h2 className="text-xl font-semibold">Checklist de ativação</h2>
             <p className="mt-1 text-sm text-zinc-400">
-              {completedSetupItems} de {setupItems.length} concluidos para deixar seu estudio pronto.
+              {completedSetupItems} de {setupItems.length} concluídos para deixar seu estúdio pronto para divulgar e vender.
             </p>
           </div>
 
@@ -101,7 +101,7 @@ export function Dashboard() {
               type="button"
             >
               <Copy size={16} />
-              Copiar link publico
+              Copiar link público
             </button>
             {studio?.slug ? (
               <Link
@@ -109,7 +109,7 @@ export function Dashboard() {
                 to={`/${studio.slug}`}
               >
                 <ExternalLink size={16} />
-                Ver pagina publica
+                Abrir página pública
               </Link>
             ) : null}
           </div>
@@ -143,7 +143,7 @@ export function Dashboard() {
                   </span>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">{item.label}</p>
-                    <p className="mt-1 text-xs text-zinc-500">{item.done ? "Concluido" : item.action}</p>
+                    <p className="mt-1 text-xs text-zinc-500">{item.done ? "Concluído" : item.action}</p>
                   </div>
                 </div>
                 <ExternalLink className="shrink-0 text-zinc-600" size={16} />
@@ -165,8 +165,8 @@ export function Dashboard() {
       <section className="rounded-xl border border-white/10 bg-[#1a1a1a]">
         <div className="flex flex-col gap-2 border-b border-white/10 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-xl font-semibold">Proximos agendamentos</h2>
-            <p className="mt-1 text-sm text-zinc-400">Ultimos 5 horarios na agenda.</p>
+            <h2 className="text-xl font-semibold">Próximos atendimentos</h2>
+            <p className="mt-1 text-sm text-zinc-400">Os 5 compromissos mais próximos para você agir rápido.</p>
           </div>
           <button className="rounded-xl bg-[#E8650A] px-4 py-2 text-sm font-semibold" type="button">
             Novo agendamento
@@ -180,9 +180,9 @@ export function Dashboard() {
                 <th className="px-5 py-3 font-medium">Hora</th>
                 <th className="px-5 py-3 font-medium">Cliente</th>
                 <th className="px-5 py-3 font-medium">Tatuador</th>
-                <th className="px-5 py-3 font-medium">Servico</th>
+                <th className="px-5 py-3 font-medium">Serviço</th>
                 <th className="px-5 py-3 font-medium">Status</th>
-                <th className="px-5 py-3 font-medium">Acoes</th>
+                <th className="px-5 py-3 font-medium">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -210,6 +210,7 @@ export function Dashboard() {
                       <button
                         className="inline-flex size-9 items-center justify-center rounded-lg bg-green-500/15 text-green-300"
                         onClick={() => setAppointmentStatus(appointment.id, "confirmed")}
+                        title="Confirmar agendamento"
                         type="button"
                       >
                         <Check size={16} />
@@ -217,6 +218,7 @@ export function Dashboard() {
                       <button
                         className="inline-flex size-9 items-center justify-center rounded-lg bg-red-500/15 text-red-300"
                         onClick={() => setAppointmentStatus(appointment.id, "cancelled")}
+                        title="Cancelar agendamento"
                         type="button"
                       >
                         <X size={16} />
@@ -229,7 +231,7 @@ export function Dashboard() {
               {!nextAppointments.length ? (
                 <tr>
                   <td className="px-5 py-8 text-center text-zinc-500" colSpan={6}>
-                    Nenhum agendamento encontrado.
+                    Nenhum agendamento próximo encontrado.
                   </td>
                 </tr>
               ) : null}

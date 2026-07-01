@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { makeDefaultWorkingHours, slugify } from "@/services/onboarding.service";
+import {
+  buildDefaultWorkingHours,
+  makeDefaultWorkingHours,
+  slugify,
+  validateOnboardingStep,
+} from "@/services/onboarding.service";
 
 describe("onboarding.service", () => {
-  it("gera slug limpo sem acentos e espacos", () => {
-    expect(slugify("Estudio Sao Jorge Tattoo!")).toBe("estudio-sao-jorge-tattoo");
+  it("gera slug limpo sem acentos e espaços", () => {
+    expect(slugify("Estúdio São Jorge Tattoo!")).toBe("estudio-sao-jorge-tattoo");
   });
 
-  it("cria horarios padrao para os 7 dias", () => {
+  it("cria horários padrão para os 7 dias", () => {
     const hours = makeDefaultWorkingHours("studio-1");
 
     expect(hours).toHaveLength(7);
@@ -24,5 +29,19 @@ describe("onboarding.service", () => {
       open_time: "09:00",
       close_time: "18:00",
     });
+  });
+
+  it("valida campos obrigatórios do onboarding", () => {
+    expect(validateOnboardingStep(1, { name: "", slug: "" })).toContain("nome");
+    expect(validateOnboardingStep(2, { whatsapp: "1199", city: "São Paulo", state: "SP" })).toContain("WhatsApp");
+    expect(validateOnboardingStep(4, { firstArtist: { name: "" } })).toContain("tatuador");
+    expect(validateOnboardingStep(5, { firstService: { name: "" } })).toContain("serviço");
+  });
+
+  it("bloqueia horário aberto com fechamento antes da abertura", () => {
+    const hours = buildDefaultWorkingHours();
+    hours[1] = { ...hours[1], open_time: "18:00", close_time: "09:00" };
+
+    expect(validateOnboardingStep(3, { workingHours: hours })).toContain("horários");
   });
 });

@@ -38,7 +38,7 @@ export function GalleryPage() {
 
       const studio = await getCurrentUserStudio(user.id);
       if (!studio) {
-        setError("Estudio nao encontrado.");
+        setError("Estúdio não encontrado.");
         return;
       }
 
@@ -48,7 +48,7 @@ export function GalleryPage() {
       setPhotos(gallery);
     } catch (caughtError) {
       logger.error("Falha ao carregar galeria", caughtError);
-      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel carregar a galeria."));
+      setError(getFriendlyErrorMessage(caughtError, "Não foi possível carregar a galeria."));
     } finally {
       setLoading(false);
     }
@@ -73,7 +73,7 @@ export function GalleryPage() {
       await loadGallery();
     } catch (caughtError) {
       logger.error("Falha ao remover foto da galeria", caughtError, { photoId: photo.id });
-      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel remover a foto."));
+      setError(getFriendlyErrorMessage(caughtError, "Não foi possível remover a foto."));
     }
   }
 
@@ -82,7 +82,7 @@ export function GalleryPage() {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-3xl font-semibold">Galeria</h1>
-          <p className="mt-2 text-sm text-zinc-400">Fotos publicas do estudio e dos tatuadores.</p>
+          <p className="mt-2 text-sm text-zinc-400">Organize o portfólio público do estúdio e valorize o trabalho de cada tatuador.</p>
         </div>
         <button
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#E8650A] px-4 py-3 font-semibold"
@@ -125,7 +125,7 @@ export function GalleryPage() {
                 <img alt="Foto da galeria" className="h-full w-full object-cover transition group-hover:scale-105" src={photo.url} />
               </button>
               <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3 text-xs text-zinc-200 opacity-100 sm:opacity-0 sm:transition sm:group-hover:opacity-100">
-                {photo.tattoo_artists?.name || "Estudio"}
+                {photo.tattoo_artists?.name || "Estúdio"}
               </div>
               <button
                 className="absolute right-2 top-2 rounded-full bg-red-500/90 p-2 text-white opacity-100 sm:opacity-0 sm:transition sm:group-hover:opacity-100"
@@ -143,8 +143,8 @@ export function GalleryPage() {
       {!loading && !photos.length ? (
         <div className="flex min-h-64 flex-col items-center justify-center rounded-xl border border-white/10 bg-[#1a1a1a] p-8 text-center">
           <ImageIcon className="text-zinc-500" size={38} />
-          <h2 className="mt-4 text-lg font-semibold">Nenhuma foto cadastrada</h2>
-          <p className="mt-2 text-sm text-zinc-400">Adicione fotos para aparecerem na pagina publica.</p>
+          <h2 className="mt-4 text-lg font-semibold">Sua galeria ainda está vazia</h2>
+          <p className="mt-2 text-sm text-zinc-400">Envie imagens para fortalecer sua página pública e o portfólio dos artistas.</p>
         </div>
       ) : null}
 

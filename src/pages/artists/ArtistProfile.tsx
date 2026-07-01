@@ -79,7 +79,7 @@ export function ArtistProfile() {
   }
 
   if (loading) return <p className="text-sm text-zinc-400">Carregando tatuador...</p>;
-  if (!artist) return <p className="rounded-xl bg-red-500/10 p-4 text-sm text-red-300">Tatuador nao encontrado.</p>;
+  if (!artist) return <p className="rounded-xl bg-red-500/10 p-4 text-sm text-red-300">Tatuador não encontrado.</p>;
 
   return (
     <section className="space-y-6">
@@ -232,7 +232,7 @@ export function ArtistProfile() {
                   {appointment.date} as {appointment.time.slice(0, 5)}
                 </p>
                 <p className="mt-1 text-sm text-zinc-400">
-                  {appointment.clients?.name ?? "Cliente"} - {appointment.services?.name ?? "Servico"}
+                  {appointment.clients?.name ?? "Cliente"} - {appointment.services?.name ?? "Serviço"}
                 </p>
               </div>
               <span className={["w-fit rounded-full px-3 py-1 text-xs font-semibold", statusClass(appointment.status)].join(" ")}>

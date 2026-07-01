@@ -50,7 +50,7 @@ export function AppointmentCard({ appointment, onStatusChange }: AppointmentCard
 
           <div className="mt-3 grid gap-1 text-sm text-zinc-400 sm:grid-cols-2">
             <p>Tatuador: {appointment.tattoo_artists?.name ?? "-"}</p>
-            <p>Servico: {appointment.services?.name ?? "-"}</p>
+            <p>Serviço: {appointment.services?.name ?? "-"}</p>
           </div>
         </div>
 
@@ -88,13 +88,13 @@ export function AppointmentCard({ appointment, onStatusChange }: AppointmentCard
         type="button"
       >
         {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        Descricao e referencias
+        Descrição e referências
       </button>
 
       {expanded ? (
         <div className="mt-4 rounded-xl bg-[#0f0f0f] p-4">
           <p className="text-sm leading-6 text-zinc-300">
-            {appointment.description || "Sem descricao informada."}
+            {appointment.description || "Sem descrição informada."}
           </p>
 
           {photos.length ? (

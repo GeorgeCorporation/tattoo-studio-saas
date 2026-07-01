@@ -19,7 +19,7 @@ export function ClientDeliveryPage() {
         const data = await getPublicDeliveryByToken(token);
         setDelivery(data);
       } catch {
-        setError("Nao foi possivel abrir entrega.");
+        setError("Não foi possível abrir entrega.");
       } finally {
         setLoading(false);
       }
@@ -36,7 +36,7 @@ export function ClientDeliveryPage() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#0f0f0f] p-6 text-white">
         <section className="max-w-md rounded-xl border border-white/10 bg-[#1a1a1a] p-6 text-center">
-          <h1 className="text-2xl font-semibold">Entrega nao encontrada</h1>
+          <h1 className="text-2xl font-semibold">Entrega não encontrada</h1>
           <p className="mt-2 text-sm text-zinc-400">Verifique se o link esta correto.</p>
         </section>
       </main>

@@ -49,15 +49,15 @@ export function ServicesPage() {
 
       const studio = await getCurrentUserStudio(user.id);
       if (!studio) {
-        setError("Estudio nao encontrado.");
+        setError("Estúdio não encontrado.");
         return;
       }
 
       setStudioId(studio.id);
       setServices(await getServices(studio.id));
     } catch (caughtError) {
-      logger.error("Falha ao carregar servicos", caughtError);
-      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel carregar servicos."));
+      logger.error("Falha ao carregar serviços", caughtError);
+      setError(getFriendlyErrorMessage(caughtError, "Não foi possível carregar serviços."));
     } finally {
       setLoading(false);
     }
@@ -87,8 +87,8 @@ export function ServicesPage() {
 
       await loadServices();
     } catch (caughtError) {
-      logger.error("Falha ao salvar servico", caughtError, { serviceId: selectedService?.id });
-      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel salvar o servico."));
+      logger.error("Falha ao salvar serviço", caughtError, { serviceId: selectedService?.id });
+      setError(getFriendlyErrorMessage(caughtError, "Não foi possível salvar o serviço."));
       throw caughtError;
     }
   }
@@ -98,8 +98,8 @@ export function ServicesPage() {
       await toggleServiceStatus(service.id, !service.is_active);
       await loadServices();
     } catch (caughtError) {
-      logger.error("Falha ao alternar status do servico", caughtError, { serviceId: service.id });
-      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel atualizar o servico."));
+      logger.error("Falha ao alternar status do serviço", caughtError, { serviceId: service.id });
+      setError(getFriendlyErrorMessage(caughtError, "Não foi possível atualizar o serviço."));
     }
   }
 
@@ -107,8 +107,8 @@ export function ServicesPage() {
     <section className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold">Servicos</h1>
-          <p className="mt-2 text-sm text-zinc-400">Catalogo de servicos do estudio.</p>
+          <h1 className="text-3xl font-semibold">Serviços</h1>
+          <p className="mt-2 text-sm text-zinc-400">Catálogo de serviços do estúdio.</p>
         </div>
         <button
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#E8650A] px-4 py-3 font-semibold"
@@ -116,12 +116,12 @@ export function ServicesPage() {
           type="button"
         >
           <Plus size={18} />
-          Adicionar servico
+          Adicionar serviço
         </button>
       </div>
 
       {error ? <p className="rounded-xl bg-red-500/10 p-4 text-sm text-red-300">{error}</p> : null}
-      {loading ? <p className="text-sm text-zinc-400">Carregando servicos...</p> : null}
+      {loading ? <p className="text-sm text-zinc-400">Carregando serviços...</p> : null}
 
       <div className="grid gap-3">
         {!loading &&
@@ -149,13 +149,13 @@ export function ServicesPage() {
                     </span>
                   </div>
                   <p className="mt-2 line-clamp-2 text-sm text-zinc-400">
-                    {service.description || "Sem descricao."}
+                    {service.description || "Sem descrição."}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-3 text-sm text-zinc-300">
                     <span>
                       Inicial: {service.starting_price ? currency.format(Number(service.starting_price)) : "-"}
                     </span>
-                    <span>Duracao: {service.avg_duration_minutes ?? "-"} min</span>
+                    <span>Duração: {service.avg_duration_minutes ?? "-"} min</span>
                   </div>
                 </div>
 
@@ -182,7 +182,7 @@ export function ServicesPage() {
 
         {!loading && !services.length ? (
           <div className="rounded-xl border border-white/10 bg-[#1a1a1a] p-8 text-center text-zinc-400">
-            Nenhum servico cadastrado.
+            Nenhum serviço cadastrado.
           </div>
         ) : null}
       </div>

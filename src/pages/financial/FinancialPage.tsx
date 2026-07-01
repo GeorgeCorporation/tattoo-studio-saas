@@ -1,16 +1,16 @@
 import { Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { paymentMethodLabels, paymentTypeLabels } from "@/lib/appointment-domain";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { paymentMethodLabels, paymentTypeLabels } from "@/lib/appointment-domain";
+import { PaymentModal } from "@/pages/financial/PaymentModal";
 import { getCurrentUserStudio } from "@/services/dashboard.service";
 import {
   getMonthSummary,
   getPaymentsByMonth,
   type FinancialPayment,
 } from "@/services/financial.service";
-import { PaymentModal } from "@/pages/financial/PaymentModal";
 
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -20,7 +20,7 @@ const currency = new Intl.NumberFormat("pt-BR", {
 const monthNames = [
   "Janeiro",
   "Fevereiro",
-  "Marco",
+  "Março",
   "Abril",
   "Maio",
   "Junho",
@@ -58,7 +58,7 @@ export function FinancialPage() {
 
       const studio = await getCurrentUserStudio(user.id);
       if (!studio) {
-        setError("Estudio nao encontrado.");
+        setError("Estúdio não encontrado.");
         return;
       }
 
@@ -72,7 +72,7 @@ export function FinancialPage() {
       setSummary(foundSummary);
     } catch (caughtError) {
       logger.error("Falha ao carregar financeiro", caughtError, { year, month });
-      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel carregar financeiro."));
+      setError(getFriendlyErrorMessage(caughtError, "Não foi possível carregar o financeiro."));
     } finally {
       setLoading(false);
     }
@@ -88,10 +88,10 @@ export function FinancialPage() {
   );
 
   const cards = [
-    { label: "Receita do mes atual", value: currency.format(summary.monthRevenue) },
+    { label: "Receita do mês atual", value: currency.format(summary.monthRevenue) },
     { label: "Sinais recebidos", value: currency.format(summary.signalTotal) },
     { label: "Pagamentos finais", value: currency.format(summary.finalTotal) },
-    { label: "Cancelados no mes", value: summary.cancelledCount },
+    { label: "Agendamentos cancelados no mês", value: summary.cancelledCount },
   ];
 
   return (
@@ -99,7 +99,7 @@ export function FinancialPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-semibold">Financeiro</h1>
-          <p className="mt-2 text-sm text-zinc-400">Recebimentos, sinais e pagamentos finais.</p>
+          <p className="mt-2 text-sm text-zinc-400">Acompanhe entradas, sinais recebidos e o fechamento financeiro do estúdio.</p>
         </div>
         <button
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#E8650A] px-4 py-3 font-semibold"
@@ -122,11 +122,11 @@ export function FinancialPage() {
 
       <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-[#1a1a1a] p-4 sm:flex-row sm:items-center sm:justify-between">
         <label className="text-sm font-medium">
-          Mes
+          Mês
           <select
             className="mt-2 block w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3 sm:w-56"
-            value={month}
             onChange={(event) => setMonth(Number(event.target.value))}
+            value={month}
           >
             {monthNames.map((name, index) => (
               <option key={name} value={index + 1}>
@@ -136,7 +136,7 @@ export function FinancialPage() {
           </select>
         </label>
         <p className="text-sm text-zinc-400">
-          Total periodo: <span className="font-semibold text-white">{currency.format(periodTotal)}</span>
+          Total do período: <span className="font-semibold text-white">{currency.format(periodTotal)}</span>
         </p>
       </div>
 
@@ -151,10 +151,10 @@ export function FinancialPage() {
                 <th className="px-5 py-3 font-medium">Data</th>
                 <th className="px-5 py-3 font-medium">Cliente</th>
                 <th className="px-5 py-3 font-medium">Tatuador</th>
-                <th className="px-5 py-3 font-medium">Servico</th>
+                <th className="px-5 py-3 font-medium">Serviço</th>
                 <th className="px-5 py-3 font-medium">Tipo</th>
                 <th className="px-5 py-3 font-medium">Valor</th>
-                <th className="px-5 py-3 font-medium">Metodo</th>
+                <th className="px-5 py-3 font-medium">Método</th>
               </tr>
             </thead>
             <tbody>
@@ -166,15 +166,13 @@ export function FinancialPage() {
                   <td className="px-5 py-4">{payment.appointments?.services?.name ?? "-"}</td>
                   <td className="px-5 py-4">{payment.type ? paymentTypeLabels[payment.type] : "-"}</td>
                   <td className="px-5 py-4 font-semibold">{currency.format(Number(payment.amount ?? 0))}</td>
-                  <td className="px-5 py-4">
-                    {payment.method ? paymentMethodLabels[payment.method] : "-"}
-                  </td>
+                  <td className="px-5 py-4">{payment.method ? paymentMethodLabels[payment.method] : "-"}</td>
                 </tr>
               ))}
               {!loading && !payments.length ? (
                 <tr>
                   <td className="px-5 py-8 text-center text-zinc-500" colSpan={7}>
-                    Nenhum pagamento neste periodo.
+                    Nenhum pagamento registrado neste período.
                   </td>
                 </tr>
               ) : null}
@@ -182,7 +180,7 @@ export function FinancialPage() {
             <tfoot>
               <tr className="border-t border-white/10">
                 <td className="px-5 py-4 font-semibold" colSpan={5}>
-                  Total do periodo
+                  Total do período
                 </td>
                 <td className="px-5 py-4 font-semibold">{currency.format(periodTotal)}</td>
                 <td />

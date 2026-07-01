@@ -95,7 +95,7 @@ export function DeliveryModal({ clients, onClose, onCreated, open, studioId }: D
       await onCreated();
       onClose();
     } catch {
-      setError("Nao foi possivel criar entrega.");
+      setError("Não foi possível criar entrega.");
     } finally {
       setSaving(false);
     }

@@ -63,7 +63,7 @@ export function ServiceModal({ open, service, studioId, onClose, onSave }: Servi
       });
       onClose();
     } catch {
-      setError("Nao foi possivel salvar servico.");
+      setError("Não foi possível salvar serviço.");
     } finally {
       setSaving(false);
     }
@@ -76,8 +76,8 @@ export function ServiceModal({ open, service, studioId, onClose, onSave }: Servi
       <section className="w-full max-w-xl rounded-xl border border-white/10 bg-[#1a1a1a] text-white shadow-2xl">
         <header className="flex items-center justify-between border-b border-white/10 p-5">
           <div>
-            <h2 className="text-xl font-semibold">{service ? "Editar servico" : "Adicionar servico"}</h2>
-            <p className="mt-1 text-sm text-zinc-400">Dados do servico oferecido.</p>
+            <h2 className="text-xl font-semibold">{service ? "Editar serviço" : "Adicionar serviço"}</h2>
+            <p className="mt-1 text-sm text-zinc-400">Dados do serviço oferecido.</p>
           </div>
           <button className="rounded-lg p-2 hover:bg-white/5" onClick={onClose} type="button">
             <X size={20} />
@@ -109,7 +109,7 @@ export function ServiceModal({ open, service, studioId, onClose, onSave }: Servi
           </label>
 
           <label>
-            <span className="mb-2 block text-sm font-medium">Descricao</span>
+            <span className="mb-2 block text-sm font-medium">Descrição</span>
             <textarea
               className="min-h-28 w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
               value={description}

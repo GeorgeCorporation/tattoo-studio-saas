@@ -17,7 +17,7 @@ export function Register() {
     setError("");
 
     if (password !== confirmPassword) {
-      setError("As senhas nao conferem.");
+      setError("As senhas não conferem.");
       return;
     }
 
@@ -40,7 +40,7 @@ export function Register() {
       <section className="w-full max-w-md rounded-xl border border-white/10 bg-[#1a1a1a] p-6 shadow-2xl shadow-black/30 sm:p-8">
         <div className="mb-8 text-center">
           <p className="text-2xl font-semibold tracking-wide text-white">Ideal Tattoo</p>
-          <p className="mt-2 text-sm text-zinc-400">Crie sua conta gratis</p>
+          <p className="mt-2 text-sm text-zinc-400">Crie sua conta grátis</p>
         </div>
 
         <form className="space-y-5" onSubmit={handleSubmit}>
@@ -101,12 +101,12 @@ export function Register() {
             type="submit"
             disabled={loading}
           >
-            {loading ? "Criando..." : "Criar conta gratis"}
+            {loading ? "Criando..." : "Criar conta grátis"}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-zinc-400">
-          Ja tem conta?{" "}
+          Já tem conta?{" "}
           <Link className="font-medium text-[#E8650A] hover:text-[#ff9a4f]" to="/login">
             Entrar
           </Link>

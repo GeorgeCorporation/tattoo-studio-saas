@@ -4,17 +4,17 @@ import { getFriendlyErrorMessage } from "@/lib/errors";
 describe("getFriendlyErrorMessage", () => {
   it("traduz erro de registro duplicado", () => {
     expect(getFriendlyErrorMessage({ code: "23505" })).toBe(
-      "Este registro ja existe. Confira os dados e tente novamente.",
+      "Este registro já existe. Confira os dados e tente novamente.",
     );
   });
 
   it("traduz erro de permissao", () => {
-    expect(getFriendlyErrorMessage({ code: "42501" })).toBe("Voce nao tem permissao para fazer esta acao.");
+    expect(getFriendlyErrorMessage({ code: "42501" })).toBe("Você não tem permissão para fazer esta ação.");
   });
 
   it("traduz erro de rede", () => {
     expect(getFriendlyErrorMessage(new Error("Failed to fetch"))).toBe(
-      "Falha de conexao. Verifique sua internet e tente novamente.",
+      "Falha de conexão. Verifique sua internet e tente novamente.",
     );
   });
 

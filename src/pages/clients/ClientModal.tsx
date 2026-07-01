@@ -49,7 +49,7 @@ export function ClientModal({ open, client, onClose, onSave }: ClientModalProps)
       await onSave({ name, phone, instagram, email, notes });
       onClose();
     } catch {
-      setError("Nao foi possivel salvar cliente.");
+      setError("Não foi possível salvar cliente.");
     } finally {
       setSaving(false);
     }

@@ -34,7 +34,7 @@ function NotFound() {
     <main className="flex min-h-screen items-center justify-center bg-[#0f0f0f] px-4 text-white">
       <section className="max-w-md text-center">
         <p className="text-3xl font-semibold">404</p>
-        <p className="mt-3 text-zinc-400">Pagina de agendamento nao encontrada.</p>
+        <p className="mt-3 text-zinc-400">Página de agendamento não encontrada.</p>
         <Link className="mt-6 inline-flex rounded-xl bg-[#E8650A] px-5 py-3 font-semibold" to="/">
           Voltar
         </Link>
@@ -99,7 +99,7 @@ export function BookingPage() {
           if (foundArtist) setSelectedArtistId(foundArtist.id);
         }
       } catch (caughtError) {
-        logger.error("Falha ao carregar dados do booking publico", caughtError, { slug: studioSlug });
+        logger.error("Falha ao carregar dados do booking público", caughtError, { slug: studioSlug });
         setNotFound(true);
       } finally {
         setLoading(false);
@@ -139,7 +139,7 @@ export function BookingPage() {
         });
         setAvailableTimes([]);
         setTime("");
-        setAvailabilityError("Nao foi possivel carregar os horarios desse dia.");
+        setAvailabilityError("Não foi possível carregar os horários desse dia.");
       } finally {
         if (active) setAvailabilityLoading(false);
       }
@@ -164,11 +164,11 @@ export function BookingPage() {
 
   const confirmationText = useMemo(() => {
     return [
-      "Ola! Quero confirmar meu agendamento:",
+      "Olá! Quero confirmar meu agendamento:",
       `*Tatuador:* ${selectedArtist?.name ?? ""}`,
-      `*Servico:* ${selectedService?.name ?? ""}`,
+      `*Serviço:* ${selectedService?.name ?? ""}`,
       `*Data:* ${date}`,
-      `*Horario:* ${time}`,
+      `*Horário:* ${time}`,
       `*Nome:* ${clientName}`,
     ].join("\n");
   }, [clientName, date, selectedArtist, selectedService, time]);
@@ -186,17 +186,17 @@ export function BookingPage() {
     setError("");
 
     if (!selectedArtistId || !selectedServiceId || !date || !time) {
-      setError("Preencha tatuador, servico, data e horario.");
+      setError("Preencha tatuador, serviço, data e horário.");
       return;
     }
 
     if (availabilityLoading) {
-      setError("Aguarde os horarios carregarem.");
+      setError("Aguarde os horários carregarem.");
       return;
     }
 
     if (!availableTimes.includes(time)) {
-      setError("Escolha um horario disponivel.");
+      setError("Escolha um horário disponível.");
       return;
     }
 
@@ -209,7 +209,7 @@ export function BookingPage() {
 
     if (!studio || !selectedArtist || !selectedService) return;
     if (!clientName || !whatsapp || !description) {
-      setError("Preencha nome, WhatsApp e descricao da tatuagem.");
+      setError("Preencha nome, WhatsApp e descrição da tatuagem.");
       return;
     }
 
@@ -245,9 +245,9 @@ export function BookingPage() {
         setStep(1);
         setError(caughtError.message);
       } else {
-        logger.error("Falha ao salvar booking publico", caughtError, { studioId: studio.id });
+        logger.error("Falha ao salvar booking público", caughtError, { studioId: studio.id });
         setError(
-          getFriendlyErrorMessage(caughtError, "Nao foi possivel salvar o agendamento. Tente novamente."),
+          getFriendlyErrorMessage(caughtError, "Não foi possível salvar o agendamento. Tente novamente."),
         );
       }
     } finally {
@@ -274,7 +274,7 @@ export function BookingPage() {
 
         <header className="mt-6 rounded-xl border border-white/10 bg-[#1a1a1a] p-5">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#E8650A]">Agendamento</p>
-          <h1 className="mt-2 text-3xl font-semibold">Agendar horario</h1>
+          <h1 className="mt-2 text-3xl font-semibold">Agendar horário</h1>
           <p className="mt-2 text-sm text-zinc-400">{studio.name}</p>
         </header>
 
@@ -298,14 +298,14 @@ export function BookingPage() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium">Servico</label>
+              <label className="mb-2 block text-sm font-medium">Serviço</label>
               <select
                 className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
                 value={selectedServiceId}
                 onChange={(event) => setSelectedServiceId(event.target.value)}
                 required
               >
-                {services.length === 0 ? <option value="">Nenhum servico ativo</option> : null}
+                {services.length === 0 ? <option value="">Nenhum serviço ativo</option> : null}
                 {services.map((service) => (
                   <option key={service.id} value={service.id}>
                     {service.name}
@@ -327,7 +327,7 @@ export function BookingPage() {
                 />
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium">Horario</label>
+                <label className="mb-2 block text-sm font-medium">Horário</label>
                 <select
                   className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
                   disabled={availabilityLoading || availableTimes.length === 0}
@@ -335,9 +335,9 @@ export function BookingPage() {
                   onChange={(event) => setTime(event.target.value)}
                   required
                 >
-                  {availabilityLoading ? <option value="">Carregando horarios...</option> : null}
+                  {availabilityLoading ? <option value="">Carregando horários...</option> : null}
                   {!availabilityLoading && availableTimes.length === 0 ? (
-                    <option value="">Nenhum horario disponivel</option>
+                    <option value="">Nenhum horário disponível</option>
                   ) : null}
                   {availableTimes.map((slot) => (
                     <option key={slot} value={slot}>
@@ -351,7 +351,7 @@ export function BookingPage() {
             {availabilityError ? <p className="text-sm text-red-400">{availabilityError}</p> : null}
             {!availabilityError && !availabilityLoading && availableTimes.length === 0 ? (
               <p className="text-sm text-zinc-400">
-                Esse dia esta fechado ou todos os horarios desse tatuador ja foram ocupados.
+                Esse dia está fechado ou todos os horários desse tatuador já foram ocupados.
               </p>
             ) : null}
             {error ? <p className="text-sm text-red-400">{error}</p> : null}
@@ -405,7 +405,7 @@ export function BookingPage() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium">Descricao da tatuagem</label>
+              <label className="mb-2 block text-sm font-medium">Descrição da tatuagem</label>
               <textarea
                 className="min-h-32 w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
                 value={description}
@@ -415,7 +415,7 @@ export function BookingPage() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium">Fotos de referencia</label>
+              <label className="mb-2 block text-sm font-medium">Fotos de referência</label>
               <input
                 accept="image/*"
                 className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
@@ -423,7 +423,7 @@ export function BookingPage() {
                 onChange={handleFiles}
                 type="file"
               />
-              <p className="mt-2 text-xs text-zinc-500">Ate 3 fotos.</p>
+              <p className="mt-2 text-xs text-zinc-500">Até 3 fotos.</p>
             </div>
 
             {error ? <p className="text-sm text-red-400">{error}</p> : null}
@@ -452,9 +452,9 @@ export function BookingPage() {
             <h2 className="text-2xl font-semibold">Agendamento recebido</h2>
             <div className="mt-5 space-y-2 text-sm text-zinc-300">
               <p>Tatuador: {selectedArtist?.name}</p>
-              <p>Servico: {selectedService?.name}</p>
+              <p>Serviço: {selectedService?.name}</p>
               <p>Data: {date}</p>
-              <p>Horario: {time}</p>
+              <p>Horário: {time}</p>
               <p>Nome: {clientName}</p>
             </div>
             <a

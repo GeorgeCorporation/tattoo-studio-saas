@@ -42,7 +42,7 @@ export type CreateAppointmentData = {
 };
 
 export class BookingAvailabilityError extends Error {
-  constructor(message = "Esse horario acabou de ficar indisponivel. Escolha outro horario.") {
+  constructor(message = "Esse horário acabou de ficar indisponível. Escolha outro horário.") {
     super(message);
     this.name = "BookingAvailabilityError";
   }

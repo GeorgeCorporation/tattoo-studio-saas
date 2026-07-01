@@ -19,7 +19,7 @@ export function Login() {
     const { data, error: signInError } = await signIn({ email, password });
 
     if (signInError || !data.user) {
-      setError(signInError?.message ?? "Nao foi possivel entrar.");
+      setError(signInError?.message ?? "Não foi possível entrar.");
       setLoading(false);
       return;
     }
@@ -45,7 +45,7 @@ export function Login() {
       <section className="w-full max-w-md rounded-xl border border-white/10 bg-[#1a1a1a] p-6 shadow-2xl shadow-black/30 sm:p-8">
         <div className="mb-8 text-center">
           <p className="text-2xl font-semibold tracking-wide text-white">Ideal Tattoo</p>
-          <p className="mt-2 text-sm text-zinc-400">Entre para gerenciar seu estudio</p>
+          <p className="mt-2 text-sm text-zinc-400">Entre para gerenciar seu estúdio</p>
         </div>
 
         <form className="space-y-5" onSubmit={handleSubmit}>
@@ -85,7 +85,7 @@ export function Login() {
         </form>
 
         <p className="mt-6 text-center text-sm text-zinc-400">
-          Ainda nao tem conta?{" "}
+          Ainda não tem conta?{" "}
           <Link className="font-medium text-[#E8650A] hover:text-[#ff9a4f]" to="/cadastro">
             Criar conta
           </Link>

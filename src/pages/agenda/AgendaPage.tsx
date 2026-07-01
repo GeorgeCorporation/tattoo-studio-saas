@@ -46,7 +46,7 @@ export function AgendaPage() {
 
       const studio = await getCurrentUserStudio(user.id);
       if (!studio) {
-        setError("Estudio nao encontrado.");
+        setError("Estúdio não encontrado.");
         return;
       }
 
@@ -54,7 +54,7 @@ export function AgendaPage() {
       setAppointments(await getAppointmentsByDate(studio.id, selectedDateInput));
     } catch (caughtError) {
       logger.error("Falha ao carregar agenda", caughtError, { selectedDate: selectedDateInput });
-      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel carregar agenda."));
+      setError(getFriendlyErrorMessage(caughtError, "Não foi possível carregar agenda."));
     } finally {
       setLoading(false);
     }
@@ -78,7 +78,7 @@ export function AgendaPage() {
       await loadAppointments();
     } catch (caughtError) {
       logger.error("Falha ao atualizar status da agenda", caughtError, { appointmentId: id, status });
-      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel atualizar o agendamento."));
+      setError(getFriendlyErrorMessage(caughtError, "Não foi possível atualizar o agendamento."));
     }
   }
 

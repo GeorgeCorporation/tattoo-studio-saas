@@ -42,7 +42,7 @@ export function useArtist(artistId?: string) {
       }
     } catch (caughtError) {
       logger.error("Falha ao carregar perfil do tatuador", caughtError, { artistId });
-      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel carregar tatuador."));
+      setError(getFriendlyErrorMessage(caughtError, "Não foi possível carregar tatuador."));
     } finally {
       setLoading(false);
     }

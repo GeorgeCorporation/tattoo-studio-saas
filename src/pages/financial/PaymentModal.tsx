@@ -60,7 +60,7 @@ export function PaymentModal({ open, studioId, onClose, onCreated }: PaymentModa
       onCreated();
       onClose();
     } catch {
-      setError("Nao foi possivel registrar pagamento.");
+      setError("Não foi possível registrar pagamento.");
     } finally {
       setSaving(false);
     }

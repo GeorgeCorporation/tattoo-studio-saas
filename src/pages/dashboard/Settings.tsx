@@ -1,10 +1,10 @@
 import { Loader2, Lock, LogOut, Save, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/lib/supabase";
 import { createStoragePath, getStoragePathFromPublicUrl } from "@/services/storage.service";
 
 type WorkingHour = {
@@ -32,41 +32,16 @@ type StudioSettings = {
 const weekDays = [
   "Domingo",
   "Segunda-feira",
-  "Terca-feira",
+  "Terça-feira",
   "Quarta-feira",
   "Quinta-feira",
   "Sexta-feira",
-  "Sabado",
+  "Sábado",
 ];
 
 const brStates = [
-  "AC",
-  "AL",
-  "AP",
-  "AM",
-  "BA",
-  "CE",
-  "DF",
-  "ES",
-  "GO",
-  "MA",
-  "MT",
-  "MS",
-  "MG",
-  "PA",
-  "PB",
-  "PR",
-  "PE",
-  "PI",
-  "RJ",
-  "RN",
-  "RS",
-  "RO",
-  "RR",
-  "SC",
-  "SP",
-  "SE",
-  "TO",
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG",
+  "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
 ];
 
 const inputClass =
@@ -124,7 +99,7 @@ export function Settings() {
 
         if (studioError) throw studioError;
         if (!studio) {
-          setToast({ type: "error", message: "Estudio nao encontrado." });
+          setToast({ type: "error", message: "Estúdio não encontrado." });
           return;
         }
 
@@ -153,10 +128,10 @@ export function Settings() {
           setWorkingHours(merged);
         }
       } catch (caughtError) {
-        logger.error("Falha ao carregar configuracoes", caughtError, { userId: user.id });
+        logger.error("Falha ao carregar configurações", caughtError, { userId: user.id });
         setToast({
           type: "error",
-          message: getFriendlyErrorMessage(caughtError, "Nao foi possivel carregar configuracoes."),
+          message: getFriendlyErrorMessage(caughtError, "Não foi possível carregar as configurações."),
         });
       } finally {
         setLoading(false);
@@ -203,12 +178,12 @@ export function Settings() {
 
   async function handleSave() {
     if (!name.trim()) {
-      setToast({ type: "error", message: "Nome do estudio obrigatorio." });
+      setToast({ type: "error", message: "Informe o nome do estúdio." });
       return;
     }
 
     if (!/^\d{11}$/.test(whatsapp)) {
-      setToast({ type: "error", message: "WhatsApp deve ter 11 numeros. Ex: 11999999999." });
+      setToast({ type: "error", message: "Informe um WhatsApp válido com 11 números. Ex: 11999999999." });
       return;
     }
 
@@ -265,12 +240,12 @@ export function Settings() {
       }
 
       setWorkingHours(nextWorkingHours);
-      setToast({ type: "success", message: "Configuracoes salvas com sucesso." });
+      setToast({ type: "success", message: "Configurações atualizadas com sucesso." });
     } catch (caughtError) {
-      logger.error("Falha ao salvar configuracoes", caughtError, { studioId });
+      logger.error("Falha ao salvar configurações", caughtError, { studioId });
       setToast({
         type: "error",
-        message: getFriendlyErrorMessage(caughtError, "Erro ao salvar configuracoes."),
+        message: getFriendlyErrorMessage(caughtError, "Não foi possível salvar as configurações."),
       });
     } finally {
       setSaving(false);
@@ -286,7 +261,7 @@ export function Settings() {
 
     setToast({
       type: error ? "error" : "success",
-      message: error ? "Nao foi possivel enviar email de senha." : "Email para alterar senha enviado.",
+      message: error ? "Não foi possível enviar o email de redefinição." : "Email de redefinição enviado com sucesso.",
     });
   }
 
@@ -311,16 +286,16 @@ export function Settings() {
       ) : null}
 
       <div>
-        <h1 className="text-3xl font-semibold">Configuracoes</h1>
-        <p className="mt-2 text-sm text-zinc-400">Ajuste identidade, contato, horarios e conta do estudio.</p>
+        <h1 className="text-3xl font-semibold">Configurações do estúdio</h1>
+        <p className="mt-2 text-sm text-zinc-400">Ajuste identidade visual, canais de contato, endereço e horários de funcionamento.</p>
       </div>
 
       {loading ? (
-        <div className="rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] p-6 text-zinc-400">Carregando configuracoes...</div>
+        <div className="rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] p-6 text-zinc-400">Carregando configurações do estúdio...</div>
       ) : (
         <>
           <div className="rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] p-5">
-            <h2 className="text-lg font-semibold">Identidade</h2>
+            <h2 className="text-lg font-semibold">Identidade visual</h2>
             <div className="mt-5 flex flex-col gap-5 md:flex-row md:items-start">
               <div className="flex flex-col items-center gap-3">
                 {logoUrl ? (
@@ -332,7 +307,7 @@ export function Settings() {
                 )}
                 <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[#2a2a2a] px-4 py-2 text-sm font-medium hover:border-[#E8650A]">
                   <Upload size={16} />
-                  Upload de logo
+                  Atualizar logo
                   <input
                     accept="image/*"
                     className="hidden"
@@ -346,7 +321,7 @@ export function Settings() {
                         logger.error("Falha ao enviar logo", caughtError, { studioId });
                         setToast({
                           type: "error",
-                          message: getFriendlyErrorMessage(caughtError, "Erro ao enviar logo."),
+                          message: getFriendlyErrorMessage(caughtError, "Não foi possível enviar a logo."),
                         });
                       }
                       event.target.value = "";
@@ -358,11 +333,11 @@ export function Settings() {
 
               <div className="grid flex-1 gap-4">
                 <div>
-                  <label className="text-sm font-medium">Nome do estudio</label>
+                  <label className="text-sm font-medium">Nome do estúdio</label>
                   <input className={inputClass} maxLength={80} onChange={(event) => setName(event.target.value)} value={name} />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Descricao</label>
+                  <label className="text-sm font-medium">Descrição</label>
                   <textarea
                     className={`${inputClass} min-h-28 resize-none`}
                     maxLength={200}
@@ -376,10 +351,10 @@ export function Settings() {
           </div>
 
           <div className="rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] p-5">
-            <h2 className="text-lg font-semibold">Contato</h2>
+            <h2 className="text-lg font-semibold">Canais de atendimento</h2>
             <div className="mt-5 grid gap-4 md:grid-cols-3">
               <div>
-                <label className="text-sm font-medium">WhatsApp</label>
+                <label className="text-sm font-medium">WhatsApp principal</label>
                 <input className={inputClass} maxLength={11} onChange={(event) => setWhatsapp(event.target.value.replace(/\D/g, ""))} value={whatsapp} />
               </div>
               <div>
@@ -397,10 +372,10 @@ export function Settings() {
           </div>
 
           <div className="rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] p-5">
-            <h2 className="text-lg font-semibold">Localizacao</h2>
+            <h2 className="text-lg font-semibold">Localização</h2>
             <div className="mt-5 grid gap-4 md:grid-cols-[2fr_1fr_140px]">
               <div>
-                <label className="text-sm font-medium">Endereco</label>
+                <label className="text-sm font-medium">Endereço</label>
                 <input className={inputClass} onChange={(event) => setAddress(event.target.value)} value={address} />
               </div>
               <div>
@@ -422,7 +397,7 @@ export function Settings() {
           </div>
 
           <div className="rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] p-5">
-            <h2 className="text-lg font-semibold">Horarios de funcionamento</h2>
+            <h2 className="text-lg font-semibold">Horários de funcionamento</h2>
             <div className="mt-5 space-y-3">
               {workingHours.map((day) => (
                 <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-4" key={day.day_of_week}>
@@ -446,7 +421,7 @@ export function Settings() {
                       </button>
                       <div>
                         <p className="font-medium">{weekDays[day.day_of_week]}</p>
-                        <p className="text-sm text-zinc-500">{day.is_open ? "Aberto" : "Fechado"}</p>
+                        <p className="text-sm text-zinc-500">{day.is_open ? "Atendimento ativo" : "Fechado"}</p>
                       </div>
                     </div>
 
@@ -456,7 +431,7 @@ export function Settings() {
                         <input className="rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] px-3 py-2 text-white outline-none focus:border-[#E8650A]" onChange={(event) => updateDay(day.day_of_week, "close_time", event.target.value)} type="time" value={day.close_time} />
                       </div>
                     ) : (
-                      <p className="text-sm font-medium text-zinc-500">Fechado</p>
+                      <p className="text-sm font-medium text-zinc-500">Sem expediente neste dia</p>
                     )}
                   </div>
                 </div>
@@ -474,7 +449,7 @@ export function Settings() {
               <div className="flex flex-col gap-3 sm:flex-row">
                 <button className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#2a2a2a] px-4 py-3 font-medium hover:border-[#E8650A]" onClick={handlePasswordReset} type="button">
                   <Lock size={16} />
-                  Alterar senha
+                  Redefinir senha
                 </button>
                 <button className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#2a2a2a] px-4 py-3 font-medium text-red-200 hover:border-red-500/40" onClick={handleSignOut} type="button">
                   <LogOut size={16} />
@@ -495,7 +470,7 @@ export function Settings() {
             type="button"
           >
             {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-            Salvar configuracoes
+            Salvar configurações
           </button>
         </div>
       </div>

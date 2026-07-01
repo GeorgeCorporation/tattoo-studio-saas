@@ -27,7 +27,7 @@ function NotFound() {
     <main className="flex min-h-screen items-center justify-center bg-[#0f0f0f] px-4 text-white">
       <section className="max-w-md text-center">
         <p className="text-3xl font-semibold">404</p>
-        <p className="mt-3 text-zinc-400">Tatuador nao encontrado.</p>
+        <p className="mt-3 text-zinc-400">Tatuador não encontrado.</p>
         <Link className="mt-6 inline-flex rounded-xl bg-[#E8650A] px-5 py-3 font-semibold" to="/">
           Voltar
         </Link>
@@ -72,7 +72,7 @@ export function ArtistPage() {
         setArtist(foundArtist);
         setGallery(foundGallery);
       } catch (caughtError) {
-        logger.error("Falha ao carregar pagina publica do tatuador", caughtError, {
+        logger.error("Falha ao carregar página pública do tatuador", caughtError, {
           slug: studioSlug,
           artistSlug: currentArtistSlug,
         });
@@ -113,7 +113,7 @@ export function ArtistPage() {
           </div>
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#E8650A]">
-              {artist.specialty ?? "Tattoo artist"}
+              {artist.specialty ?? "Tatuador"}
             </p>
             <h1 className="mt-3 text-4xl font-semibold sm:text-5xl">{artist.name}</h1>
             {artist.bio ? <p className="mt-4 max-w-2xl leading-7 text-zinc-300">{artist.bio}</p> : null}

@@ -2,8 +2,8 @@ import { Plus, Search } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { getCurrentUserStudio } from "@/services/dashboard.service";
 import { ClientModal } from "@/pages/clients/ClientModal";
+import { getCurrentUserStudio } from "@/services/dashboard.service";
 import {
   createClient,
   getClients,
@@ -34,14 +34,14 @@ export function ClientsPage() {
 
       const studio = await getCurrentUserStudio(user.id);
       if (!studio) {
-        setError("Estudio nao encontrado.");
+        setError("Estúdio não encontrado.");
         return;
       }
 
       setStudioId(studio.id);
       setClients(await getClients(studio.id, search));
     } catch {
-      setError("Nao foi possivel carregar clientes.");
+      setError("Não foi possível carregar os clientes.");
     } finally {
       setLoading(false);
     }
@@ -62,7 +62,7 @@ export function ClientsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-semibold">Clientes</h1>
-          <p className="mt-2 text-sm text-zinc-400">Lista completa de clientes do estudio.</p>
+          <p className="mt-2 text-sm text-zinc-400">Acompanhe contatos, histórico e relacionamento com cada cliente do estúdio.</p>
         </div>
         <button
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#E8650A] px-4 py-3 font-semibold"
@@ -78,9 +78,9 @@ export function ClientsPage() {
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
         <input
           className="w-full rounded-xl border border-white/10 bg-[#1a1a1a] py-3 pl-11 pr-4 text-white outline-none focus:border-[#E8650A]"
+          onChange={(event) => setSearch(event.target.value)}
           placeholder="Buscar por nome ou WhatsApp"
           value={search}
-          onChange={(event) => setSearch(event.target.value)}
         />
       </label>
 
@@ -108,9 +108,9 @@ export function ClientsPage() {
                           {client.phone}
                         </a>
                       ) : (
-                        <span>Sem WhatsApp</span>
+                        <span>WhatsApp não informado</span>
                       )}
-                      <span>{client.instagram || "Sem Instagram"}</span>
+                      <span>{client.instagram || "Instagram não informado"}</span>
                     </div>
                   </div>
                   <span className="rounded-full bg-white/5 px-3 py-1 text-sm text-zinc-300">
@@ -123,12 +123,12 @@ export function ClientsPage() {
 
         {!loading && !clients.length ? (
           <div className="rounded-xl border border-white/10 bg-[#1a1a1a] p-8 text-center text-zinc-400">
-            Nenhum cliente encontrado.
+            Nenhum cliente encontrado para esta busca.
           </div>
         ) : null}
       </div>
 
-      <ClientModal open={modalOpen} onClose={() => setModalOpen(false)} onSave={handleCreate} />
+      <ClientModal onClose={() => setModalOpen(false)} onSave={handleCreate} open={modalOpen} />
     </section>
   );
 }

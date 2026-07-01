@@ -31,7 +31,7 @@ describe("StudioPage", () => {
     mockGetStudioGallery.mockReset();
   });
 
-  it("renderiza estudio mesmo sem tatuadores e galeria", async () => {
+  it("renderiza estúdio mesmo sem tatuadores e galeria", async () => {
     mockGetStudioBySlug.mockResolvedValue({
       id: "studio-1",
       name: "Ideal Tattoo",
@@ -39,7 +39,7 @@ describe("StudioPage", () => {
       logo_url: null,
       description: null,
       address: null,
-      city: "Sao Paulo",
+      city: "São Paulo",
       state: "SP",
       instagram: null,
       whatsapp: "11999999999",
@@ -54,14 +54,14 @@ describe("StudioPage", () => {
 
     expect(screen.getByText("0 profissionais")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Agendar agora" })).toHaveAttribute("href", "/ideal-tattoo/agendar");
-    expect(screen.getByText("Sao Paulo - SP")).toBeInTheDocument();
+    expect(screen.getByText("São Paulo - SP")).toBeInTheDocument();
   });
 
-  it("mostra 404 quando estudio nao existe", async () => {
+  it("mostra 404 quando estúdio não existe", async () => {
     mockGetStudioBySlug.mockResolvedValue(null);
 
     renderStudioPage("/nao-existe");
 
-    await waitFor(() => expect(screen.getByText("Estudio nao encontrado.")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Estúdio não encontrado.")).toBeInTheDocument());
   });
 });

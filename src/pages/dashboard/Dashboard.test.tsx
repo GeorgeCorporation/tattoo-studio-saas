@@ -43,9 +43,9 @@ describe("Dashboard", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("1 de 6 concluidos para deixar seu estudio pronto.")).toBeInTheDocument();
+    expect(screen.getByText("1 de 6 concluídos para deixar seu estúdio pronto para divulgar e vender.")).toBeInTheDocument();
     expect(screen.getByText("Cadastrar primeiro tatuador")).toBeInTheDocument();
-    expect(screen.getByText("Nenhum agendamento encontrado.")).toBeInTheDocument();
+    expect(screen.getByText("Nenhum agendamento próximo encontrado.")).toBeInTheDocument();
   });
 
   it("mostra checklist concluido quando setup esta completo", () => {
@@ -86,7 +86,7 @@ describe("Dashboard", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("6 de 6 concluidos para deixar seu estudio pronto.")).toBeInTheDocument();
+    expect(screen.getByText("6 de 6 concluídos para deixar seu estúdio pronto para divulgar e vender.")).toBeInTheDocument();
     expect(screen.getByText("George")).toBeInTheDocument();
     expect(screen.getByText("Confirmado")).toBeInTheDocument();
   });

@@ -30,7 +30,7 @@ export const paymentTypeLabels: Record<PaymentType, string> = {
 export const paymentMethodLabels: Record<PaymentMethod, string> = {
   pix: "PIX",
   cash: "Dinheiro",
-  card: "Cartao",
+  card: "Cartão",
 };
 
 export const appointmentStatusTransitions: Record<AppointmentStatus, AppointmentStatus[]> = {
@@ -51,7 +51,7 @@ export function canTransitionAppointmentStatus(current: AppointmentStatus, next:
 
 export function assertAppointmentStatus(value: string): asserts value is AppointmentStatus {
   if (!isAppointmentStatus(value)) {
-    throw new Error(`Status de agendamento invalido: ${value}`);
+    throw new Error(`Status de agendamento inválido: ${value}`);
   }
 }
 
@@ -74,12 +74,12 @@ export function buildWhatsAppReminderMessage(data: {
   time: string;
 }) {
   return [
-    `Ola, ${data.clientName}!`,
+    `Olá, ${data.clientName}!`,
     `Passando para lembrar seu agendamento no ${data.studioName}:`,
     `*Tatuador:* ${data.artistName}`,
-    `*Servico:* ${data.serviceName}`,
+    `*Serviço:* ${data.serviceName}`,
     `*Data:* ${data.date}`,
-    `*Horario:* ${data.time}`,
+    `*Horário:* ${data.time}`,
     "Se precisar remarcar, responda esta mensagem.",
   ].join("\n");
 }

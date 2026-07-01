@@ -28,7 +28,7 @@ export function DeliveriesPage() {
 
       const studio = await getCurrentUserStudio(user.id);
       if (!studio) {
-        setError("Estudio nao encontrado.");
+        setError("Estúdio não encontrado.");
         return;
       }
 
@@ -40,7 +40,7 @@ export function DeliveriesPage() {
       setClients(foundClients);
       setDeliveries(foundDeliveries);
     } catch {
-      setError("Nao foi possivel carregar entregas.");
+      setError("Não foi possível carregar entregas.");
     } finally {
       setLoading(false);
     }

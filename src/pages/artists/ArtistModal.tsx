@@ -56,7 +56,7 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
 
       onCreated(artist.id);
     } catch {
-      setError("Nao foi possivel criar tatuador.");
+      setError("Não foi possível criar tatuador.");
     } finally {
       setSaving(false);
     }

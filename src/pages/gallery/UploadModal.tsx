@@ -81,7 +81,7 @@ export function UploadModal({ artists, onClose, onUploaded, open, studioId }: Up
       await onUploaded();
       onClose();
     } catch {
-      setError("Nao foi possivel enviar as fotos.");
+      setError("Não foi possível enviar as fotos.");
     } finally {
       setUploading(false);
     }

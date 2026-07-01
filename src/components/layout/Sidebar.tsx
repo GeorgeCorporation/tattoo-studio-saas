@@ -26,11 +26,11 @@ const items = [
   { label: "Agenda", href: "/agenda", icon: CalendarDays },
   { label: "Clientes", href: "/clientes", icon: Users },
   { label: "Tatuadores", href: "/tatuadores", icon: Scissors },
-  { label: "Servicos", href: "/servicos", icon: Palette },
+  { label: "Serviços", href: "/servicos", icon: Palette },
   { label: "Galeria", href: "/galeria", icon: Camera },
   { label: "Entregas", href: "/entregas", icon: Images },
   { label: "Financeiro", href: "/financeiro", icon: Banknote },
-  { label: "Configuracoes", href: "/configuracoes", icon: Settings },
+  { label: "Configurações", href: "/configuracoes", icon: Settings },
 ];
 
 export function Sidebar({ studioName = "Ideal Tattoo", showMobileButton = true }: SidebarProps) {

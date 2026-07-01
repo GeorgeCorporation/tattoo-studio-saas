@@ -25,14 +25,14 @@ export function ArtistsPage() {
       setError("");
       const studio = await getCurrentUserStudio(user.id);
       if (!studio) {
-        setError("Estudio nao encontrado.");
+        setError("Estúdio não encontrado.");
         return;
       }
       setStudioId(studio.id);
       setArtists(await getArtists(studio.id));
     } catch (caughtError) {
       logger.error("Falha ao carregar tatuadores", caughtError);
-      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel carregar tatuadores."));
+      setError(getFriendlyErrorMessage(caughtError, "Não foi possível carregar tatuadores."));
     } finally {
       setLoading(false);
     }
@@ -49,7 +49,7 @@ export function ArtistsPage() {
       await loadArtists();
     } catch (caughtError) {
       logger.error("Falha ao alternar status do tatuador", caughtError, { artistId: artist.id });
-      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel atualizar o tatuador."));
+      setError(getFriendlyErrorMessage(caughtError, "Não foi possível atualizar o tatuador."));
     }
   }
 
