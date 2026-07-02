@@ -46,6 +46,28 @@ const citiesByState: Record<string, string[]> = {
   SP: ["São Paulo", "Guarulhos", "Campinas", "São Bernardo do Campo", "Santo André", "Osasco", "Ribeirão Preto", "Sorocaba"],
 };
 
+const extraCitiesByState: Record<string, string[]> = {
+  AC: ["Rio Branco", "Cruzeiro do Sul", "Sena Madureira", "Tarauacá", "Feijó"],
+  AL: ["Maceió", "Arapiraca", "Rio Largo", "Palmeira dos Índios", "União dos Palmares"],
+  AP: ["Macapá", "Santana", "Laranjal do Jari", "Oiapoque", "Porto Grande"],
+  AM: ["Manaus", "Parintins", "Itacoatiara", "Manacapuru", "Coari"],
+  ES: ["Vitoria", "Vila Velha", "Serra", "Cariacica", "Linhares"],
+  GO: ["Goiânia", "Aparecida de Goiânia", "Anápolis", "Rio Verde", "Luziânia"],
+  MA: ["São Luís", "Imperatriz", "São José de Ribamar", "Timon", "Caxias"],
+  MT: ["Cuiabá", "Várzea Grande", "Rondonópolis", "Sinop", "Tangará da Serra"],
+  MS: ["Campo Grande", "Dourados", "Três Lagoas", "Corumbá", "Ponta Porã"],
+  PA: ["Belém", "Ananindeua", "Santarém", "Marabá", "Parauapebas"],
+  PI: ["Teresina", "Parnaíba", "Picos", "Piripiri", "Floriano"],
+  RO: ["Porto Velho", "Ji-Parana", "Ariquemes", "Vilhena", "Cacoal"],
+  RR: ["Boa Vista", "Rorainopolis", "Caracarai", "Alto Alegre", "Mucajai"],
+  SE: ["Aracaju", "Nossa Senhora do Socorro", "Lagarto", "Itabaiana", "São Cristóvão"],
+  TO: ["Palmas", "Araguaína", "Gurupi", "Porto Nacional", "Paraíso do Tocantins"],
+  RN: ["Natal", "Mossoró", "Parnamirim", "São Gonçalo do Amarante", "Caicó"],
+  PB: ["João Pessoa", "Campina Grande", "Santa Rita", "Patos"],
+  PE: ["Recife", "Jaboatão dos Guararapes", "Olinda", "Caruaru", "Petrolina"],
+  CE: ["Fortaleza", "Caucaia", "Juazeiro do Norte", "Maracanaú", "Sobral"],
+};
+
 const serviceExamples = [
   { name: "Orçamento", category: "Outro", duration: "30", price: "" },
   { name: "Tatuagem pequena", category: "Fine Line", duration: "120", price: "250" },
@@ -179,7 +201,7 @@ export function OnboardingPage() {
   const publicUrl = slugify(slug) || "seu-estudio";
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const progress = Math.round((step / steps.length) * 100);
-  const cityOptions = stateUf ? citiesByState[stateUf] ?? [] : [];
+  const cityOptions = stateUf ? Array.from(new Set([...(citiesByState[stateUf] ?? []), ...(extraCitiesByState[stateUf] ?? [])])) : [];
   const artistsToSave = [
     ...artists,
     {
@@ -622,9 +644,9 @@ export function OnboardingPage() {
                 <label className="block">
                   <span className="text-sm font-medium">Instagram</span>
                   <div className="mt-2 flex overflow-hidden rounded-xl border border-white/10 bg-[#0f0f0f] focus-within:border-[#E8650A] focus-within:ring-2 focus-within:ring-[#E8650A]/25">
-                    <span className="flex items-center border-r border-white/10 px-4 text-zinc-400">@</span>
+                    <span className="flex w-12 shrink-0 items-center justify-center border-r border-white/10 text-zinc-400">@</span>
                     <input
-                      className="min-w-0 flex-1 bg-transparent px-4 py-3 text-white outline-none"
+                      className="min-w-0 flex-1 bg-transparent px-5 py-3 text-white outline-none"
                       onChange={(event) => setInstagram(event.target.value.replace("@", ""))}
                       placeholder="seuestudio"
                       value={instagram}
@@ -641,14 +663,16 @@ export function OnboardingPage() {
                 </label>
                 <label className="block">
                   <span className="text-sm font-medium">Cidade</span>
-                  <input aria-label="Cidade" className={inputClass} list="onboarding-cities" onChange={(event) => setCity(event.target.value)} required value={city} />
-                  <datalist id="onboarding-cities">
+                  <select aria-label="Cidade" className={inputClass} disabled={!stateUf} onChange={(event) => setCity(event.target.value)} required value={city}>
+                    <option value="">{stateUf ? "Selecione" : "Escolha o estado primeiro"}</option>
                     {cityOptions.map((option) => (
-                      <option key={option} value={option} />
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
                     ))}
-                  </datalist>
+                  </select>
                   <p className="mt-2 text-xs text-zinc-500">
-                    {stateUf && cityOptions.length ? "Digite ou escolha uma cidade sugerida para o estado." : "Escolha o estado para ver sugestões de cidade."}
+                    {stateUf && cityOptions.length ? "Escolha uma cidade do estado selecionado." : "Escolha o estado para ver sugestões de cidade."}
                   </p>
                 </label>
                 <label className="block">
@@ -776,9 +800,9 @@ export function OnboardingPage() {
                   <label className="block">
                     <span className="text-sm font-medium">Instagram</span>
                     <div className="mt-2 flex overflow-hidden rounded-xl border border-white/10 bg-[#0f0f0f] focus-within:border-[#E8650A] focus-within:ring-2 focus-within:ring-[#E8650A]/25">
-                      <span className="flex items-center border-r border-white/10 px-4 text-zinc-400">@</span>
+                      <span className="flex w-12 shrink-0 items-center justify-center border-r border-white/10 text-zinc-400">@</span>
                       <input
-                        className="min-w-0 flex-1 bg-transparent px-4 py-3 text-white outline-none"
+                        className="min-w-0 flex-1 bg-transparent px-5 py-3 text-white outline-none"
                         onChange={(event) => setArtistInstagram(event.target.value.replace("@", ""))}
                         value={artistInstagram}
                       />

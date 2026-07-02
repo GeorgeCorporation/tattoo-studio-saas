@@ -66,8 +66,8 @@ describe("OnboardingPage", () => {
 
     await screen.findByText("Contato e localização");
     fireEvent.change(screen.getByLabelText("WhatsApp"), { target: { value: "1199" } });
-    fireEvent.change(screen.getByLabelText("Cidade"), { target: { value: "São Paulo" } });
     fireEvent.change(screen.getByLabelText("Estado"), { target: { value: "SP" } });
+    fireEvent.change(screen.getByLabelText("Cidade"), { target: { value: "São Paulo" } });
     fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
 
     expect(screen.getByText(/WhatsApp válido/i)).toBeInTheDocument();
@@ -81,8 +81,8 @@ describe("OnboardingPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
 
     fireEvent.change(screen.getByLabelText("WhatsApp"), { target: { value: "11999999999" } });
-    fireEvent.change(screen.getByLabelText("Cidade"), { target: { value: "São Paulo" } });
     fireEvent.change(screen.getByLabelText("Estado"), { target: { value: "SP" } });
+    fireEvent.change(screen.getByLabelText("Cidade"), { target: { value: "São Paulo" } });
     fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
 
     fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
