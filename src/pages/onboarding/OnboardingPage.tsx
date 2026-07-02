@@ -33,6 +33,43 @@ const brStates = [
 const weekDays = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 const serviceCategories = ["Fine Line", "Black Work", "Realismo", "Old School", "New School", "Colorido", "Fechamento", "Piercing", "Outro"];
 
+const citiesByState: Record<string, string[]> = {
+  BA: ["Salvador", "Feira de Santana", "Vitória da Conquista", "Camaçari", "Itabuna", "Juazeiro"],
+  CE: ["Fortaleza", "Caucaia", "Juazeiro do Norte", "Maracanaú", "Sobral"],
+  DF: ["Brasília"],
+  MG: ["Belo Horizonte", "Uberlândia", "Contagem", "Juiz de Fora", "Betim", "Montes Claros"],
+  PE: ["Recife", "Jaboatão dos Guararapes", "Olinda", "Caruaru", "Petrolina"],
+  PR: ["Curitiba", "Londrina", "Maringá", "Ponta Grossa", "Cascavel"],
+  RJ: ["Rio de Janeiro", "São Gonçalo", "Duque de Caxias", "Niterói", "Nova Iguaçu"],
+  RS: ["Porto Alegre", "Caxias do Sul", "Canoas", "Pelotas", "Santa Maria"],
+  SC: ["Florianópolis", "Joinville", "Blumenau", "São José", "Chapecó"],
+  SP: ["São Paulo", "Guarulhos", "Campinas", "São Bernardo do Campo", "Santo André", "Osasco", "Ribeirão Preto", "Sorocaba"],
+};
+
+const serviceExamples = [
+  { name: "Orçamento", category: "Outro", duration: "30", price: "" },
+  { name: "Tatuagem pequena", category: "Fine Line", duration: "120", price: "250" },
+  { name: "Sessão de tatuagem", category: "Outro", duration: "240", price: "" },
+  { name: "Retoque", category: "Outro", duration: "60", price: "" },
+];
+
+type ArtistDraft = {
+  name: string;
+  slug: string;
+  specialty: string;
+  instagram: string;
+  whatsapp: string;
+  photoFile: File | null;
+};
+
+type ServiceDraft = {
+  name: string;
+  category: string;
+  description: string;
+  startingPrice: string;
+  durationMinutes: string;
+};
+
 const inputClass =
   "mt-2 w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3 text-white outline-none transition focus:border-[#E8650A] focus:ring-2 focus:ring-[#E8650A]/25";
 
@@ -80,6 +117,27 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string) {
   ]);
 }
 
+function createEmptyArtist(): ArtistDraft {
+  return {
+    name: "",
+    slug: "",
+    specialty: "",
+    instagram: "",
+    whatsapp: "",
+    photoFile: null,
+  };
+}
+
+function createEmptyService(): ServiceDraft {
+  return {
+    name: "",
+    category: "Outro",
+    description: "",
+    startingPrice: "",
+    durationMinutes: "120",
+  };
+}
+
 export function OnboardingPage() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -103,11 +161,13 @@ export function OnboardingPage() {
   const [artistInstagram, setArtistInstagram] = useState("");
   const [artistWhatsapp, setArtistWhatsapp] = useState("");
   const [artistPhotoFile, setArtistPhotoFile] = useState<File | null>(null);
+  const [artists, setArtists] = useState<ArtistDraft[]>([]);
   const [serviceName, setServiceName] = useState("");
   const [serviceCategory, setServiceCategory] = useState("Outro");
   const [serviceDescription, setServiceDescription] = useState("");
   const [startingPrice, setStartingPrice] = useState("");
   const [durationMinutes, setDurationMinutes] = useState("120");
+  const [services, setServices] = useState<ServiceDraft[]>([]);
   const [checkingStudio, setCheckingStudio] = useState(true);
   const [startupWaitExpired, setStartupWaitExpired] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -119,6 +179,28 @@ export function OnboardingPage() {
   const publicUrl = slugify(slug) || "seu-estudio";
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const progress = Math.round((step / steps.length) * 100);
+  const cityOptions = stateUf ? citiesByState[stateUf] ?? [] : [];
+  const artistsToSave = [
+    ...artists,
+    {
+      name: artistName,
+      slug: artistSlug,
+      specialty: artistSpecialty,
+      instagram: artistInstagram,
+      whatsapp: artistWhatsapp,
+      photoFile: artistPhotoFile,
+    },
+  ].filter((artist) => artist.name.trim());
+  const servicesToSave = [
+    ...services,
+    {
+      name: serviceName,
+      category: serviceCategory,
+      description: serviceDescription,
+      startingPrice,
+      durationMinutes,
+    },
+  ].filter((service) => service.name.trim());
 
   const validationData = useMemo(
     () => ({
@@ -129,9 +211,11 @@ export function OnboardingPage() {
       state: stateUf,
       workingHours,
       firstArtist: { name: artistName },
+      firstArtists: artistsToSave,
       firstService: { name: serviceName },
+      firstServices: servicesToSave,
     }),
-    [artistName, city, name, serviceName, slug, stateUf, whatsapp, workingHours],
+    [artistName, artistsToSave, city, name, serviceName, servicesToSave, slug, stateUf, whatsapp, workingHours],
   );
 
   useEffect(() => {
@@ -195,6 +279,87 @@ export function OnboardingPage() {
     if (!artistSlugEdited) setArtistSlug(slugify(value));
   }
 
+  function addCurrentArtist() {
+    if (!artistName.trim()) {
+      setError("Informe o nome do tatuador antes de adicionar outro.");
+      return;
+    }
+
+    setArtists((current) => [
+      ...current,
+      {
+        name: artistName.trim(),
+        slug: artistSlug || slugify(artistName),
+        specialty: artistSpecialty,
+        instagram: artistInstagram.replace("@", ""),
+        whatsapp: artistWhatsapp.replace(/\D/g, ""),
+        photoFile: artistPhotoFile,
+      },
+    ]);
+    setArtistName("");
+    setArtistSlug("");
+    setArtistSlugEdited(false);
+    setArtistSpecialty("");
+    setArtistInstagram("");
+    setArtistWhatsapp("");
+    setArtistPhotoFile(null);
+    setError("");
+  }
+
+  function removeArtist(index: number) {
+    setArtists((current) => current.filter((_, currentIndex) => currentIndex !== index));
+  }
+
+  function applyServiceExample(example: (typeof serviceExamples)[number]) {
+    setServiceName(example.name);
+    setServiceCategory(example.category);
+    setDurationMinutes(example.duration);
+    setStartingPrice(example.price);
+  }
+
+  function addCurrentService() {
+    if (!serviceName.trim()) {
+      setError("Informe o nome do serviço antes de adicionar outro.");
+      return;
+    }
+
+    setServices((current) => [
+      ...current,
+      {
+        name: serviceName.trim(),
+        category: serviceCategory,
+        description: serviceDescription,
+        startingPrice,
+        durationMinutes,
+      },
+    ]);
+    setServiceName("");
+    setServiceCategory("Outro");
+    setServiceDescription("");
+    setStartingPrice("");
+    setDurationMinutes("120");
+    setError("");
+  }
+
+  function removeService(index: number) {
+    setServices((current) => current.filter((_, currentIndex) => currentIndex !== index));
+  }
+
+  function applySchedulePreset(preset: "week" | "everyday" | "custom") {
+    setWorkingHours((current) =>
+      current.map((hour) => {
+        const open = preset === "everyday" || (preset === "week" && hour.day_of_week !== 0) || (preset === "custom" && hour.is_open);
+
+        return {
+          ...hour,
+          is_open: open,
+          open_time: open ? hour.open_time ?? "09:00" : null,
+          close_time: open ? hour.close_time ?? "18:00" : null,
+        };
+      }),
+    );
+  }
+
   function updateHour(day: number, field: keyof OnboardingWorkingHour, value: boolean | string | null) {
     setWorkingHours((current) =>
       current.map((hour) =>
@@ -254,7 +419,7 @@ export function OnboardingPage() {
         logoFile,
         whatsapp,
         instagram,
-        website,
+        website: website && !/^https?:\/\//i.test(website) ? `https://${website}` : website,
         address,
         city,
         state: stateUf,
@@ -267,6 +432,14 @@ export function OnboardingPage() {
           whatsapp: artistWhatsapp,
           photoFile: artistPhotoFile,
         },
+        firstArtists: artistsToSave.map((artist) => ({
+          name: artist.name,
+          slug: artist.slug,
+          specialty: artist.specialty,
+          instagram: artist.instagram,
+          whatsapp: artist.whatsapp,
+          photoFile: artist.photoFile,
+        })),
         firstService: {
           name: serviceName,
           category: serviceCategory,
@@ -274,6 +447,13 @@ export function OnboardingPage() {
           starting_price: startingPrice ? Number(startingPrice) : null,
           avg_duration_minutes: durationMinutes ? Number(durationMinutes) : null,
         },
+        firstServices: servicesToSave.map((service) => ({
+          name: service.name,
+          category: service.category,
+          description: service.description,
+          starting_price: service.startingPrice ? Number(service.startingPrice) : null,
+          avg_duration_minutes: service.durationMinutes ? Number(service.durationMinutes) : null,
+        })),
       });
 
       setSavingLabel("Abrindo painel...");
@@ -441,7 +621,15 @@ export function OnboardingPage() {
                 </label>
                 <label className="block">
                   <span className="text-sm font-medium">Instagram</span>
-                  <input className={inputClass} onChange={(event) => setInstagram(event.target.value.replace("@", ""))} placeholder="seuestudio" value={instagram} />
+                  <div className="mt-2 flex overflow-hidden rounded-xl border border-white/10 bg-[#0f0f0f] focus-within:border-[#E8650A] focus-within:ring-2 focus-within:ring-[#E8650A]/25">
+                    <span className="flex items-center border-r border-white/10 px-4 text-zinc-400">@</span>
+                    <input
+                      className="min-w-0 flex-1 bg-transparent px-4 py-3 text-white outline-none"
+                      onChange={(event) => setInstagram(event.target.value.replace("@", ""))}
+                      placeholder="seuestudio"
+                      value={instagram}
+                    />
+                  </div>
                 </label>
                 <label className="block">
                   <span className="text-sm font-medium">Website</span>
@@ -453,11 +641,27 @@ export function OnboardingPage() {
                 </label>
                 <label className="block">
                   <span className="text-sm font-medium">Cidade</span>
-                  <input className={inputClass} onChange={(event) => setCity(event.target.value)} required value={city} />
+                  <input aria-label="Cidade" className={inputClass} list="onboarding-cities" onChange={(event) => setCity(event.target.value)} required value={city} />
+                  <datalist id="onboarding-cities">
+                    {cityOptions.map((option) => (
+                      <option key={option} value={option} />
+                    ))}
+                  </datalist>
+                  <p className="mt-2 text-xs text-zinc-500">
+                    {stateUf && cityOptions.length ? "Digite ou escolha uma cidade sugerida para o estado." : "Escolha o estado para ver sugestões de cidade."}
+                  </p>
                 </label>
                 <label className="block">
                   <span className="text-sm font-medium">Estado</span>
-                  <select className={inputClass} onChange={(event) => setStateUf(event.target.value)} required value={stateUf}>
+                  <select
+                    aria-label="Estado"
+                    className={inputClass}
+                    onChange={(event) => {
+                      setStateUf(event.target.value);
+                    }}
+                    required
+                    value={stateUf}
+                  >
                     <option value="">Selecione</option>
                     {brStates.map((uf) => (
                       <option key={uf} value={uf}>
@@ -474,7 +678,18 @@ export function OnboardingPage() {
             <div className="space-y-5">
               <div>
                 <h2 className="text-xl font-semibold">Horários de funcionamento</h2>
-                <p className="mt-1 text-sm text-zinc-400">Começamos com domingo fechado e segunda a sábado das 09:00 às 18:00. Ajuste como preferir.</p>
+                <p className="mt-1 text-sm text-zinc-400">Defina os dias em que o estúdio aceita agendamentos. Domingo pode ficar ativo se houver tatuador disponível.</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button className="rounded-xl border border-white/10 px-3 py-2 text-sm hover:border-[#E8650A]" onClick={() => applySchedulePreset("week")} type="button">
+                    Segunda a sábado
+                  </button>
+                  <button className="rounded-xl border border-white/10 px-3 py-2 text-sm hover:border-[#E8650A]" onClick={() => applySchedulePreset("everyday")} type="button">
+                    Domingo a domingo
+                  </button>
+                  <button className="rounded-xl border border-white/10 px-3 py-2 text-sm hover:border-[#E8650A]" onClick={() => applySchedulePreset("custom")} type="button">
+                    Personalizado
+                  </button>
+                </div>
               </div>
 
               <div className="grid gap-3">
@@ -501,9 +716,25 @@ export function OnboardingPage() {
           {step === 4 ? (
             <div className="space-y-5">
               <div>
-                <h2 className="text-xl font-semibold">Primeiro tatuador</h2>
-                <p className="mt-1 text-sm text-zinc-400">Crie o primeiro perfil público de artista. Depois você pode adicionar outros pelo painel.</p>
+                <h2 className="text-xl font-semibold">Equipe de tatuadores</h2>
+                <p className="mt-1 text-sm text-zinc-400">Adicione um ou mais tatuadores agora. Depois você pode editar tudo no painel.</p>
               </div>
+
+              {artists.length ? (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {artists.map((artist, index) => (
+                    <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#0f0f0f] p-4" key={`${artist.name}-${index}`}>
+                      <div>
+                        <p className="font-semibold">{artist.name}</p>
+                        <p className="text-sm text-zinc-500">{artist.specialty || "Especialidade não informada"}</p>
+                      </div>
+                      <button className="rounded-lg border border-white/10 px-3 py-2 text-sm text-zinc-300" onClick={() => removeArtist(index)} type="button">
+                        Remover
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
 
               <div className="grid gap-6 lg:grid-cols-[14rem_1fr]">
                 <div className="flex flex-col items-center gap-3 rounded-xl border border-white/10 bg-[#0f0f0f] p-4">
@@ -544,7 +775,14 @@ export function OnboardingPage() {
                   </label>
                   <label className="block">
                     <span className="text-sm font-medium">Instagram</span>
-                    <input className={inputClass} onChange={(event) => setArtistInstagram(event.target.value.replace("@", ""))} value={artistInstagram} />
+                    <div className="mt-2 flex overflow-hidden rounded-xl border border-white/10 bg-[#0f0f0f] focus-within:border-[#E8650A] focus-within:ring-2 focus-within:ring-[#E8650A]/25">
+                      <span className="flex items-center border-r border-white/10 px-4 text-zinc-400">@</span>
+                      <input
+                        className="min-w-0 flex-1 bg-transparent px-4 py-3 text-white outline-none"
+                        onChange={(event) => setArtistInstagram(event.target.value.replace("@", ""))}
+                        value={artistInstagram}
+                      />
+                    </div>
                   </label>
                   <label className="block">
                     <span className="text-sm font-medium">WhatsApp</span>
@@ -552,14 +790,44 @@ export function OnboardingPage() {
                   </label>
                 </div>
               </div>
+
+              <button className="rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold hover:border-[#E8650A]" onClick={addCurrentArtist} type="button">
+                Adicionar outro tatuador
+              </button>
             </div>
           ) : null}
 
           {step === 5 ? (
             <div className="space-y-5">
               <div>
-                <h2 className="text-xl font-semibold">Primeiro serviço</h2>
-                <p className="mt-1 text-sm text-zinc-400">Cadastre uma oferta inicial para sua página pública e fluxo de agendamento.</p>
+                <h2 className="text-xl font-semibold">Serviços iniciais</h2>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Serviço é o tipo de atendimento que o cliente escolhe ao agendar. Ex: orçamento, tatuagem pequena, sessão ou retoque.
+                </p>
+              </div>
+
+              {services.length ? (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {services.map((service, index) => (
+                    <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#0f0f0f] p-4" key={`${service.name}-${index}`}>
+                      <div>
+                        <p className="font-semibold">{service.name}</p>
+                        <p className="text-sm text-zinc-500">{service.category}</p>
+                      </div>
+                      <button className="rounded-lg border border-white/10 px-3 py-2 text-sm text-zinc-300" onClick={() => removeService(index)} type="button">
+                        Remover
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap gap-2">
+                {serviceExamples.map((example) => (
+                  <button className="rounded-xl border border-white/10 px-3 py-2 text-sm hover:border-[#E8650A]" key={example.name} onClick={() => applyServiceExample(example)} type="button">
+                    {example.name}
+                  </button>
+                ))}
               </div>
 
               <div className="grid gap-5 md:grid-cols-2">
@@ -590,6 +858,10 @@ export function OnboardingPage() {
                   <textarea className={`${inputClass} min-h-28 resize-none`} onChange={(event) => setServiceDescription(event.target.value)} value={serviceDescription} />
                 </label>
               </div>
+
+              <button className="rounded-xl border border-white/10 px-4 py-3 text-sm font-semibold hover:border-[#E8650A]" onClick={addCurrentService} type="button">
+                Adicionar outro serviço
+              </button>
             </div>
           ) : null}
 
@@ -605,8 +877,8 @@ export function OnboardingPage() {
                 <SummaryCard label="Contato" value={whatsapp} detail={instagram ? `@${instagram}` : "Instagram não informado"} />
                 <SummaryCard label="Localização" value={`${city} - ${stateUf}`} detail={address || "Endereço não informado"} />
                 <SummaryCard label="Horários" value={`${workingHours.filter((hour) => hour.is_open).length} dias abertos`} detail="Editável depois em Configurações" />
-                <SummaryCard label="Tatuador" value={artistName} detail={artistSpecialty || "Especialidade não informada"} />
-                <SummaryCard label="Serviço" value={serviceName} detail={`${serviceCategory}${startingPrice ? ` • R$ ${Number(startingPrice).toFixed(2)}` : ""}`} />
+                <SummaryCard label="Tatuadores" value={`${artistsToSave.length} cadastrados`} detail={artistsToSave.map((artist) => artist.name).join(", ")} />
+                <SummaryCard label="Serviços" value={`${servicesToSave.length} cadastrados`} detail={servicesToSave.map((service) => service.name).join(", ")} />
               </div>
             </div>
           ) : null}

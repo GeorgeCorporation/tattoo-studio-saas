@@ -40,7 +40,9 @@ export type OnboardingStudioData = {
   logoFile?: File | null;
   workingHours?: OnboardingWorkingHour[];
   firstArtist?: OnboardingFirstArtistData;
+  firstArtists?: OnboardingFirstArtistData[];
   firstService?: OnboardingFirstServiceData;
+  firstServices?: OnboardingFirstServiceData[];
 };
 
 export type UserStudio = {
@@ -51,7 +53,9 @@ export type UserStudio = {
 
 export type OnboardingValidationData = Partial<OnboardingStudioData> & {
   firstArtist?: Partial<OnboardingFirstArtistData>;
+  firstArtists?: Partial<OnboardingFirstArtistData>[];
   firstService?: Partial<OnboardingFirstServiceData>;
+  firstServices?: Partial<OnboardingFirstServiceData>[];
 };
 
 export function slugify(value: string) {
@@ -104,12 +108,12 @@ export function validateOnboardingStep(step: number, data: OnboardingValidationD
     if (invalidHour) return "Confira os horários: abertura precisa ser antes do fechamento.";
   }
 
-  if (step === 4 && !data.firstArtist?.name?.trim()) {
-    return "Informe o nome do primeiro tatuador.";
+  if (step === 4 && !data.firstArtist?.name?.trim() && !data.firstArtists?.some((artist) => artist.name?.trim())) {
+    return "Informe pelo menos um tatuador.";
   }
 
-  if (step === 5 && !data.firstService?.name?.trim()) {
-    return "Informe o nome do primeiro serviço.";
+  if (step === 5 && !data.firstService?.name?.trim() && !data.firstServices?.some((service) => service.name?.trim())) {
+    return "Informe pelo menos um serviço inicial.";
   }
 
   return "";
@@ -262,18 +266,20 @@ export async function createStudioOnboarding(data: OnboardingStudioData) {
     if (error) throw error;
   }
 
-  if (data.firstArtist?.name?.trim()) {
-    const artistSlug = await ensureUniqueArtistSlug(studio.id, data.firstArtist.slug || data.firstArtist.name);
+  const artistsToCreate = data.firstArtists?.length ? data.firstArtists : data.firstArtist ? [data.firstArtist] : [];
+
+  for (const firstArtist of artistsToCreate.filter((artist) => artist.name?.trim())) {
+    const artistSlug = await ensureUniqueArtistSlug(studio.id, firstArtist.slug || firstArtist.name);
 
     const { data: artist, error: artistError } = await supabase
       .from("tattoo_artists")
       .insert({
         studio_id: studio.id,
-        name: data.firstArtist.name.trim(),
+        name: firstArtist.name.trim(),
         slug: artistSlug,
-        specialty: data.firstArtist.specialty?.trim() || null,
-        instagram: data.firstArtist.instagram ? `@${data.firstArtist.instagram.replace("@", "")}` : null,
-        whatsapp: data.firstArtist.whatsapp?.replace(/\D/g, "") || null,
+        specialty: firstArtist.specialty?.trim() || null,
+        instagram: firstArtist.instagram ? `@${firstArtist.instagram.replace("@", "")}` : null,
+        whatsapp: firstArtist.whatsapp?.replace(/\D/g, "") || null,
         is_active: true,
       })
       .select("id")
@@ -281,21 +287,23 @@ export async function createStudioOnboarding(data: OnboardingStudioData) {
 
     if (artistError) throw artistError;
 
-    if (data.firstArtist.photoFile) {
-      const photoUrl = await uploadFirstArtistPhoto(data.firstArtist.photoFile, studio.id, artist.id);
+    if (firstArtist.photoFile) {
+      const photoUrl = await uploadFirstArtistPhoto(firstArtist.photoFile, studio.id, artist.id);
       const { error } = await supabase.from("tattoo_artists").update({ photo_url: photoUrl }).eq("id", artist.id);
       if (error) throw error;
     }
   }
 
-  if (data.firstService?.name?.trim()) {
+  const servicesToCreate = data.firstServices?.length ? data.firstServices : data.firstService ? [data.firstService] : [];
+
+  for (const firstService of servicesToCreate.filter((service) => service.name?.trim())) {
     const { error: serviceError } = await supabase.from("services").insert({
       studio_id: studio.id,
-      name: data.firstService.name.trim(),
-      category: data.firstService.category || "Outro",
-      description: data.firstService.description?.trim() || null,
-      starting_price: data.firstService.starting_price ?? null,
-      avg_duration_minutes: data.firstService.avg_duration_minutes ?? null,
+      name: firstService.name.trim(),
+      category: firstService.category || "Outro",
+      description: firstService.description?.trim() || null,
+      starting_price: firstService.starting_price ?? null,
+      avg_duration_minutes: firstService.avg_duration_minutes ?? null,
       is_active: true,
     });
 
