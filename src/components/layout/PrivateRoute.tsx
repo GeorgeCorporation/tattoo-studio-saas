@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { getMockStudio, isMockMode } from "@/lib/mockMode";
 import { supabase } from "@/lib/supabase";
 
 type PrivateRouteProps = {
@@ -27,6 +28,12 @@ export function PrivateRoute({ requireStudio = true }: PrivateRouteProps) {
 
   useEffect(() => {
     if (!requireStudio || !user) {
+      setCheckingStudio(false);
+      return;
+    }
+
+    if (isMockMode) {
+      setHasStudio(Boolean(getMockStudio()));
       setCheckingStudio(false);
       return;
     }

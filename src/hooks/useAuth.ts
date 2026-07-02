@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
+import { clearMockStudio, isMockMode, mockUser } from "@/lib/mockMode";
 import { supabase } from "@/lib/supabase";
 
 type SignInCredentials = {
@@ -17,6 +18,13 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (isMockMode) {
+      setUser(mockUser);
+      setSession(null);
+      setLoading(false);
+      return;
+    }
+
     let isMounted = true;
     const timeout = window.setTimeout(() => {
       if (!isMounted) return;
@@ -60,10 +68,18 @@ export function useAuth() {
   }, []);
 
   async function signIn({ email, password }: SignInCredentials) {
+    if (isMockMode) {
+      return { data: { user: mockUser, session: null }, error: null };
+    }
+
     return supabase.auth.signInWithPassword({ email, password });
   }
 
   async function signUp({ fullName, email, password }: SignUpCredentials) {
+    if (isMockMode) {
+      return { data: { user: mockUser, session: null }, error: null };
+    }
+
     return supabase.auth.signUp({
       email,
       password,
@@ -77,6 +93,13 @@ export function useAuth() {
   }
 
   async function signOut() {
+    if (isMockMode) {
+      clearMockStudio();
+      setUser(null);
+      setSession(null);
+      return { error: null };
+    }
+
     return supabase.auth.signOut();
   }
 

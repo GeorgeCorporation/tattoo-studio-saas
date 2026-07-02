@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { getMockStudio, isMockMode } from "@/lib/mockMode";
 import { supabase } from "@/lib/supabase";
 import { getUserStudio } from "@/services/onboarding.service";
 
@@ -15,6 +16,13 @@ export function AuthCallback() {
     if (errorDescription) return;
 
     let isMounted = true;
+
+    if (isMockMode) {
+      navigate(getMockStudio() ? "/dashboard" : "/onboarding", { replace: true });
+      return () => {
+        isMounted = false;
+      };
+    }
 
     supabase.auth.getSession().then(async ({ data }) => {
       try {

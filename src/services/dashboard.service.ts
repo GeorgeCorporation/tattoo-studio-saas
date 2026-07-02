@@ -1,4 +1,5 @@
 import { assertAppointmentStatus, type AppointmentStatus } from "@/lib/appointment-domain";
+import { getMockDashboardStudio, getMockSetupStatus, isMockMode } from "@/lib/mockMode";
 import { supabase } from "@/lib/supabase";
 
 export type DashboardStudio = {
@@ -27,6 +28,8 @@ export type DashboardSetupStatus = {
 };
 
 export async function getCurrentUserStudio(userId: string) {
+  if (isMockMode) return getMockDashboardStudio();
+
   const { data, error } = await supabase
     .from("studios")
     .select("id, name, slug, logo_url")
@@ -39,6 +42,8 @@ export async function getCurrentUserStudio(userId: string) {
 }
 
 export async function getSetupStatus(studioId: string) {
+  if (isMockMode) return getMockSetupStatus();
+
   const [artists, services, gallery, appointments, studio] = await Promise.all([
     supabase
       .from("tattoo_artists")
@@ -76,6 +81,8 @@ export async function getSetupStatus(studioId: string) {
 }
 
 export async function getTodayAppointments(studioId: string) {
+  if (isMockMode) return 0;
+
   const today = new Date().toISOString().split("T")[0];
 
   const { data, error } = await supabase
@@ -89,6 +96,8 @@ export async function getTodayAppointments(studioId: string) {
 }
 
 export async function getWeekAppointments(studioId: string) {
+  if (isMockMode) return 0;
+
   const start = new Date();
   const end = new Date();
   end.setDate(start.getDate() + 7);
@@ -105,6 +114,8 @@ export async function getWeekAppointments(studioId: string) {
 }
 
 export async function getMonthRevenue(studioId: string) {
+  if (isMockMode) return 0;
+
   const start = new Date();
   start.setDate(1);
   start.setHours(0, 0, 0, 0);
@@ -120,6 +131,8 @@ export async function getMonthRevenue(studioId: string) {
 }
 
 export async function getTotalClients(studioId: string) {
+  if (isMockMode) return 0;
+
   const { count, error } = await supabase
     .from("clients")
     .select("id", { count: "exact", head: true })
@@ -130,6 +143,8 @@ export async function getTotalClients(studioId: string) {
 }
 
 export async function getNextAppointments(studioId: string, limit: number) {
+  if (isMockMode) return [];
+
   const today = new Date().toISOString().split("T")[0];
 
   const { data, error } = await supabase
@@ -150,6 +165,7 @@ export async function getNextAppointments(studioId: string, limit: number) {
 
 export async function updateAppointmentStatus(appointmentId: string, status: AppointmentStatus) {
   assertAppointmentStatus(status);
+  if (isMockMode) return;
 
   const { error } = await supabase
     .from("appointments")

@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { getMockStudio, isMockMode, saveMockStudio } from "@/lib/mockMode";
 import { createStoragePath } from "@/services/storage.service";
 
 export type OnboardingWorkingHour = {
@@ -115,6 +116,8 @@ export function validateOnboardingStep(step: number, data: OnboardingValidationD
 }
 
 export async function getUserStudio(userId: string) {
+  if (isMockMode) return getMockStudio();
+
   const { data, error } = await supabase
     .from("studios")
     .select("id, name, slug")
@@ -128,6 +131,8 @@ export async function getUserStudio(userId: string) {
 
 export async function ensureUniqueStudioSlug(slug: string) {
   const base = slugify(slug) || "estudio";
+  if (isMockMode) return base;
+
   let nextSlug = base;
   let suffix = 2;
 
@@ -148,6 +153,8 @@ export async function ensureUniqueStudioSlug(slug: string) {
 
 export async function ensureUniqueArtistSlug(studioId: string, slug: string) {
   const base = slugify(slug) || "tatuador";
+  if (isMockMode) return base;
+
   let nextSlug = base;
   let suffix = 2;
 
@@ -168,6 +175,8 @@ export async function ensureUniqueArtistSlug(studioId: string, slug: string) {
 }
 
 export async function uploadStudioLogo(file: File, studioId: string) {
+  if (isMockMode) return URL.createObjectURL(file);
+
   const path = createStoragePath(studioId, file.name);
 
   const { error } = await supabase.storage.from("logos").upload(path, file, {
@@ -182,6 +191,8 @@ export async function uploadStudioLogo(file: File, studioId: string) {
 }
 
 export async function uploadFirstArtistPhoto(file: File, studioId: string, artistId: string) {
+  if (isMockMode) return URL.createObjectURL(file);
+
   const path = createStoragePath(studioId, file.name, [artistId]);
 
   const { error } = await supabase.storage.from("artists").upload(path, file, {
@@ -196,6 +207,20 @@ export async function uploadFirstArtistPhoto(file: File, studioId: string, artis
 }
 
 export async function createStudioOnboarding(data: OnboardingStudioData) {
+  if (isMockMode) {
+    const existingStudio = getMockStudio();
+    if (existingStudio) return existingStudio;
+
+    const studio = {
+      id: "mock-studio-1",
+      name: data.name.trim(),
+      slug: slugify(data.slug || data.name) || "estudio-teste",
+    };
+
+    saveMockStudio(studio);
+    return studio;
+  }
+
   const existingStudio = await getUserStudio(data.userId);
   if (existingStudio) return existingStudio;
 

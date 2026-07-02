@@ -2,6 +2,7 @@ import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { getFriendlyAuthErrorMessage, getFriendlyErrorMessage } from "@/lib/errors";
+import { getMockStudio, isMockMode } from "@/lib/mockMode";
 import { supabase } from "@/lib/supabase";
 
 function withTimeout<T>(promise: PromiseLike<T>, ms: number, message: string) {
@@ -31,6 +32,11 @@ export function Login() {
 
       if (signInError || !data.user) {
         setError(getFriendlyAuthErrorMessage(signInError, "Não foi possível entrar."));
+        return;
+      }
+
+      if (isMockMode) {
+        navigate(getMockStudio() ? "/dashboard" : "/onboarding", { replace: true });
         return;
       }
 
