@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OnboardingPage } from "@/pages/onboarding/OnboardingPage";
 
 const mocks = vi.hoisted(() => ({
@@ -50,6 +50,7 @@ async function fillContact() {
   await screen.findByText("Contato e localização");
   fireEvent.change(screen.getByLabelText("WhatsApp"), { target: { value: "11999999999" } });
   fireEvent.change(screen.getByLabelText("Estado"), { target: { value: "SP" } });
+  await waitFor(() => expect(screen.getByRole("option", { name: "São Paulo" })).toBeInTheDocument());
   fireEvent.change(screen.getByLabelText("Cidade"), { target: { value: "São Paulo" } });
   fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
 }
@@ -60,7 +61,24 @@ describe("OnboardingPage", () => {
     mocks.navigate.mockClear();
     mocks.createStudioOnboarding.mockReset();
     mocks.createStudioOnboarding.mockResolvedValue({ id: "studio-1", name: "Ideal Tattoo", slug: "ideal-tattoo" });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        const cities = url.includes("/SP/")
+          ? [{ nome: "Campinas" }, { nome: "São Paulo" }]
+          : [{ nome: "Acari" }, { nome: "Natal" }, { nome: "Mossoró" }];
+
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(cities),
+        });
+      }),
+    );
     window.scrollTo = vi.fn();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("gera slug automaticamente pelo nome do estúdio", async () => {
@@ -78,6 +96,7 @@ describe("OnboardingPage", () => {
     await fillIdentity();
     fireEvent.change(screen.getByLabelText("WhatsApp"), { target: { value: "1199" } });
     fireEvent.change(screen.getByLabelText("Estado"), { target: { value: "SP" } });
+    await waitFor(() => expect(screen.getByRole("option", { name: "São Paulo" })).toBeInTheDocument());
     fireEvent.change(screen.getByLabelText("Cidade"), { target: { value: "São Paulo" } });
     fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
 
@@ -93,6 +112,16 @@ describe("OnboardingPage", () => {
     fireEvent.change(screen.getByPlaceholderText("Digite sua cidade"), { target: { value: "Cidade Teste" } });
 
     expect(screen.getByDisplayValue("Cidade Teste")).toBeInTheDocument();
+  });
+
+  it("carrega cidades completas do estado pelo IBGE", async () => {
+    renderPage();
+
+    await fillIdentity();
+    fireEvent.change(screen.getByLabelText("Estado"), { target: { value: "RN" } });
+
+    await waitFor(() => expect(screen.getByRole("option", { name: "Acari" })).toBeInTheDocument());
+    expect(screen.getByLabelText("Cidade")).not.toBeDisabled();
   });
 
   it("envia dados completos e redireciona para dashboard", async () => {

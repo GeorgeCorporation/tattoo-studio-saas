@@ -234,6 +234,9 @@ export function OnboardingPage() {
   const [city, setCity] = useState(draft.city ?? "");
   const [stateUf, setStateUf] = useState(draft.stateUf ?? "");
   const [manualCity, setManualCity] = useState(draft.manualCity ?? false);
+  const [citiesByUf, setCitiesByUf] = useState<Record<string, string[]>>({});
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [cityLoadError, setCityLoadError] = useState("");
   const [workingHours, setWorkingHours] = useState<OnboardingWorkingHour[]>(draft.workingHours ?? buildDefaultWorkingHours());
   const [activateBooking, setActivateBooking] = useState(draft.activateBooking ?? true);
   const [artists, setArtists] = useState<ArtistDraft[]>((draft.artists ?? []).map((artist) => ({ ...artist, photoFile: null })));
@@ -261,7 +264,7 @@ export function OnboardingPage() {
   const publicUrl = slugify(slug) || "seu-estudio";
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const progress = Math.round((step / steps.length) * 100);
-  const cityOptions = stateUf ? (citiesByState[stateUf] ?? []) : [];
+  const cityOptions = stateUf ? (citiesByUf[stateUf] ?? citiesByState[stateUf] ?? []) : [];
 
   const currentArtist = {
     name: artistName,
@@ -361,6 +364,56 @@ export function OnboardingPage() {
     whatsapp,
     workingHours,
   ]);
+
+  useEffect(() => {
+    if (!stateUf || manualCity || citiesByUf[stateUf]) {
+      setLoadingCities(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    let isActive = true;
+
+    async function loadCities() {
+      setLoadingCities(true);
+      setCityLoadError("");
+
+      try {
+        const response = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${stateUf}/municipios`, {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error("Falha ao carregar cidades.");
+        }
+
+        const data = (await response.json()) as Array<{ nome?: string }>;
+        const names = data
+          .map((item) => item.nome)
+          .filter((value): value is string => Boolean(value))
+          .sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+        if (isActive && names.length) {
+          setCitiesByUf((current) => ({ ...current, [stateUf]: names }));
+        }
+      } catch (caughtError) {
+        if (controller.signal.aborted) return;
+        logger.warn("Falha ao carregar cidades do IBGE", { stateUf, error: caughtError });
+        if (isActive) {
+          setCityLoadError("Não foi possível carregar a lista completa agora. Você ainda pode digitar a cidade manualmente.");
+        }
+      } finally {
+        if (isActive) setLoadingCities(false);
+      }
+    }
+
+    loadCities();
+
+    return () => {
+      isActive = false;
+      controller.abort();
+    };
+  }, [citiesByUf, manualCity, stateUf]);
 
   useEffect(() => {
     let isMounted = true;
@@ -787,8 +840,8 @@ export function OnboardingPage() {
                     {manualCity ? (
                       <input className={inputClass} onChange={(event) => setCity(event.target.value)} placeholder="Digite sua cidade" required value={city} />
                     ) : (
-                      <select aria-label="Cidade" className={inputClass} disabled={!stateUf} onChange={(event) => setCity(event.target.value)} required value={city}>
-                        <option value="">{stateUf ? "Selecione" : "Escolha o estado primeiro"}</option>
+                      <select aria-label="Cidade" className={inputClass} disabled={!stateUf || loadingCities} onChange={(event) => setCity(event.target.value)} required value={city}>
+                        <option value="">{loadingCities ? "Carregando cidades..." : stateUf ? "Selecione uma cidade" : "Escolha o estado primeiro"}</option>
                         {cityOptions.map((option) => (
                           <option key={option} value={option}>
                             {option}
@@ -797,6 +850,7 @@ export function OnboardingPage() {
                       </select>
                     )}
                   </label>
+                  {cityLoadError ? <p className="mt-2 text-xs text-amber-400">{cityLoadError}</p> : null}
                   <button className="mt-2 text-xs font-semibold text-[#E8650A]" disabled={!stateUf} onClick={() => setManualCity((current) => !current)} type="button">
                     {manualCity ? "Escolher cidade da lista" : "Digitar cidade manualmente"}
                   </button>
