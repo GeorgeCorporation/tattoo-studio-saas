@@ -121,13 +121,9 @@ export function StudioPage() {
                 Instagram
               </a>
             ) : null}
-            {whatsApp ? (
-              <Link className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold text-white" to={`/${studio.slug}/agendar`}>
-                Agendar agora
-              </Link>
-            ) : (
-              <button className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold text-white">Agendar agora</button>
-            )}
+            <Link className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold text-white" to={`/${studio.slug}/agendar`}>
+              Agendar agora
+            </Link>
           </div>
         </header>
 
@@ -157,6 +153,11 @@ export function StudioPage() {
               </Link>
             ))}
           </div>
+          {artists.length === 0 ? (
+            <p className="rounded-xl border border-white/10 bg-[#1a1a1a] p-5 text-sm text-zinc-400">
+              Este estúdio ainda está cadastrando seus tatuadores.
+            </p>
+          ) : null}
         </section>
 
         <section>
@@ -171,6 +172,11 @@ export function StudioPage() {
               />
             ))}
           </div>
+          {gallery.length === 0 ? (
+            <p className="rounded-xl border border-white/10 bg-[#1a1a1a] p-5 text-sm text-zinc-400">
+              Galeria em preparação. Em breve, os trabalhos aparecem aqui.
+            </p>
+          ) : null}
         </section>
 
         <section className="rounded-xl border border-white/10 bg-[#1a1a1a] p-5">

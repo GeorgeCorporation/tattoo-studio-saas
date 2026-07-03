@@ -124,15 +124,9 @@ export function ArtistPage() {
                   Instagram
                 </a>
               ) : null}
-              {whatsApp ? (
-                <Link className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold text-white" to={`/${studio.slug}/${artist.slug}/agendar`}>
-                  Agendar com {artist.name}
-                </Link>
-              ) : (
-                <button className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold text-white">
-                  Agendar com {artist.name}
-                </button>
-              )}
+              <Link className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold text-white" to={`/${studio.slug}/${artist.slug}/agendar`}>
+                Agendar com {artist.name}
+              </Link>
             </div>
           </div>
         </header>
@@ -149,6 +143,11 @@ export function ArtistPage() {
               />
             ))}
           </div>
+          {gallery.length === 0 ? (
+            <p className="rounded-xl border border-white/10 bg-[#1a1a1a] p-5 text-sm text-zinc-400">
+              Este portfólio ainda está sendo preparado.
+            </p>
+          ) : null}
         </section>
       </section>
     </main>
