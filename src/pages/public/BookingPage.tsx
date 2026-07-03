@@ -25,6 +25,15 @@ function cleanPhone(phone: string) {
   return phone.replace(/\D/g, "");
 }
 
+function isValidBrazilPhone(phone: string) {
+  const digits = cleanPhone(phone);
+  return digits.length >= 10 && digits.length <= 11;
+}
+
+function cleanInstagram(value: string) {
+  return value.replace("@", "").trim();
+}
+
 function whatsappUrl(phone: string, text: string) {
   return `https://wa.me/55${cleanPhone(phone)}?text=${encodeURIComponent(text)}`;
 }
@@ -60,6 +69,7 @@ export function BookingPage() {
   const [email, setEmail] = useState("");
   const [description, setDescription] = useState("");
   const [referenceFiles, setReferenceFiles] = useState<File[]>([]);
+  const [referencePreviews, setReferencePreviews] = useState<string[]>([]);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [loading, setLoading] = useState(true);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
@@ -67,6 +77,7 @@ export function BookingPage() {
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState("");
   const [availabilityError, setAvailabilityError] = useState("");
+  const [submitWarning, setSubmitWarning] = useState("");
 
   useEffect(() => {
     if (!slug) return;
@@ -152,6 +163,15 @@ export function BookingPage() {
     };
   }, [date, selectedArtistId, studio?.id]);
 
+  useEffect(() => {
+    const urls = referenceFiles.map((file) => URL.createObjectURL(file));
+    setReferencePreviews(urls);
+
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [referenceFiles]);
+
   const selectedArtist = useMemo(
     () => artists.find((artist) => artist.id === selectedArtistId) ?? null,
     [artists, selectedArtistId],
@@ -173,11 +193,13 @@ export function BookingPage() {
     ].join("\n");
   }, [clientName, date, selectedArtist, selectedService, time]);
 
-  const studioWhatsapp = studio?.whatsapp ?? whatsapp;
-  const confirmationLink = whatsappUrl(studioWhatsapp, confirmationText);
+  const studioWhatsapp = studio?.whatsapp ?? "";
+  const confirmationLink = studioWhatsapp ? whatsappUrl(studioWhatsapp, confirmationText) : "";
 
   function handleFiles(event: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.target.files ?? []).slice(0, 3);
+    const files = Array.from(event.target.files ?? [])
+      .filter((file) => file.type.startsWith("image/"))
+      .slice(0, 3);
     setReferenceFiles(files);
   }
 
@@ -187,6 +209,16 @@ export function BookingPage() {
 
     if (!selectedArtistId || !selectedServiceId || !date || !time) {
       setError("Preencha tatuador, serviço, data e horário.");
+      return;
+    }
+
+    if (artists.length === 0) {
+      setError("Este estúdio ainda não tem tatuadores disponíveis para agendamento.");
+      return;
+    }
+
+    if (services.length === 0) {
+      setError("Este estúdio ainda não tem serviços disponíveis para agendamento.");
       return;
     }
 
@@ -213,15 +245,21 @@ export function BookingPage() {
       return;
     }
 
+    if (!isValidBrazilPhone(whatsapp)) {
+      setError("Informe um WhatsApp válido com DDD.");
+      return;
+    }
+
     try {
       setSubmitting(true);
+      setSubmitWarning("");
 
       const client = await createClient({
         studioId: studio.id,
         name: clientName,
         phone: whatsapp,
         email,
-        instagram,
+        instagram: cleanInstagram(instagram),
       });
 
       const appointment = await createAppointment({
@@ -235,8 +273,16 @@ export function BookingPage() {
       });
 
       if (referenceFiles.length) {
-        const referenceUrls = await uploadReferencePhotos(studio.id, appointment.id, referenceFiles);
-        await updateAppointmentNotes(appointment.id, `Referencias: ${referenceUrls.join(", ")}`);
+        try {
+          const referenceUrls = await uploadReferencePhotos(studio.id, appointment.id, referenceFiles);
+          await updateAppointmentNotes(appointment.id, `Referências: ${referenceUrls.join(", ")}`);
+        } catch (uploadError) {
+          logger.error("Falha ao enviar referências do agendamento", uploadError, {
+            studioId: studio.id,
+            appointmentId: appointment.id,
+          });
+          setSubmitWarning("Agendamento salvo. As fotos não foram enviadas, mas você pode mandar as referências pelo WhatsApp.");
+        }
       }
 
       setStep(3);
@@ -349,6 +395,11 @@ export function BookingPage() {
             </div>
 
             {availabilityError ? <p className="text-sm text-red-400">{availabilityError}</p> : null}
+            {artists.length === 0 || services.length === 0 ? (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+                Este estúdio ainda precisa cadastrar pelo menos um tatuador e um serviço ativo para receber agendamentos.
+              </div>
+            ) : null}
             {!availabilityError && !availabilityLoading && availableTimes.length === 0 ? (
               <p className="text-sm text-zinc-400">
                 Esse dia está fechado ou todos os horários desse tatuador já foram ocupados.
@@ -381,6 +432,8 @@ export function BookingPage() {
                   className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
                   value={whatsapp}
                   onChange={(event) => setWhatsapp(event.target.value)}
+                  inputMode="numeric"
+                  placeholder="11999999999"
                   required
                 />
               </div>
@@ -389,7 +442,8 @@ export function BookingPage() {
                 <input
                   className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
                   value={instagram}
-                  onChange={(event) => setInstagram(event.target.value)}
+                  onChange={(event) => setInstagram(cleanInstagram(event.target.value))}
+                  placeholder="seuinstagram"
                 />
               </div>
             </div>
@@ -424,6 +478,18 @@ export function BookingPage() {
                 type="file"
               />
               <p className="mt-2 text-xs text-zinc-500">Até 3 fotos.</p>
+              {referencePreviews.length ? (
+                <div className="mt-3 grid grid-cols-3 gap-3">
+                  {referencePreviews.map((preview) => (
+                    <img
+                      alt="Referência da tatuagem"
+                      className="aspect-square rounded-xl border border-white/10 object-cover"
+                      key={preview}
+                      src={preview}
+                    />
+                  ))}
+                </div>
+              ) : null}
             </div>
 
             {error ? <p className="text-sm text-red-400">{error}</p> : null}
@@ -457,14 +523,25 @@ export function BookingPage() {
               <p>Horário: {time}</p>
               <p>Nome: {clientName}</p>
             </div>
-            <a
-              className="mt-6 inline-flex w-full justify-center rounded-xl bg-[#E8650A] px-4 py-3 font-semibold"
-              href={confirmationLink}
-              rel="noreferrer"
-              target="_blank"
-            >
-              Confirmar pelo WhatsApp
-            </a>
+            {submitWarning ? (
+              <p className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-100">
+                {submitWarning}
+              </p>
+            ) : null}
+            {confirmationLink ? (
+              <a
+                className="mt-6 inline-flex w-full justify-center rounded-xl bg-[#E8650A] px-4 py-3 font-semibold"
+                href={confirmationLink}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Confirmar pelo WhatsApp
+              </a>
+            ) : (
+              <p className="mt-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+                Agendamento salvo. O estúdio ainda precisa cadastrar um WhatsApp para confirmação automática.
+              </p>
+            )}
           </section>
         ) : null}
       </section>
