@@ -40,8 +40,23 @@ function renderPage() {
   );
 }
 
+async function fillIdentity() {
+  await screen.findByText("Identidade do estúdio");
+  fireEvent.change(screen.getByLabelText("Nome do estúdio"), { target: { value: "Estúdio São Jorge" } });
+  fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
+}
+
+async function fillContact() {
+  await screen.findByText("Contato e localização");
+  fireEvent.change(screen.getByLabelText("WhatsApp"), { target: { value: "11999999999" } });
+  fireEvent.change(screen.getByLabelText("Estado"), { target: { value: "SP" } });
+  fireEvent.change(screen.getByLabelText("Cidade"), { target: { value: "São Paulo" } });
+  fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
+}
+
 describe("OnboardingPage", () => {
   beforeEach(() => {
+    localStorage.clear();
     mocks.navigate.mockClear();
     mocks.createStudioOnboarding.mockReset();
     mocks.createStudioOnboarding.mockResolvedValue({ id: "studio-1", name: "Ideal Tattoo", slug: "ideal-tattoo" });
@@ -60,11 +75,7 @@ describe("OnboardingPage", () => {
   it("bloqueia avanço com WhatsApp inválido", async () => {
     renderPage();
 
-    await screen.findByText("Identidade do estúdio");
-    fireEvent.change(screen.getByLabelText("Nome do estúdio"), { target: { value: "Ideal Tattoo" } });
-    fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
-
-    await screen.findByText("Contato e localização");
+    await fillIdentity();
     fireEvent.change(screen.getByLabelText("WhatsApp"), { target: { value: "1199" } });
     fireEvent.change(screen.getByLabelText("Estado"), { target: { value: "SP" } });
     fireEvent.change(screen.getByLabelText("Cidade"), { target: { value: "São Paulo" } });
@@ -73,23 +84,27 @@ describe("OnboardingPage", () => {
     expect(screen.getByText(/WhatsApp válido/i)).toBeInTheDocument();
   });
 
+  it("permite digitar cidade manualmente", async () => {
+    renderPage();
+
+    await fillIdentity();
+    fireEvent.change(screen.getByLabelText("Estado"), { target: { value: "RN" } });
+    fireEvent.click(screen.getByRole("button", { name: /digitar cidade manualmente/i }));
+    fireEvent.change(screen.getByPlaceholderText("Digite sua cidade"), { target: { value: "Cidade Teste" } });
+
+    expect(screen.getByDisplayValue("Cidade Teste")).toBeInTheDocument();
+  });
+
   it("envia dados completos e redireciona para dashboard", async () => {
     renderPage();
 
-    await screen.findByText("Identidade do estúdio");
-    fireEvent.change(screen.getByLabelText("Nome do estúdio"), { target: { value: "Ideal Tattoo" } });
-    fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
+    await fillIdentity();
+    await fillContact();
 
-    fireEvent.change(screen.getByLabelText("WhatsApp"), { target: { value: "11999999999" } });
-    fireEvent.change(screen.getByLabelText("Estado"), { target: { value: "SP" } });
-    fireEvent.change(screen.getByLabelText("Cidade"), { target: { value: "São Paulo" } });
-    fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
-
+    await screen.findByRole("heading", { name: "Funcionamento" });
     fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
 
     fireEvent.change(screen.getByLabelText("Nome do tatuador"), { target: { value: "George Tattoo" } });
-    fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
-
     fireEvent.change(screen.getByLabelText("Nome do serviço"), { target: { value: "Tatuagem pequena" } });
     fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
 
@@ -98,11 +113,30 @@ describe("OnboardingPage", () => {
     await waitFor(() => expect(mocks.createStudioOnboarding).toHaveBeenCalled());
     expect(mocks.createStudioOnboarding.mock.calls[0][0]).toMatchObject({
       userId: "user-1",
-      name: "Ideal Tattoo",
+      name: "Estúdio São Jorge",
       whatsapp: "11999999999",
-      firstArtist: { name: "George Tattoo" },
-      firstService: { name: "Tatuagem pequena" },
+      firstArtists: [{ name: "George Tattoo" }],
+      firstServices: [{ name: "Tatuagem pequena" }],
     });
     expect(mocks.navigate).toHaveBeenCalledWith("/dashboard", { replace: true });
+  });
+
+  it("permite deixar tatuadores e serviços para depois quando agenda pública está desligada", async () => {
+    renderPage();
+
+    await fillIdentity();
+    await fillContact();
+
+    await screen.findByRole("heading", { name: "Funcionamento" });
+    fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
+    fireEvent.click(screen.getByLabelText(/ativar agenda pública agora/i));
+    fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
+    fireEvent.click(screen.getByRole("button", { name: /ativar meu estúdio/i }));
+
+    await waitFor(() => expect(mocks.createStudioOnboarding).toHaveBeenCalled());
+    expect(mocks.createStudioOnboarding.mock.calls[0][0]).toMatchObject({
+      firstArtists: [],
+      firstServices: [],
+    });
   });
 });

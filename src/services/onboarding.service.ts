@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+﻿import { supabase } from "@/lib/supabase";
 import { getMockStudio, isMockMode, saveMockStudio } from "@/lib/mockMode";
 import { assertPublicSlug, isReservedSlug } from "@/lib/slugs";
 import { createStoragePath, validateUploadFile } from "@/services/storage.service";
@@ -57,6 +57,7 @@ export type OnboardingValidationData = Partial<OnboardingStudioData> & {
   firstArtists?: Partial<OnboardingFirstArtistData>[];
   firstService?: Partial<OnboardingFirstServiceData>;
   firstServices?: Partial<OnboardingFirstServiceData>[];
+  activateBooking?: boolean;
 };
 
 export function slugify(value: string) {
@@ -111,12 +112,13 @@ export function validateOnboardingStep(step: number, data: OnboardingValidationD
     if (invalidHour) return "Confira os horários: abertura precisa ser antes do fechamento.";
   }
 
-  if (step === 4 && !data.firstArtist?.name?.trim() && !data.firstArtists?.some((artist) => artist.name?.trim())) {
-    return "Informe pelo menos um tatuador.";
-  }
+  if (step === 4 && data.activateBooking !== false) {
+    const hasArtist = Boolean(data.firstArtist?.name?.trim() || data.firstArtists?.some((artist) => artist.name?.trim()));
+    const hasService = Boolean(data.firstService?.name?.trim() || data.firstServices?.some((service) => service.name?.trim()));
 
-  if (step === 5 && !data.firstService?.name?.trim() && !data.firstServices?.some((service) => service.name?.trim())) {
-    return "Informe pelo menos um serviço inicial.";
+    if (!hasArtist || !hasService) {
+      return "Para ativar a agenda pública agora, informe pelo menos um tatuador e um serviço. Ou desmarque a opção para fazer depois.";
+    }
   }
 
   return "";
@@ -319,3 +321,4 @@ export async function createStudioOnboarding(data: OnboardingStudioData) {
 
   return studio;
 }
+
