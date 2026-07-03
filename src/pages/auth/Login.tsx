@@ -3,7 +3,13 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { getFriendlyAuthErrorMessage, getFriendlyErrorMessage } from "@/lib/errors";
 import { getMockStudio, isMockMode } from "@/lib/mockMode";
+import { logSeguranca } from "@/lib/security-logger";
 import { supabase } from "@/lib/supabase";
+
+const MAX_TENTATIVAS = 5;
+const BLOQUEIO_MINUTOS = 15;
+const LOGIN_TENTATIVAS_KEY = "login_tentativas";
+const LOGIN_BLOQUEADO_ATE_KEY = "login_bloqueado_ate";
 
 function withTimeout<T>(promise: PromiseLike<T>, ms: number, message: string) {
   return Promise.race([
@@ -12,6 +18,37 @@ function withTimeout<T>(promise: PromiseLike<T>, ms: number, message: string) {
       window.setTimeout(() => reject(new Error(message)), ms);
     }),
   ]);
+}
+
+function getLoginTentativas() {
+  return Number(window.localStorage.getItem(LOGIN_TENTATIVAS_KEY) ?? "0");
+}
+
+function getBloqueioRestanteMinutos() {
+  const bloqueadoAte = window.localStorage.getItem(LOGIN_BLOQUEADO_ATE_KEY);
+  if (!bloqueadoAte) return 0;
+
+  const restante = new Date(bloqueadoAte).getTime() - Date.now();
+  return restante > 0 ? Math.ceil(restante / 60000) : 0;
+}
+
+function registrarFalhaLogin() {
+  const tentativas = getLoginTentativas() + 1;
+  window.localStorage.setItem(LOGIN_TENTATIVAS_KEY, String(tentativas));
+  logSeguranca("LOGIN_FALHA", { tentativa: tentativas });
+
+  if (tentativas >= MAX_TENTATIVAS) {
+    const bloqueadoAte = new Date(Date.now() + BLOQUEIO_MINUTOS * 60000).toISOString();
+    window.localStorage.setItem(LOGIN_BLOQUEADO_ATE_KEY, bloqueadoAte);
+    logSeguranca("LOGIN_BLOQUEADO", { tentativas });
+  }
+
+  return tentativas;
+}
+
+function limparBloqueioLogin() {
+  window.localStorage.removeItem(LOGIN_TENTATIVAS_KEY);
+  window.localStorage.removeItem(LOGIN_BLOQUEADO_ATE_KEY);
 }
 
 export function Login() {
@@ -25,15 +62,31 @@ export function Login() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+
+    const bloqueioRestante = getBloqueioRestanteMinutos();
+    if (bloqueioRestante > 0) {
+      logSeguranca("LOGIN_BLOQUEADO", { minutos: bloqueioRestante });
+      setError(`Muitas tentativas. Aguarde ${bloqueioRestante} minuto(s) e tente novamente.`);
+      return;
+    }
+
     setLoading(true);
 
     try {
       const { data, error: signInError } = await signIn({ email, password });
 
       if (signInError || !data.user) {
+        const tentativas = registrarFalhaLogin();
+        if (tentativas >= MAX_TENTATIVAS) {
+          setError(`Muitas tentativas. Aguarde ${BLOQUEIO_MINUTOS} minutos e tente novamente.`);
+          return;
+        }
         setError(getFriendlyAuthErrorMessage(signInError, "Não foi possível entrar."));
         return;
       }
+
+      limparBloqueioLogin();
+      logSeguranca("LOGIN_SUCESSO");
 
       if (isMockMode) {
         navigate(getMockStudio() ? "/dashboard" : "/onboarding", { replace: true });

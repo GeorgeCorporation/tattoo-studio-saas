@@ -22,6 +22,11 @@ export function Register() {
       return;
     }
 
+    if (password.length < 8) {
+      setError("A senha precisa ter pelo menos 8 caracteres.");
+      return;
+    }
+
     setLoading(true);
     const { error: signUpError } = await signUp({ fullName, email, password });
     setLoading(false);
@@ -72,7 +77,7 @@ export function Register() {
             <input
               autoComplete="new-password"
               className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3 text-white outline-none transition focus:border-[#E8650A] focus:ring-2 focus:ring-[#E8650A]/30"
-              minLength={6}
+              minLength={8}
               onChange={(event) => setPassword(event.target.value)}
               required
               type="password"
@@ -85,7 +90,7 @@ export function Register() {
             <input
               autoComplete="new-password"
               className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3 text-white outline-none transition focus:border-[#E8650A] focus:ring-2 focus:ring-[#E8650A]/30"
-              minLength={6}
+              minLength={8}
               onChange={(event) => setConfirmPassword(event.target.value)}
               required
               type="password"

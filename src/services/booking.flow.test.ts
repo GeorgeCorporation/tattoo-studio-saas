@@ -37,6 +37,20 @@ vi.mock("@/lib/supabase", () => ({
         return builder;
       }
 
+      if (table === "tattoo_artists" || table === "services") {
+        const builder = {
+          select: vi.fn(() => builder),
+          eq: vi.fn(() => builder),
+          maybeSingle: vi.fn(() =>
+            Promise.resolve({
+              data: { id: table === "tattoo_artists" ? "artist-1" : "service-1" },
+              error: null,
+            }),
+          ),
+        };
+        return builder;
+      }
+
       return {};
     }),
     rpc: vi.fn(() => Promise.resolve({ data: bookedTimes, error: null })),

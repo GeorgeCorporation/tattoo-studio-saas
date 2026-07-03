@@ -139,27 +139,6 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string) {
   ]);
 }
 
-function createEmptyArtist(): ArtistDraft {
-  return {
-    name: "",
-    slug: "",
-    specialty: "",
-    instagram: "",
-    whatsapp: "",
-    photoFile: null,
-  };
-}
-
-function createEmptyService(): ServiceDraft {
-  return {
-    name: "",
-    category: "Outro",
-    description: "",
-    startingPrice: "",
-    durationMinutes: "120",
-  };
-}
-
 export function OnboardingPage() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();

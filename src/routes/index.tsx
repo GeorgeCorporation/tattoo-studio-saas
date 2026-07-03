@@ -21,6 +21,7 @@ import { StudioPage } from "@/pages/public/StudioPage";
 import { FinancialPage } from "@/pages/financial/FinancialPage";
 import { GalleryPage } from "@/pages/gallery/GalleryPage";
 import LandingPage from "@/pages/landing/LandingPage";
+import { PrivacyPolicy } from "@/pages/legal/PrivacyPolicy";
 import { OnboardingPage } from "@/pages/onboarding/OnboardingPage";
 import { ServicesPage } from "@/pages/services/ServicesPage";
 
@@ -63,6 +64,10 @@ const router = createBrowserRouter([
       {
         path: "/auth/callback",
         element: <AuthCallback />,
+      },
+      {
+        path: "/privacidade",
+        element: <PrivacyPolicy />,
       },
       {
         element: <PrivateRoute requireStudio={false} />,

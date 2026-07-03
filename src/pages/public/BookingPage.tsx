@@ -13,6 +13,7 @@ import {
   BookingAvailabilityError,
   createAppointment,
   createClient,
+  deleteClientIfEmpty,
   getAvailableTimeSlots,
   getMinimumBookingDate,
   getServicesByStudio,
@@ -262,15 +263,23 @@ export function BookingPage() {
         instagram: cleanInstagram(instagram),
       });
 
-      const appointment = await createAppointment({
-        studioId: studio.id,
-        artistId: selectedArtist.id,
-        clientId: client.id,
-        serviceId: selectedService.id,
-        date,
-        time,
-        description,
-      });
+      let appointment;
+      try {
+        appointment = await createAppointment({
+          studioId: studio.id,
+          artistId: selectedArtist.id,
+          clientId: client.id,
+          serviceId: selectedService.id,
+          date,
+          time,
+          description,
+        });
+      } catch (appointmentError) {
+        await deleteClientIfEmpty(client.id).catch((rollbackError) => {
+          logger.warn("Não foi possível desfazer cliente sem agendamento", { rollbackError });
+        });
+        throw appointmentError;
+      }
 
       if (referenceFiles.length) {
         try {

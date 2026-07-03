@@ -4,48 +4,67 @@ import {
   createStoragePath,
   getStoragePathFromPublicUrl,
   safeFileName,
+  validateUploadFile,
 } from "@/services/storage.service";
+
+const fixedUuid = "00000000-0000-4000-8000-000000000000";
+
+function mockRandomUuid() {
+  return vi.spyOn(crypto, "randomUUID").mockReturnValue(fixedUuid as `${string}-${string}-${string}-${string}-${string}`);
+}
 
 describe("storage.service", () => {
   it("remove acentos e caracteres inseguros do nome do arquivo", () => {
     expect(safeFileName("logo São João @2026.png")).toBe("logo_Sao_Joao__2026.png");
   });
 
-  it("cria path padrao com studioId na primeira pasta", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-06-30T12:00:00Z"));
+  it("cria path padrão com studioId na primeira pasta e nome não adivinhável", () => {
+    const uuidSpy = mockRandomUuid();
 
-    expect(createStoragePath("studio-1", "foto capa.png")).toBe("studio-1/1782820800000_foto_capa.png");
+    expect(createStoragePath("studio-1", "foto capa.png")).toBe(`${fixedUuid}.png`.replace(/^/, "studio-1/"));
 
-    vi.useRealTimers();
+    uuidSpy.mockRestore();
   });
 
   it("cria path de artista com artistId depois do studioId", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-06-30T12:00:00Z"));
+    const uuidSpy = mockRandomUuid();
 
-    expect(createStoragePath("studio-1", "perfil.jpg", ["artist-1"])).toBe(
-      "studio-1/artist-1/1782820800000_perfil.jpg",
-    );
+    expect(createStoragePath("studio-1", "perfil.jpg", ["artist-1"])).toBe(`studio-1/artist-1/${fixedUuid}.jpg`);
 
-    vi.useRealTimers();
+    uuidSpy.mockRestore();
   });
 
-  it("cria path de referencia com appointmentId", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-06-30T12:00:00Z"));
+  it("cria path de referência com appointmentId", () => {
+    const uuidSpy = mockRandomUuid();
 
     expect(createBookingReferencePath("studio-1", "appointment-1", "ref 01.jpeg")).toBe(
-      "studio-1/appointment-1/1782820800000_ref_01.jpeg",
+      `studio-1/appointment-1/${fixedUuid}.jpeg`,
     );
 
-    vi.useRealTimers();
+    uuidSpy.mockRestore();
   });
 
-  it("extrai path da url publica do bucket", () => {
-    const url =
-      "https://project.supabase.co/storage/v1/object/public/gallery/studio-1/1782820800000_foto.png";
+  it("bloqueia uploads inseguros", () => {
+    const file = new File(["<svg></svg>"], "icone.svg", { type: "image/svg+xml" });
 
-    expect(getStoragePathFromPublicUrl(url, "gallery")).toBe("studio-1/1782820800000_foto.png");
+    expect(() => validateUploadFile(file)).toThrow("Tipo de arquivo não permitido");
+  });
+
+  it("bloqueia uploads acima de 5MB", () => {
+    const file = new File([new Uint8Array(5 * 1024 * 1024 + 1)], "foto.png", { type: "image/png" });
+
+    expect(() => validateUploadFile(file)).toThrow("Arquivo muito grande");
+  });
+
+  it("aceita imagem permitida", () => {
+    const file = new File(["ok"], "foto.webp", { type: "image/webp" });
+
+    expect(() => validateUploadFile(file)).not.toThrow();
+  });
+
+  it("extrai path da url pública do bucket", () => {
+    const url = "https://project.supabase.co/storage/v1/object/public/gallery/studio-1/foto.png";
+
+    expect(getStoragePathFromPublicUrl(url, "gallery")).toBe("studio-1/foto.png");
   });
 });

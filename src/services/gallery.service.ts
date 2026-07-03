@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { createStoragePath, getStoragePathFromPublicUrl } from "@/services/storage.service";
+import { createStoragePath, getStoragePathFromPublicUrl, validateUploadFile } from "@/services/storage.service";
 
 export type GalleryPhoto = {
   id: string;
@@ -29,6 +29,7 @@ export async function getGallery(studioId: string, artistId?: string) {
 }
 
 export async function uploadPhoto(file: File, studioId: string, artistId?: string) {
+  validateUploadFile(file);
   const path = createStoragePath(studioId, file.name);
 
   const { error: uploadError } = await supabase.storage.from("gallery").upload(path, file, {

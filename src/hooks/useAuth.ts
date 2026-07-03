@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { clearMockStudio, isMockMode, mockUser } from "@/lib/mockMode";
+import { logSeguranca } from "@/lib/security-logger";
 import { supabase } from "@/lib/supabase";
 
 type SignInCredentials = {
@@ -54,7 +55,11 @@ export function useAuth() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (event === "SIGNED_OUT") {
+        logSeguranca("LOGOUT");
+      }
+
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
       setLoading(false);
@@ -93,6 +98,8 @@ export function useAuth() {
   }
 
   async function signOut() {
+    logSeguranca("LOGOUT");
+
     if (isMockMode) {
       clearMockStudio();
       setUser(null);

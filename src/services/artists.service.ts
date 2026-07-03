@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
-import { createStoragePath, getStoragePathFromPublicUrl } from "@/services/storage.service";
+import { assertPublicSlug } from "@/lib/slugs";
+import { createStoragePath, getStoragePathFromPublicUrl, validateUploadFile } from "@/services/storage.service";
 
 export type Artist = {
   id: string;
@@ -55,6 +56,7 @@ function slugify(value: string) {
 
 async function ensureUniqueSlug(studioId: string, slug: string, ignoreArtistId?: string) {
   const base = slugify(slug) || "tatuador";
+  assertPublicSlug(base);
   let nextSlug = base;
   let suffix = 2;
 
@@ -162,6 +164,7 @@ export async function deleteStorageFile(url: string, bucket: "artists" | "galler
 }
 
 export async function uploadArtistPhoto(file: File, studioId: string, artistId: string) {
+  validateUploadFile(file);
   const path = createStoragePath(studioId, file.name, [artistId]);
 
   const { error } = await supabase.storage.from("artists").upload(path, file, {
@@ -188,6 +191,7 @@ export async function getArtistGallery(artistId: string) {
 }
 
 export async function addArtistPhoto(file: File, studioId: string, artistId: string) {
+  validateUploadFile(file);
   const path = createStoragePath(studioId, file.name);
 
   const { error: uploadError } = await supabase.storage.from("gallery").upload(path, file, {

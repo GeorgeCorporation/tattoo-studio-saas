@@ -296,8 +296,8 @@ export default function LandingPage() {
             </button>
             <p>© 2026 Ideal Tattoo. Todos os direitos reservados.</p>
             <div className="flex gap-5">
-              <a href="/">Privacidade</a>
-              <a href="/">Termos</a>
+              <a href="/privacidade">Privacidade</a>
+              <a href="/privacidade">Termos</a>
             </div>
           </div>
         </footer>

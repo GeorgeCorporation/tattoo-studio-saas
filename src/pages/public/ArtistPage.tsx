@@ -124,7 +124,15 @@ export function ArtistPage() {
                   Instagram
                 </a>
               ) : null}
-              <Link className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold text-white" to={`/${studio.slug}/${artist.slug}/agendar`}>
+              {whatsApp ? (
+                <a className="rounded-xl border border-white/10 px-4 py-3 font-medium text-zinc-200" href={whatsApp}>
+                  WhatsApp
+                </a>
+              ) : null}
+              <Link
+                className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold text-white"
+                to={`/${studio.slug}/${artist.slug}/agendar`}
+              >
                 Agendar com {artist.name}
               </Link>
             </div>

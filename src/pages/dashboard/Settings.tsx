@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { supabase } from "@/lib/supabase";
-import { createStoragePath, getStoragePathFromPublicUrl } from "@/services/storage.service";
+import { createStoragePath, getStoragePathFromPublicUrl, validateUploadFile } from "@/services/storage.service";
 
 type WorkingHour = {
   id?: string;
@@ -156,6 +156,7 @@ export function Settings() {
   async function uploadLogo(file: File) {
     if (!studioId) return;
 
+    validateUploadFile(file);
     const path = createStoragePath(studioId, file.name);
 
     if (logoUrl) {

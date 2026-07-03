@@ -36,7 +36,7 @@ export function getFriendlyAuthErrorMessage(error: unknown, fallback = "Não foi
   }
 
   if (message.includes("password") && message.includes("weak")) {
-    return "Senha fraca. Use pelo menos 6 caracteres e evite senhas muito simples.";
+    return "Senha fraca. Use pelo menos 8 caracteres e evite senhas muito simples.";
   }
 
   if (message.includes("signup disabled")) {

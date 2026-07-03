@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { createBookingReferencePath } from "@/services/storage.service";
+import { createBookingReferencePath, validateUploadFile } from "@/services/storage.service";
 
 export type BookingService = {
   id: string;
@@ -40,6 +40,10 @@ export type CreateAppointmentData = {
   description: string;
   notes?: string;
 };
+
+export function cleanPhoneNumber(value: string) {
+  return value.replace(/\D/g, "");
+}
 
 export class BookingAvailabilityError extends Error {
   constructor(message = "Esse horário acabou de ficar indisponível. Escolha outro horário.") {
@@ -162,7 +166,7 @@ export async function createClient(data: CreateClientData) {
     .insert({
       studio_id: data.studioId,
       name: data.name,
-      phone: data.phone,
+      phone: cleanPhoneNumber(data.phone),
       email: data.email || null,
       instagram: data.instagram || null,
       notes: data.notes || null,
@@ -174,7 +178,39 @@ export async function createClient(data: CreateClientData) {
   return client;
 }
 
+export async function deleteClientIfEmpty(clientId: string) {
+  const { error } = await supabase.from("clients").delete().eq("id", clientId);
+  if (error) throw error;
+}
+
+export async function validateBookingEntities(studioId: string, artistId: string, serviceId: string) {
+  const [artistResult, serviceResult] = await Promise.all([
+    supabase
+      .from("tattoo_artists")
+      .select("id")
+      .eq("id", artistId)
+      .eq("studio_id", studioId)
+      .eq("is_active", true)
+      .maybeSingle<{ id: string }>(),
+    supabase
+      .from("services")
+      .select("id")
+      .eq("id", serviceId)
+      .eq("studio_id", studioId)
+      .eq("is_active", true)
+      .maybeSingle<{ id: string }>(),
+  ]);
+
+  if (artistResult.error) throw artistResult.error;
+  if (serviceResult.error) throw serviceResult.error;
+
+  if (!artistResult.data || !serviceResult.data) {
+    throw new BookingAvailabilityError("Dados de agendamento inválidos. Recarregue a página e tente novamente.");
+  }
+}
+
 export async function createAppointment(data: CreateAppointmentData) {
+  await validateBookingEntities(data.studioId, data.artistId, data.serviceId);
   const availableSlots = await getAvailableTimeSlots(data.studioId, data.artistId, data.date);
 
   if (!availableSlots.includes(normalizeTime(data.time))) {
@@ -216,6 +252,7 @@ export async function updateAppointmentNotes(appointmentId: string, notes: strin
 }
 
 export async function uploadReference(file: File, studioId: string, appointmentId: string) {
+  validateUploadFile(file);
   const path = createBookingReferencePath(studioId, appointmentId, file.name);
 
   const { error } = await supabase.storage.from("booking-references").upload(path, file, {

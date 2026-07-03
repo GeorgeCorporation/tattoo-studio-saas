@@ -170,6 +170,58 @@ create index if not exists client_deliveries_token_idx on public.client_deliveri
 create index if not exists client_delivery_photos_delivery_id_idx on public.client_delivery_photos(delivery_id);
 create index if not exists client_delivery_photos_studio_id_idx on public.client_delivery_photos(studio_id);
 
+-- Slug guardrails
+do $$
+begin
+  alter table public.studios
+  add constraint studios_slug_format_check
+  check (slug ~ '^[a-z0-9-]+$') not valid;
+exception when duplicate_object then
+  null;
+end $$;
+
+do $$
+begin
+  alter table public.studios
+  add constraint studios_slug_reserved_check
+  check (
+    slug not in (
+      'admin',
+      'api',
+      'login',
+      'cadastro',
+      'dashboard',
+      'onboarding',
+      'configuracoes',
+      'agenda',
+      'clientes',
+      'tatuadores',
+      'servicos',
+      'financeiro',
+      'galeria',
+      'auth',
+      'public',
+      'static',
+      'assets',
+      'images',
+      'favicon',
+      'entrega',
+      'entregas'
+    )
+  ) not valid;
+exception when duplicate_object then
+  null;
+end $$;
+
+do $$
+begin
+  alter table public.tattoo_artists
+  add constraint tattoo_artists_slug_format_check
+  check (slug ~ '^[a-z0-9-]+$') not valid;
+exception when duplicate_object then
+  null;
+end $$;
+
 -- Product guardrails
 do $$
 begin

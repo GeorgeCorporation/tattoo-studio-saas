@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { getMockStudio, isMockMode, saveMockStudio } from "@/lib/mockMode";
-import { createStoragePath } from "@/services/storage.service";
+import { assertPublicSlug, isReservedSlug } from "@/lib/slugs";
+import { createStoragePath, validateUploadFile } from "@/services/storage.service";
 
 export type OnboardingWorkingHour = {
   day_of_week: number;
@@ -87,7 +88,9 @@ export function makeDefaultWorkingHours(studioId: string) {
 export function validateOnboardingStep(step: number, data: OnboardingValidationData) {
   if (step === 1) {
     if (!data.name?.trim()) return "Informe o nome do estúdio.";
-    if (!slugify(data.slug || data.name)) return "Defina um link público válido para seu estúdio.";
+    const slug = slugify(data.slug || data.name);
+    if (!slug) return "Defina um link público válido para seu estúdio.";
+    if (isReservedSlug(slug)) return "Este link público é reservado pelo sistema. Escolha outro.";
   }
 
   if (step === 2) {
@@ -135,6 +138,7 @@ export async function getUserStudio(userId: string) {
 
 export async function ensureUniqueStudioSlug(slug: string) {
   const base = slugify(slug) || "estudio";
+  assertPublicSlug(base);
   if (isMockMode) return base;
 
   let nextSlug = base;
@@ -157,6 +161,7 @@ export async function ensureUniqueStudioSlug(slug: string) {
 
 export async function ensureUniqueArtistSlug(studioId: string, slug: string) {
   const base = slugify(slug) || "tatuador";
+  assertPublicSlug(base);
   if (isMockMode) return base;
 
   let nextSlug = base;
@@ -181,6 +186,7 @@ export async function ensureUniqueArtistSlug(studioId: string, slug: string) {
 export async function uploadStudioLogo(file: File, studioId: string) {
   if (isMockMode) return URL.createObjectURL(file);
 
+  validateUploadFile(file);
   const path = createStoragePath(studioId, file.name);
 
   const { error } = await supabase.storage.from("logos").upload(path, file, {
@@ -197,6 +203,7 @@ export async function uploadStudioLogo(file: File, studioId: string) {
 export async function uploadFirstArtistPhoto(file: File, studioId: string, artistId: string) {
   if (isMockMode) return URL.createObjectURL(file);
 
+  validateUploadFile(file);
   const path = createStoragePath(studioId, file.name, [artistId]);
 
   const { error } = await supabase.storage.from("artists").upload(path, file, {

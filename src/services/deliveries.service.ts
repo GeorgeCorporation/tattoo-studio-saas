@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { createStoragePath, getStoragePathFromPublicUrl } from "@/services/storage.service";
+import { createStoragePath, getStoragePathFromPublicUrl, validateUploadFile } from "@/services/storage.service";
 
 export type DeliveryClient = {
   id: string;
@@ -99,6 +99,7 @@ export async function createDelivery(data: CreateDeliveryData) {
 }
 
 export async function uploadDeliveryPhoto(file: File, studioId: string, deliveryId: string) {
+  validateUploadFile(file);
   const path = createStoragePath(studioId, file.name, [deliveryId]);
 
   const { error: uploadError } = await supabase.storage.from("client-deliveries").upload(path, file, {
