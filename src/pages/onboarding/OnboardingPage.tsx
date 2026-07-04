@@ -1,4 +1,4 @@
-import {
+﻿import {
   ArrowLeft,
   ArrowRight,
   CalendarClock,
@@ -258,6 +258,7 @@ export function OnboardingPage() {
   const [saving, setSaving] = useState(false);
   const [savingLabel, setSavingLabel] = useState("Finalizando configuração...");
   const [error, setError] = useState("");
+  const [submitFailed, setSubmitFailed] = useState(false);
 
   const logoPreview = useFilePreview(logoFile);
   const artistPhotoPreview = useFilePreview(artistPhotoFile);
@@ -283,6 +284,8 @@ export function OnboardingPage() {
   };
   const artistsToSave = [...artists, currentArtist].filter((artist) => artist.name.trim());
   const servicesToSave = [...services, currentService].filter((service) => service.name.trim());
+  const openDaysCount = workingHours.filter((hour) => hour.is_open).length;
+  const readyForPublicBooking = activateBooking && artistsToSave.length > 0 && servicesToSave.length > 0;
 
   const validationData = useMemo(
     () => ({
@@ -433,7 +436,8 @@ export function OnboardingPage() {
       } catch (caughtError) {
         logger.error("Falha ao verificar estúdio no onboarding", caughtError, { userId: user.id });
         if (isMounted) {
-          setError(getFriendlyErrorMessage(caughtError, "Não foi possível verificar seu estúdio."));
+          setError(getFriendlyErrorMessage(caughtError, "Não foi possível verificar seu estúdio. Tente novamente em alguns minutos."));
+          setSubmitFailed(false);
         }
       } finally {
         if (isMounted) setCheckingStudio(false);
@@ -574,16 +578,19 @@ export function OnboardingPage() {
     const message = validateOnboardingStep(step, validationData);
     if (message) {
       setError(message);
+      setSubmitFailed(false);
       return;
     }
 
     setError("");
+    setSubmitFailed(false);
     setStep((current) => Math.min(steps.length, current + 1));
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function goBack() {
     setError("");
+    setSubmitFailed(false);
     setStep((current) => Math.max(1, current - 1));
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -597,6 +604,7 @@ export function OnboardingPage() {
       if (message) {
         setStep(currentStep);
         setError(message);
+        setSubmitFailed(false);
         return;
       }
     }
@@ -604,7 +612,8 @@ export function OnboardingPage() {
     try {
       setSaving(true);
       setError("");
-      setSavingLabel("Criando estúdio...");
+      setSubmitFailed(false);
+      setSavingLabel("Salvando estúdio e link público...");
 
       await createStudioOnboarding({
         userId: user.id,
@@ -642,6 +651,7 @@ export function OnboardingPage() {
     } catch (caughtError) {
       logger.error("Falha ao criar estúdio no onboarding", caughtError, { userId: user.id });
       setError(getFriendlyErrorMessage(caughtError, "Não foi possível ativar o estúdio. Se o problema continuar, tente novamente em alguns minutos."));
+      setSubmitFailed(true);
     } finally {
       setSaving(false);
     }
@@ -1063,18 +1073,30 @@ export function OnboardingPage() {
                 <p className="mt-1 text-sm text-zinc-400">Confira tudo antes de ativar seu estúdio.</p>
               </div>
 
+              <div className="rounded-2xl border border-[#E8650A]/25 bg-[#E8650A]/10 p-4">
+                <p className="font-semibold">{readyForPublicBooking ? "Agenda pública pronta para receber pedidos." : "Estúdio pronto. Agenda pública pode ser ativada depois."}</p>
+                <p className="mt-1 text-sm text-zinc-300">
+                  {readyForPublicBooking
+                    ? "Cliente já poderá escolher tatuador, serviço, data e horário pela página pública."
+                    : "Você poderá cadastrar tatuadores e serviços no painel antes de divulgar o link."}
+                </p>
+              </div>
+
               <div className="grid gap-3 md:grid-cols-2">
                 <SummaryCard label="Estúdio pronto" value={name} detail={`${origin}/${publicUrl}`} status="ok" />
                 <SummaryCard label="Contato pronto" value={whatsapp} detail={instagram ? `@${instagram}` : "Instagram não informado"} status="ok" />
                 <SummaryCard label="Localização" value={`${city} - ${stateUf}`} detail={address || "Endereço não informado"} status="ok" />
-                <SummaryCard label="Funcionamento" value={`${workingHours.filter((hour) => hour.is_open).length} dias abertos`} detail="Editável depois em Configurações" status="ok" />
+                <SummaryCard label="Funcionamento" value={`${openDaysCount} dias abertos`} detail="Editável depois em Configurações" status="ok" />
+                <SummaryCard label="Agenda pública" value={readyForPublicBooking ? "Pronta" : activateBooking ? "Incompleta" : "Desligada por enquanto"} detail={readyForPublicBooking ? "Pode divulgar o link." : "Finalize equipe e serviços para receber pedidos completos."} status={readyForPublicBooking ? "ok" : "pending"} />
                 <SummaryCard label="Tatuadores" value={`${artistsToSave.length} cadastrados`} detail={artistsToSave.map((artist) => artist.name).join(", ") || "Pode cadastrar depois"} status={artistsToSave.length ? "ok" : "pending"} />
                 <SummaryCard label="Serviços" value={`${servicesToSave.length} cadastrados`} detail={servicesToSave.map((service) => service.name).join(", ") || "Pode cadastrar depois"} status={servicesToSave.length ? "ok" : "pending"} />
               </div>
             </div>
           ) : null}
 
-          {error ? <p className="mt-5 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p> : null}
+          {saving ? <SavingStatus label={savingLabel} /> : null}
+
+          {error ? <ErrorCard message={error} onLogin={() => navigate("/login", { replace: true })} showActions={submitFailed} /> : null}
 
           <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
             <button className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 px-4 py-3 font-semibold text-zinc-200 disabled:cursor-not-allowed disabled:opacity-40" disabled={step === 1 || saving} onClick={goBack} type="button">
@@ -1124,3 +1146,47 @@ function SummaryCard({
     </div>
   );
 }
+
+function SavingStatus({ label }: { label: string }) {
+  const items = ["Estúdio", "Horários", "Equipe", "Serviços", "Painel"];
+
+  return (
+    <div className="mt-5 rounded-2xl border border-[#E8650A]/25 bg-[#E8650A]/10 p-4">
+      <div className="flex items-center gap-3">
+        <Loader2 className="animate-spin text-[#E8650A]" size={18} />
+        <div>
+          <p className="font-semibold">{label}</p>
+          <p className="text-sm text-zinc-300">Mantenha esta página aberta enquanto finalizamos.</p>
+        </div>
+      </div>
+      <div className="mt-4 grid gap-2 sm:grid-cols-5">
+        {items.map((item) => (
+          <div className="rounded-xl border border-white/10 bg-[#0f0f0f] px-3 py-2 text-center text-xs text-zinc-300" key={item}>
+            {item}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ErrorCard({ message, onLogin, showActions }: { message: string; onLogin: () => void; showActions: boolean }) {
+  return (
+    <div className="mt-5 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">
+      <p className="font-semibold">Não conseguimos concluir agora</p>
+      <p className="mt-1 text-red-200">{message}</p>
+      {showActions ? (
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+          <button className="rounded-xl bg-[#E8650A] px-4 py-2 font-semibold text-white" type="submit">
+            Tentar novamente
+          </button>
+          <button className="rounded-xl border border-white/10 px-4 py-2 font-semibold text-white" onClick={onLogin} type="button">
+            Ir para login
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+

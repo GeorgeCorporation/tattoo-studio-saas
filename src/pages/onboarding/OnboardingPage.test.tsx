@@ -168,4 +168,21 @@ describe("OnboardingPage", () => {
       firstServices: [],
     });
   });
+
+  it("mostra ação clara quando salvar falha", async () => {
+    mocks.createStudioOnboarding.mockRejectedValueOnce(new Error("network"));
+    renderPage();
+
+    await fillIdentity();
+    await fillContact();
+
+    await screen.findByRole("heading", { name: "Funcionamento" });
+    fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
+    fireEvent.click(screen.getByLabelText(/ativar agenda pública agora/i));
+    fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
+    fireEvent.click(screen.getByRole("button", { name: /ativar meu estúdio/i }));
+
+    expect(await screen.findByRole("button", { name: /tentar novamente/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /ir para login/i })).toBeInTheDocument();
+  });
 });
