@@ -114,13 +114,13 @@ describe("OnboardingPage", () => {
     expect(screen.getByDisplayValue("Cidade Teste")).toBeInTheDocument();
   });
 
-  it("carrega cidades completas do estado pelo IBGE", async () => {
+  it("mostra cidades completas do estado sem depender de API externa", async () => {
     renderPage();
 
     await fillIdentity();
     fireEvent.change(screen.getByLabelText("Estado"), { target: { value: "RN" } });
 
-    await waitFor(() => expect(screen.getByRole("option", { name: "Acari" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("option", { name: "Ceará-Mirim" })).toBeInTheDocument());
     expect(screen.getByLabelText("Cidade")).not.toBeDisabled();
   });
 

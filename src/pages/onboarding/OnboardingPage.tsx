@@ -17,6 +17,7 @@ import { inkoraLogo, inkoraMark } from "@/assets";
 import { useAuth } from "@/hooks/useAuth";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import citiesByState from "@/lib/brazil-cities.json";
 import {
   buildDefaultWorkingHours,
   createStudioOnboarding,
@@ -70,36 +71,6 @@ const serviceCategories = [
   "Piercing",
   "Outro",
 ];
-
-const citiesByState: Record<string, string[]> = {
-  AC: ["Rio Branco", "Cruzeiro do Sul", "Sena Madureira", "Tarauacá", "Feijó"],
-  AL: ["Maceió", "Arapiraca", "Rio Largo", "Palmeira dos Índios", "União dos Palmares"],
-  AP: ["Macapá", "Santana", "Laranjal do Jari", "Oiapoque", "Porto Grande"],
-  AM: ["Manaus", "Parintins", "Itacoatiara", "Manacapuru", "Coari"],
-  BA: ["Salvador", "Feira de Santana", "Vitória da Conquista", "Camaçari", "Itabuna", "Juazeiro"],
-  CE: ["Fortaleza", "Caucaia", "Juazeiro do Norte", "Maracanaú", "Sobral"],
-  DF: ["Brasília"],
-  ES: ["Vitória", "Vila Velha", "Serra", "Cariacica", "Linhares"],
-  GO: ["Goiânia", "Aparecida de Goiânia", "Anápolis", "Rio Verde", "Luziânia"],
-  MA: ["São Luís", "Imperatriz", "São José de Ribamar", "Timon", "Caxias"],
-  MT: ["Cuiabá", "Várzea Grande", "Rondonópolis", "Sinop", "Tangará da Serra"],
-  MS: ["Campo Grande", "Dourados", "Três Lagoas", "Corumbá", "Ponta Porã"],
-  MG: ["Belo Horizonte", "Uberlândia", "Contagem", "Juiz de Fora", "Betim", "Montes Claros"],
-  PA: ["Belém", "Ananindeua", "Santarém", "Marabá", "Parauapebas"],
-  PB: ["João Pessoa", "Campina Grande", "Santa Rita", "Patos"],
-  PR: ["Curitiba", "Londrina", "Maringá", "Ponta Grossa", "Cascavel"],
-  PE: ["Recife", "Jaboatão dos Guararapes", "Olinda", "Caruaru", "Petrolina"],
-  PI: ["Teresina", "Parnaíba", "Picos", "Piripiri", "Floriano"],
-  RJ: ["Rio de Janeiro", "São Gonçalo", "Duque de Caxias", "Niterói", "Nova Iguaçu"],
-  RN: ["Natal", "Mossoró", "Parnamirim", "São Gonçalo do Amarante", "Caicó"],
-  RS: ["Porto Alegre", "Caxias do Sul", "Canoas", "Pelotas", "Santa Maria"],
-  RO: ["Porto Velho", "Ji-Paraná", "Ariquemes", "Vilhena", "Cacoal"],
-  RR: ["Boa Vista", "Rorainópolis", "Caracaraí", "Alto Alegre", "Mucajaí"],
-  SC: ["Florianópolis", "Joinville", "Blumenau", "São José", "Chapecó"],
-  SP: ["São Paulo", "Guarulhos", "Campinas", "São Bernardo do Campo", "Santo André", "Osasco", "Ribeirão Preto", "Sorocaba"],
-  SE: ["Aracaju", "Nossa Senhora do Socorro", "Lagarto", "Itabaiana", "São Cristóvão"],
-  TO: ["Palmas", "Araguaína", "Gurupi", "Porto Nacional", "Paraíso do Tocantins"],
-};
 
 const serviceExamples = [
   { name: "Orçamento", category: "Outro", duration: "30", price: "" },
@@ -235,9 +206,6 @@ export function OnboardingPage() {
   const [city, setCity] = useState(draft.city ?? "");
   const [stateUf, setStateUf] = useState(draft.stateUf ?? "");
   const [manualCity, setManualCity] = useState(draft.manualCity ?? false);
-  const [citiesByUf, setCitiesByUf] = useState<Record<string, string[]>>({});
-  const [loadingCities, setLoadingCities] = useState(false);
-  const [cityLoadError, setCityLoadError] = useState("");
   const [workingHours, setWorkingHours] = useState<OnboardingWorkingHour[]>(draft.workingHours ?? buildDefaultWorkingHours());
   const [activateBooking, setActivateBooking] = useState(draft.activateBooking ?? true);
   const [artists, setArtists] = useState<ArtistDraft[]>((draft.artists ?? []).map((artist) => ({ ...artist, photoFile: null })));
@@ -266,7 +234,7 @@ export function OnboardingPage() {
   const publicUrl = slugify(slug) || "seu-estudio";
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const progress = Math.round((step / steps.length) * 100);
-  const cityOptions = stateUf ? (citiesByUf[stateUf] ?? citiesByState[stateUf] ?? []) : [];
+  const cityOptions = stateUf ? citiesByState[stateUf as keyof typeof citiesByState] ?? [] : [];
 
   const currentArtist = {
     name: artistName,
@@ -368,56 +336,6 @@ export function OnboardingPage() {
     whatsapp,
     workingHours,
   ]);
-
-  useEffect(() => {
-    if (!stateUf || manualCity || citiesByUf[stateUf]) {
-      setLoadingCities(false);
-      return;
-    }
-
-    const controller = new AbortController();
-    let isActive = true;
-
-    async function loadCities() {
-      setLoadingCities(true);
-      setCityLoadError("");
-
-      try {
-        const response = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${stateUf}/municipios`, {
-          signal: controller.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error("Falha ao carregar cidades.");
-        }
-
-        const data = (await response.json()) as Array<{ nome?: string }>;
-        const names = data
-          .map((item) => item.nome)
-          .filter((value): value is string => Boolean(value))
-          .sort((a, b) => a.localeCompare(b, "pt-BR"));
-
-        if (isActive && names.length) {
-          setCitiesByUf((current) => ({ ...current, [stateUf]: names }));
-        }
-      } catch (caughtError) {
-        if (controller.signal.aborted) return;
-        logger.warn("Falha ao carregar cidades do IBGE", { stateUf, error: caughtError });
-        if (isActive) {
-          setCityLoadError("Não foi possível carregar a lista completa agora. Você ainda pode digitar a cidade manualmente.");
-        }
-      } finally {
-        if (isActive) setLoadingCities(false);
-      }
-    }
-
-    loadCities();
-
-    return () => {
-      isActive = false;
-      controller.abort();
-    };
-  }, [citiesByUf, manualCity, stateUf]);
 
   useEffect(() => {
     let isMounted = true;
@@ -849,8 +767,8 @@ export function OnboardingPage() {
                     {manualCity ? (
                       <input className={inputClass} onChange={(event) => setCity(event.target.value)} placeholder="Digite sua cidade" required value={city} />
                     ) : (
-                      <select aria-label="Cidade" className={inputClass} disabled={!stateUf || loadingCities} onChange={(event) => setCity(event.target.value)} required value={city}>
-                        <option value="">{loadingCities ? "Carregando cidades..." : stateUf ? "Selecione uma cidade" : "Escolha o estado primeiro"}</option>
+                      <select aria-label="Cidade" className={inputClass} disabled={!stateUf} onChange={(event) => setCity(event.target.value)} required value={city}>
+                        <option value="">{stateUf ? "Selecione uma cidade" : "Escolha o estado primeiro"}</option>
                         {cityOptions.map((option) => (
                           <option key={option} value={option}>
                             {option}
@@ -859,7 +777,6 @@ export function OnboardingPage() {
                       </select>
                     )}
                   </label>
-                  {cityLoadError ? <p className="mt-2 text-xs text-amber-400">{cityLoadError}</p> : null}
                   <button className="mt-2 text-xs font-semibold text-[#E8650A]" disabled={!stateUf} onClick={() => setManualCity((current) => !current)} type="button">
                     {manualCity ? "Escolher cidade da lista" : "Digitar cidade manualmente"}
                   </button>
