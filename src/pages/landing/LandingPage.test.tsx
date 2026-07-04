@@ -49,7 +49,7 @@ describe("LandingPage", () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(screen.getAllByRole("button", { name: /ideal tattoo/i })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: /inkora/i })[0]);
 
     expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
     expect(window.location.pathname).toBe("/");

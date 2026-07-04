@@ -1,6 +1,7 @@
 import { Loader2, Lock, LogOut, Save, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { inkoraMark } from "@/assets";
 import { useAuth } from "@/hooks/useAuth";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
@@ -302,8 +303,8 @@ export function Settings() {
                 {logoUrl ? (
                   <img alt={name || "Logo"} className="h-24 w-24 rounded-2xl object-cover" src={logoUrl} />
                 ) : (
-                  <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-[#E8650A] text-2xl font-semibold">
-                    {initials(name || "Ideal Tattoo")}
+                  <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-[#171717]">
+                    {name ? <span className="text-2xl font-semibold text-white">{initials(name)}</span> : <img alt="Inkora" className="h-12 w-12" src={inkoraMark} />}
                   </div>
                 )}
                 <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[#2a2a2a] px-4 py-2 text-sm font-medium hover:border-[#E8650A]">

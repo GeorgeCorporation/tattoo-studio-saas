@@ -11,10 +11,10 @@ import {
   UserPlus,
   Users,
   UserX,
-  Zap,
 } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { inkoraLogo, inkoraMark } from "@/assets";
 
 const problemCards = [
   { icon: CalendarX, title: "Agenda bagunçada", text: "Horários perdidos, mensagens espalhadas e encaixes que viram dor de cabeça." },
@@ -105,8 +105,7 @@ export default function LandingPage() {
       <header className="fixed inset-x-0 top-0 z-20 border-b border-[#1f1f1f] bg-[#0a0a0a]/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
           <button className="flex items-center gap-2 text-lg font-semibold" onClick={goHome} type="button">
-            <Zap className="text-[#E8650A]" size={22} />
-            <span>Ideal Tattoo</span>
+            <img alt="Inkora" className="h-9 w-auto" src={inkoraLogo} />
           </button>
 
           <nav className="hidden items-center gap-8 text-sm text-[#A0A0A0] md:flex">
@@ -291,10 +290,10 @@ export default function LandingPage() {
         <footer className="relative z-10 border-t border-[#1f1f1f] px-4 py-8 text-sm text-[#A0A0A0] sm:px-6">
           <div className="mx-auto flex max-w-7xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <button className="flex items-center gap-2 text-white" onClick={goHome} type="button">
-              <Zap className="text-[#E8650A]" size={18} />
-              <span>Ideal Tattoo</span>
+              <img alt="Inkora" className="h-7 w-7" src={inkoraMark} />
+              <span>Inkora</span>
             </button>
-            <p>© 2026 Ideal Tattoo. Todos os direitos reservados.</p>
+            <p>© 2026 Inkora. Todos os direitos reservados.</p>
             <div className="flex gap-5">
               <a href="/privacidade">Privacidade</a>
               <a href="/privacidade">Termos</a>

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { inkoraLogo } from "@/assets";
 import { useAuth } from "@/hooks/useAuth";
 
 type SidebarProps = {
@@ -33,7 +34,7 @@ const items = [
   { label: "Configurações", href: "/configuracoes", icon: Settings },
 ];
 
-export function Sidebar({ studioName = "Ideal Tattoo", showMobileButton = true }: SidebarProps) {
+export function Sidebar({ studioName = "Seu estúdio", showMobileButton = true }: SidebarProps) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const [open, setOpen] = useState(false);
@@ -46,9 +47,12 @@ export function Sidebar({ studioName = "Ideal Tattoo", showMobileButton = true }
   const content = (
     <aside className="flex h-full w-72 flex-col border-r border-white/10 bg-[#0f0f0f] text-white">
       <div className="flex h-16 items-center justify-between border-b border-white/10 px-5">
-        <div>
-          <p className="text-lg font-semibold">Ideal Tattoo</p>
-          <p className="text-xs text-zinc-500">Studio SaaS</p>
+        <div className="flex items-center gap-3">
+          <img alt="Inkora" className="h-9 w-auto" src={inkoraLogo} />
+          <div>
+            <p className="text-lg font-semibold">Inkora</p>
+            <p className="text-xs text-zinc-500">Studio SaaS</p>
+          </div>
         </div>
         <button className="rounded-lg p-2 lg:hidden" onClick={() => setOpen(false)} type="button">
           <X size={20} />

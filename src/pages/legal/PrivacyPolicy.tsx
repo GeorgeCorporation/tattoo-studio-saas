@@ -9,7 +9,7 @@ export function PrivacyPolicy() {
         </Link>
         <h1 className="mt-6 text-3xl font-semibold">Política de Privacidade</h1>
         <p className="mt-4 text-zinc-300">
-          Esta página informa, de forma inicial, quais dados o Ideal Tattoo coleta para operar agenda, página pública,
+          Esta página informa, de forma inicial, quais dados a Inkora coleta para operar agenda, página pública,
           cadastro de clientes, entregas de fotos e gestão do estúdio.
         </p>
         <h2 className="mt-8 text-xl font-semibold">Dados coletados</h2>

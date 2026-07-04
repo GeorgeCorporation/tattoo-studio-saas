@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { inkoraLogo } from "@/assets";
 import { useAuth } from "@/hooks/useAuth";
 import { getFriendlyAuthErrorMessage, getFriendlyErrorMessage } from "@/lib/errors";
 import { getMockStudio, isMockMode } from "@/lib/mockMode";
@@ -120,8 +121,8 @@ export function Login() {
     <main className="flex min-h-screen items-center justify-center bg-[#0f0f0f] px-4 py-10 text-white">
       <section className="w-full max-w-md rounded-xl border border-white/10 bg-[#1a1a1a] p-6 shadow-2xl shadow-black/30 sm:p-8">
         <div className="mb-8 text-center">
-          <p className="text-2xl font-semibold tracking-wide text-white">Ideal Tattoo</p>
-          <p className="mt-2 text-sm text-zinc-400">Entre para gerenciar seu estúdio</p>
+          <img alt="Inkora" className="mx-auto h-12 w-auto" src={inkoraLogo} />
+          <p className="mt-3 text-sm text-zinc-400">Entre para gerenciar seu estúdio com uma plataforma profissional.</p>
         </div>
 
         <form className="space-y-5" onSubmit={handleSubmit}>

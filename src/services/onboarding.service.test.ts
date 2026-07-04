@@ -34,8 +34,15 @@ describe("onboarding.service", () => {
   it("valida campos obrigatórios do onboarding", () => {
     expect(validateOnboardingStep(1, { name: "", slug: "" })).toContain("nome");
     expect(validateOnboardingStep(2, { whatsapp: "1199", city: "São Paulo", state: "SP" })).toContain("WhatsApp");
-    expect(validateOnboardingStep(4, { firstArtist: { name: "" } })).toContain("tatuador");
-    expect(validateOnboardingStep(5, { firstService: { name: "" } })).toContain("serviço");
+    expect(validateOnboardingStep(4, { firstArtist: { name: "" }, firstService: { name: "" } })).toContain("tatuador");
+    expect(validateOnboardingStep(4, { firstArtist: { name: "Ana" }, firstService: { name: "" } })).toContain("serviço");
+    expect(
+      validateOnboardingStep(4, {
+        activateBooking: false,
+        firstArtist: { name: "" },
+        firstService: { name: "" },
+      }),
+    ).toBe("");
   });
 
   it("bloqueia horário aberto com fechamento antes da abertura", () => {

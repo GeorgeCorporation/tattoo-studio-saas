@@ -13,6 +13,7 @@
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { inkoraLogo, inkoraMark } from "@/assets";
 import { useAuth } from "@/hooks/useAuth";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
@@ -702,9 +703,7 @@ export function OnboardingPage() {
     <main className="min-h-screen bg-[#0f0f0f] px-4 py-8 text-white sm:py-12">
       <section className="mx-auto w-full max-w-5xl">
         <div className="mb-8 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#E8650A]">
-            <Scissors size={26} />
-          </div>
+          <img alt="Inkora" className="mx-auto h-12 w-auto" src={inkoraLogo} />
           <h1 className="mt-4 text-3xl font-semibold">Ative seu estúdio</h1>
           <p className="mt-2 text-sm text-zinc-400">Configure o essencial agora. O restante pode ser refinado dentro do painel.</p>
         </div>
@@ -752,8 +751,8 @@ export function OnboardingPage() {
                   {logoPreview ? (
                     <img alt="Preview da logo" className="h-28 w-28 rounded-2xl object-cover" src={logoPreview} />
                   ) : (
-                    <div className="flex h-28 w-28 items-center justify-center rounded-2xl bg-[#E8650A] text-3xl font-semibold">
-                      {initials(name || "Ideal Tattoo")}
+                    <div className="flex h-28 w-28 items-center justify-center rounded-2xl bg-[#171717]">
+                      {name ? <span className="text-3xl font-semibold text-white">{initials(name)}</span> : <img alt="Inkora" className="h-14 w-14" src={inkoraMark} />}
                     </div>
                   )}
                   <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm font-medium hover:border-[#E8650A]">
