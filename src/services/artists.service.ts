@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { assertPublicSlug } from "@/lib/slugs";
+import type { Database } from "@/types/database.types";
 import { createStoragePath, getStoragePathFromPublicUrl, validateUploadFile } from "@/services/storage.service";
 
 export type Artist = {
@@ -12,6 +13,8 @@ export type Artist = {
   bio: string | null;
   instagram: string | null;
   whatsapp: string | null;
+  access_email: string | null;
+  auth_user_id?: string | null;
   is_active: boolean;
   studios?: { slug: string; name: string } | null;
 };
@@ -41,6 +44,7 @@ export type ArtistFormData = {
   bio?: string;
   instagram?: string;
   whatsapp?: string;
+  accessEmail?: string;
   photoUrl?: string;
 };
 
@@ -84,7 +88,7 @@ export { slugify };
 export async function getArtists(studioId: string) {
   const { data, error } = await supabase
     .from("tattoo_artists")
-    .select("id, studio_id, name, slug, photo_url, specialty, bio, instagram, whatsapp, is_active")
+    .select("id, studio_id, name, slug, photo_url, specialty, bio, instagram, whatsapp, access_email, auth_user_id, is_active")
     .eq("studio_id", studioId)
     .order("name", { ascending: true })
     .returns<Artist[]>();
@@ -97,7 +101,7 @@ export async function getArtistById(id: string) {
   const { data, error } = await supabase
     .from("tattoo_artists")
     .select(
-      "id, studio_id, name, slug, photo_url, specialty, bio, instagram, whatsapp, is_active, studios(slug, name)",
+      "id, studio_id, name, slug, photo_url, specialty, bio, instagram, whatsapp, access_email, auth_user_id, is_active, studios(slug, name)",
     )
     .eq("id", id)
     .maybeSingle<Artist>();
@@ -119,6 +123,7 @@ export async function createArtist(data: ArtistFormData) {
       bio: data.bio || null,
       instagram: data.instagram || null,
       whatsapp: data.whatsapp || null,
+      access_email: data.accessEmail || null,
       photo_url: data.photoUrl || null,
       is_active: true,
     })
@@ -135,17 +140,20 @@ export async function updateArtist(id: string, data: Partial<ArtistFormData>) {
     slug = await ensureUniqueSlug(data.studioId, data.slug, id);
   }
 
+  const payload: Database["public"]["Tables"]["tattoo_artists"]["Update"] = {};
+
+  if (data.name !== undefined) payload.name = data.name;
+  if (slug !== undefined) payload.slug = slug;
+  if (data.specialty !== undefined) payload.specialty = data.specialty || null;
+  if (data.bio !== undefined) payload.bio = data.bio || null;
+  if (data.instagram !== undefined) payload.instagram = data.instagram || null;
+  if (data.whatsapp !== undefined) payload.whatsapp = data.whatsapp || null;
+  if (data.accessEmail !== undefined) payload.access_email = data.accessEmail || null;
+  if (data.photoUrl !== undefined) payload.photo_url = data.photoUrl;
+
   const { error } = await supabase
     .from("tattoo_artists")
-    .update({
-      name: data.name,
-      slug,
-      specialty: data.specialty || null,
-      bio: data.bio || null,
-      instagram: data.instagram || null,
-      whatsapp: data.whatsapp || null,
-      photo_url: data.photoUrl,
-    })
+    .update(payload)
     .eq("id", id);
 
   if (error) throw error;

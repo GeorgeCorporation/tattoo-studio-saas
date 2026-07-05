@@ -1,6 +1,7 @@
 import { assertAppointmentStatus, type AppointmentStatus } from "@/lib/appointment-domain";
-import { getMockDashboardStudio, getMockSetupStatus, isMockMode } from "@/lib/mockMode";
+import { getMockDashboardStudio, getMockSetupStatus, isMockMode, mockUser } from "@/lib/mockMode";
 import { supabase } from "@/lib/supabase";
+import { getCurrentUserAccess } from "@/services/access.service";
 
 export type DashboardStudio = {
   id: string;
@@ -27,45 +28,29 @@ export type DashboardSetupStatus = {
   appointmentsCount: number;
 };
 
-export async function getCurrentUserStudio(userId: string) {
-  if (isMockMode) return getMockDashboardStudio();
+export async function getCurrentUserStudio(userId: string, userEmail?: string | null) {
+  if (isMockMode && userId === mockUser.id) return getMockDashboardStudio();
 
-  const { data, error } = await supabase
-    .from("studios")
-    .select("id, name, slug, logo_url")
-    .eq("user_id", userId)
-    .limit(1)
-    .maybeSingle<DashboardStudio>();
+  const access = await getCurrentUserAccess(userId, userEmail);
+  if (!access) return null;
 
-  if (error) throw error;
-  return data;
+  return {
+    id: access.studioId,
+    name: access.studioName,
+    slug: access.studioSlug,
+    logo_url: access.studioLogoUrl,
+  } satisfies DashboardStudio;
 }
 
 export async function getSetupStatus(studioId: string) {
   if (isMockMode) return getMockSetupStatus();
 
   const [artists, services, gallery, appointments, studio] = await Promise.all([
-    supabase
-      .from("tattoo_artists")
-      .select("id", { count: "exact", head: true })
-      .eq("studio_id", studioId),
-    supabase
-      .from("services")
-      .select("id", { count: "exact", head: true })
-      .eq("studio_id", studioId),
-    supabase
-      .from("gallery")
-      .select("id", { count: "exact", head: true })
-      .eq("studio_id", studioId),
-    supabase
-      .from("appointments")
-      .select("id", { count: "exact", head: true })
-      .eq("studio_id", studioId),
-    supabase
-      .from("studios")
-      .select("logo_url")
-      .eq("id", studioId)
-      .maybeSingle<{ logo_url: string | null }>(),
+    supabase.from("tattoo_artists").select("id", { count: "exact", head: true }).eq("studio_id", studioId),
+    supabase.from("services").select("id", { count: "exact", head: true }).eq("studio_id", studioId),
+    supabase.from("gallery").select("id", { count: "exact", head: true }).eq("studio_id", studioId),
+    supabase.from("appointments").select("id", { count: "exact", head: true }).eq("studio_id", studioId),
+    supabase.from("studios").select("logo_url").eq("id", studioId).maybeSingle<{ logo_url: string | null }>(),
   ]);
 
   const error = artists.error || services.error || gallery.error || appointments.error || studio.error;
@@ -84,13 +69,7 @@ export async function getTodayAppointments(studioId: string) {
   if (isMockMode) return 0;
 
   const today = new Date().toISOString().split("T")[0];
-
-  const { data, error } = await supabase
-    .from("appointments")
-    .select("id")
-    .eq("studio_id", studioId)
-    .eq("date", today);
-
+  const { data, error } = await supabase.from("appointments").select("id").eq("studio_id", studioId).eq("date", today);
   if (error) throw error;
   return data?.length ?? 0;
 }
@@ -146,12 +125,9 @@ export async function getNextAppointments(studioId: string, limit: number) {
   if (isMockMode) return [];
 
   const today = new Date().toISOString().split("T")[0];
-
   const { data, error } = await supabase
     .from("appointments")
-    .select(
-      "id, date, time, status, clients(name), tattoo_artists(name), services(name)",
-    )
+    .select("id, date, time, status, clients(name), tattoo_artists(name), services(name)")
     .eq("studio_id", studioId)
     .gte("date", today)
     .order("date", { ascending: true })
@@ -167,10 +143,6 @@ export async function updateAppointmentStatus(appointmentId: string, status: App
   assertAppointmentStatus(status);
   if (isMockMode) return;
 
-  const { error } = await supabase
-    .from("appointments")
-    .update({ status })
-    .eq("id", appointmentId);
-
+  const { error } = await supabase.from("appointments").update({ status }).eq("id", appointmentId);
   if (error) throw error;
 }

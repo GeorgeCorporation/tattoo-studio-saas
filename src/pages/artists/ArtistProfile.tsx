@@ -19,6 +19,7 @@ export function ArtistProfile() {
   const [bio, setBio] = useState("");
   const [instagram, setInstagram] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
+  const [accessEmail, setAccessEmail] = useState("");
   const [slug, setSlug] = useState("");
   const [saving, setSaving] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
@@ -30,6 +31,7 @@ export function ArtistProfile() {
     setBio(artist.bio ?? "");
     setInstagram(artist.instagram ?? "");
     setWhatsapp(artist.whatsapp ?? "");
+    setAccessEmail(artist.access_email ?? "");
     setSlug(artist.slug);
   }, [artist]);
 
@@ -44,7 +46,7 @@ export function ArtistProfile() {
 
     try {
       setSaving(true);
-      await updateArtist({ name, slug, specialty, bio, instagram, whatsapp });
+      await updateArtist({ name, slug, specialty, bio, instagram, whatsapp, accessEmail });
     } finally {
       setSaving(false);
     }
@@ -174,6 +176,10 @@ export function ArtistProfile() {
           <label>
             <span className="mb-2 block text-sm font-medium">WhatsApp</span>
             <input className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3" value={whatsapp} onChange={(event) => setWhatsapp(event.target.value)} />
+          </label>
+          <label>
+            <span className="mb-2 block text-sm font-medium">E-mail de acesso</span>
+            <input className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3" type="email" value={accessEmail} onChange={(event) => setAccessEmail(event.target.value)} />
           </label>
           <label className="sm:col-span-2">
             <span className="mb-2 block text-sm font-medium">Slug</span>

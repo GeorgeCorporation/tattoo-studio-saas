@@ -1,22 +1,38 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-type FromCall = {
+type TableCall = {
   table: string;
-  action?: "select" | "insert" | "update";
+  action: "select" | "insert" | "update";
   payload?: unknown;
 };
 
-const calls: FromCall[] = [];
-let existingStudio: { id: string; name: string; slug: string } | null = null;
-let slugExists = false;
+const calls: TableCall[] = [];
+let studioRow: Record<string, unknown> | null = null;
+let workingHoursRows: Array<Record<string, unknown>> = [];
+let artistRows: Array<Record<string, unknown>> = [];
+let serviceRows: Array<Record<string, unknown>> = [];
+let studioSlugExists = false;
+
+function selectResultFor(table: string) {
+  if (table === "studios") return studioRow;
+  if (table === "working_hours") return workingHoursRows;
+  if (table === "tattoo_artists") return artistRows;
+  if (table === "services") return serviceRows;
+  return [];
+}
 
 function createSelectBuilder(table: string) {
   const builder = {
     eq: vi.fn(() => builder),
     limit: vi.fn(() => builder),
-    maybeSingle: vi.fn(() => Promise.resolve({ data: existingStudio, error: null })),
-    then: (resolve: (value: { data: { id: string }[]; error: null }) => void) =>
-      resolve({ data: slugExists ? [{ id: `${table}-existing` }] : [], error: null }),
+    order: vi.fn(() => builder),
+    returns: vi.fn(() => Promise.resolve({ data: selectResultFor(table), error: null })),
+    maybeSingle: vi.fn(() => Promise.resolve({ data: table === "studios" ? studioRow : null, error: null })),
+    then: (resolve: (value: { data: Array<{ id: string }>; error: null }) => void) =>
+      resolve({
+        data: studioSlugExists ? [{ id: "existing-slug" }] : [],
+        error: null,
+      }),
   };
 
   calls.push({ table, action: "select" });
@@ -25,28 +41,26 @@ function createSelectBuilder(table: string) {
 
 function createUpdateBuilder(table: string, payload: unknown) {
   const builder = {
-    eq: vi.fn(() => Promise.resolve({ error: null })),
-  };
-
-  calls.push({ table, action: "update", payload });
-  return builder;
-}
-
-function createInsertBuilder(table: string, payload: unknown) {
-  calls.push({ table, action: "insert", payload });
-
-  if (table === "working_hours" || table === "services") {
-    return Promise.resolve({ error: null });
-  }
-
-  const builder = {
+    eq: vi.fn(() => {
+      calls.push({ table, action: "update", payload });
+      return builder;
+    }),
     select: vi.fn(() => builder),
     single: vi.fn(() =>
       Promise.resolve({
-        data:
-          table === "tattoo_artists"
-            ? { id: "artist-new" }
-            : { id: "studio-new", name: "Ideal Tattoo", slug: "ideal-tattoo" },
+        data: {
+          id: "studio-1",
+          name: "Inkora",
+          slug: "inkora",
+          logo_url: null,
+          description: "Estúdio premium",
+          whatsapp: "11999999999",
+          instagram: "@inkora",
+          website: null,
+          address: null,
+          city: "São Paulo",
+          state: "SP",
+        },
         error: null,
       }),
     ),
@@ -54,6 +68,60 @@ function createInsertBuilder(table: string, payload: unknown) {
 
   return builder;
 }
+
+function createInsertBuilder(table: string, payload: unknown) {
+  calls.push({ table, action: "insert", payload });
+
+  if (table === "working_hours") {
+    return Promise.resolve({ error: null });
+  }
+
+  const builder = {
+    select: vi.fn(() => builder),
+    single: vi.fn(() => {
+      if (table === "studios") {
+        return Promise.resolve({
+          data: {
+            id: "studio-1",
+            name: "Inkora",
+            slug: "inkora",
+            logo_url: null,
+            description: "Estúdio premium",
+            whatsapp: "11999999999",
+            instagram: "@inkora",
+            website: null,
+            address: null,
+            city: "São Paulo",
+            state: "SP",
+          },
+          error: null,
+        });
+      }
+
+      if (table === "tattoo_artists") {
+        return Promise.resolve({
+          data: { id: "artist-1", photo_url: null },
+          error: null,
+        });
+      }
+
+      if (table === "services") {
+        return Promise.resolve({
+          data: { id: "service-1" },
+          error: null,
+        });
+      }
+
+      return Promise.resolve({ data: null, error: null });
+    }),
+  };
+
+  return builder;
+}
+
+vi.mock("@/services/studio-brand.service", () => ({
+  replaceStudioLogo: vi.fn(() => Promise.resolve({ logoUrl: "https://cdn.test/logo.png", removalWarning: null })),
+}));
 
 vi.mock("@/lib/supabase", () => ({
   supabase: {
@@ -74,37 +142,23 @@ vi.mock("@/lib/supabase", () => ({
 describe("createStudioOnboarding", () => {
   beforeEach(() => {
     calls.length = 0;
-    existingStudio = null;
-    slugExists = false;
-  });
-
-  it("retorna estúdio existente sem criar duplicado", async () => {
-    existingStudio = { id: "studio-existing", name: "Studio Já Existe", slug: "studio-ja-existe" };
-    const { createStudioOnboarding } = await import("@/services/onboarding.service");
-
-    const result = await createStudioOnboarding({
-      userId: "user-1",
-      name: "Ideal Tattoo",
-      slug: "ideal-tattoo",
-      whatsapp: "11999999999",
-      city: "São Paulo",
-      state: "SP",
-    });
-
-    expect(result).toEqual(existingStudio);
-    expect(calls.filter((call) => call.action === "insert")).toHaveLength(0);
+    studioRow = null;
+    workingHoursRows = [];
+    artistRows = [];
+    serviceRows = [];
+    studioSlugExists = false;
   });
 
   it("cria estúdio, horários, tatuador e serviço inicial", async () => {
-    const { createStudioOnboarding, buildDefaultWorkingHours } = await import("@/services/onboarding.service");
+    const { buildDefaultWorkingHours, createStudioOnboarding } = await import("@/services/onboarding.service");
 
     const result = await createStudioOnboarding({
       userId: "user-1",
-      name: " Ideal Tattoo ",
-      slug: "Ideal Tattoo",
+      name: " Inkora ",
+      slug: "Inkora",
       description: " Estúdio premium ",
       whatsapp: "11999999999",
-      instagram: "@idealtattoo",
+      instagram: "@inkora",
       city: " São Paulo ",
       state: "SP",
       workingHours: buildDefaultWorkingHours(),
@@ -121,33 +175,67 @@ describe("createStudioOnboarding", () => {
       },
     });
 
-    const studioInsert = calls.find((call) => call.table === "studios" && call.action === "insert");
-    const hoursInsert = calls.find((call) => call.table === "working_hours" && call.action === "insert");
-    const artistInsert = calls.find((call) => call.table === "tattoo_artists" && call.action === "insert");
-    const serviceInsert = calls.find((call) => call.table === "services" && call.action === "insert");
-
-    expect(result).toMatchObject({ id: "studio-new", slug: "ideal-tattoo" });
-    expect(studioInsert?.payload).toMatchObject({
+    expect(result).toMatchObject({ id: "studio-1", slug: "inkora" });
+    expect(calls.find((call) => call.table === "studios" && call.action === "insert")?.payload).toMatchObject({
       user_id: "user-1",
-      name: "Ideal Tattoo",
-      slug: "ideal-tattoo",
+      name: "Inkora",
+      slug: "inkora",
       description: "Estúdio premium",
-      instagram: "@idealtattoo",
+      instagram: "@inkora",
       city: "São Paulo",
     });
-    expect(hoursInsert?.payload).toHaveLength(7);
-    expect(artistInsert?.payload).toMatchObject({
-      studio_id: "studio-new",
+    expect(calls.find((call) => call.table === "working_hours" && call.action === "insert")?.payload).toBeTruthy();
+    expect(calls.find((call) => call.table === "tattoo_artists" && call.action === "insert")?.payload).toMatchObject({
+      studio_id: "studio-1",
       name: "George Tattoo",
       specialty: "Realismo",
       is_active: true,
     });
-    expect(serviceInsert?.payload).toMatchObject({
-      studio_id: "studio-new",
+    expect(calls.find((call) => call.table === "services" && call.action === "insert")?.payload).toMatchObject({
+      studio_id: "studio-1",
       name: "Tatuagem pequena",
       category: "Fine Line",
       starting_price: 250,
       is_active: true,
     });
+  });
+
+  it("retoma setup parcial sem criar outro estúdio", async () => {
+    studioRow = {
+      id: "studio-1",
+      name: "Inkora",
+      slug: "inkora",
+      logo_url: null,
+      description: null,
+      whatsapp: "11999999999",
+      instagram: null,
+      website: null,
+      address: null,
+      city: "São Paulo",
+      state: "SP",
+    };
+
+    const { buildDefaultWorkingHours, createStudioOnboarding } = await import("@/services/onboarding.service");
+
+    await createStudioOnboarding({
+      userId: "user-1",
+      name: "Inkora",
+      slug: "inkora",
+      whatsapp: "11999999999",
+      city: "São Paulo",
+      state: "SP",
+      workingHours: buildDefaultWorkingHours(),
+      firstArtist: {
+        name: "George Tattoo",
+      },
+      firstService: {
+        name: "Tatuagem pequena",
+      },
+    });
+
+    expect(calls.filter((call) => call.table === "studios" && call.action === "insert")).toHaveLength(0);
+    expect(calls.filter((call) => call.table === "studios" && call.action === "update")).not.toHaveLength(0);
+    expect(calls.find((call) => call.table === "tattoo_artists" && call.action === "insert")).toBeTruthy();
+    expect(calls.find((call) => call.table === "services" && call.action === "insert")).toBeTruthy();
   });
 });

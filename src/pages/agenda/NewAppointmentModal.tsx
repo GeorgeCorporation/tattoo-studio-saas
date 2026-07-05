@@ -33,6 +33,7 @@ export function NewAppointmentModal({
   const [serviceId, setServiceId] = useState("");
   const [date, setDate] = useState(defaultDate);
   const [time, setTime] = useState("09:00");
+  const [clientSource, setClientSource] = useState<"artist_client" | "studio_referral">("artist_client");
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -54,6 +55,7 @@ export function NewAppointmentModal({
       setArtistId(foundArtists[0]?.id ?? "");
       setServiceId(foundServices[0]?.id ?? "");
       setDate(defaultDate);
+      setClientSource("artist_client");
     }
 
     loadOptions();
@@ -78,6 +80,7 @@ export function NewAppointmentModal({
         date,
         time,
         description,
+        clientSource,
       });
       onCreated();
       onClose();
@@ -150,6 +153,20 @@ export function NewAppointmentModal({
               ))}
             </select>
           </label>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label>
+              <span className="mb-2 block text-sm font-medium">Origem do cliente</span>
+              <select
+                className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
+                value={clientSource}
+                onChange={(event) => setClientSource(event.target.value as "artist_client" | "studio_referral")}
+              >
+                <option value="artist_client">Cliente do tatuador</option>
+                <option value="studio_referral">Indicação do estúdio</option>
+              </select>
+            </label>
+          </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label>

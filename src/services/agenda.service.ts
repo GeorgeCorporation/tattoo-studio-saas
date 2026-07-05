@@ -28,6 +28,7 @@ export type CreateAgendaAppointmentData = {
   date: string;
   time: string;
   description: string;
+  clientSource: "artist_client" | "studio_referral";
 };
 
 export async function getAppointmentsByDate(studioId: string, date: string) {
@@ -61,6 +62,7 @@ export async function createAppointment(data: CreateAgendaAppointmentData) {
     service_id: data.serviceId,
     date: data.date,
     time: data.time,
+    client_source: data.clientSource,
     status: "pending",
     description: data.description,
   });

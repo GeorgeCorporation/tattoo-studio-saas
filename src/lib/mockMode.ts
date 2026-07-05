@@ -2,8 +2,8 @@ import type { User } from "@supabase/supabase-js";
 import type { DashboardSetupStatus, DashboardStudio } from "@/services/dashboard.service";
 import type { UserStudio } from "@/services/onboarding.service";
 
-const mockModeKey = "ideal-tattoo:mock-mode";
-const studioKey = "ideal-tattoo:mock-studio";
+const mockModeKey = "inkora:mock-mode";
+const studioKey = "inkora:mock-studio";
 
 function readMockMode() {
   if (import.meta.env.VITE_USE_MOCK === "true") return true;
@@ -33,9 +33,9 @@ export const mockUser = {
   app_metadata: {},
   aud: "authenticated",
   created_at: "2026-07-01T00:00:00.000Z",
-  email: "teste@idealtattoo.com",
+  email: "teste@inkora.app",
   user_metadata: {
-    full_name: "Usuário Teste",
+    full_name: "Usuário Inkora",
   },
 } as User;
 

@@ -1,6 +1,7 @@
 import { Plus, Search } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useAccess } from "@/hooks/useAccess";
 import { useAuth } from "@/hooks/useAuth";
 import { ClientModal } from "@/pages/clients/ClientModal";
 import { getCurrentUserStudio } from "@/services/dashboard.service";
@@ -18,6 +19,7 @@ function phoneUrl(phone?: string | null) {
 
 export function ClientsPage() {
   const { user } = useAuth();
+  const { access } = useAccess();
   const [studioId, setStudioId] = useState("");
   const [clients, setClients] = useState<ClientListItem[]>([]);
   const [search, setSearch] = useState("");
@@ -32,7 +34,7 @@ export function ClientsPage() {
       setLoading(true);
       setError("");
 
-      const studio = await getCurrentUserStudio(user.id);
+      const studio = await getCurrentUserStudio(user.id, user.email);
       if (!studio) {
         setError("Estúdio não encontrado.");
         return;
@@ -56,6 +58,8 @@ export function ClientsPage() {
     await createClient({ ...data, studioId });
     await loadClients();
   }
+
+  const basePath = access?.role === "artist" ? "/painel/clientes" : "/clientes";
 
   return (
     <section className="space-y-6">
@@ -97,7 +101,7 @@ export function ClientsPage() {
               <Link
                 className="rounded-xl border border-white/10 bg-[#1a1a1a] p-4 transition hover:border-[#E8650A]/70"
                 key={client.id}
-                to={`/clientes/${client.id}`}
+                to={`${basePath}/${client.id}`}
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>

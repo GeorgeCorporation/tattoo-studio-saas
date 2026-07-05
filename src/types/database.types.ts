@@ -38,6 +38,7 @@ export type Database = {
           service_id: string | null;
           date: string;
           time: string;
+          client_source: string;
           status: string;
           description: string | null;
           signal_paid: number;
@@ -53,6 +54,7 @@ export type Database = {
           service_id?: string | null;
           date: string;
           time: string;
+          client_source?: string;
           status?: string;
           description?: string | null;
           signal_paid?: number;
@@ -177,6 +179,42 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["payments"]["Insert"]>;
         Relationships: [];
       };
+      payment_commissions: {
+        Row: {
+          id: string;
+          studio_id: string;
+          payment_id: string;
+          appointment_id: string | null;
+          artist_id: string;
+          rule_id: string | null;
+          client_source: string;
+          base_amount: number;
+          percentage: number;
+          raw_commission_amount: number;
+          commission_amount: number;
+          cap_consumed_amount: number;
+          cap_applied: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          studio_id: string;
+          payment_id: string;
+          appointment_id?: string | null;
+          artist_id: string;
+          rule_id?: string | null;
+          client_source: string;
+          base_amount?: number;
+          percentage?: number;
+          raw_commission_amount?: number;
+          commission_amount?: number;
+          cap_consumed_amount?: number;
+          cap_applied?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["payment_commissions"]["Insert"]>;
+        Relationships: [];
+      };
       reviews: {
         Row: {
           id: string;
@@ -219,6 +257,34 @@ export type Database = {
           is_active?: boolean;
         };
         Update: Partial<Database["public"]["Tables"]["services"]["Insert"]>;
+        Relationships: [];
+      };
+      artist_commission_rules: {
+        Row: {
+          id: string;
+          studio_id: string;
+          artist_id: string;
+          is_active: boolean;
+          percentage: number;
+          cap_enabled: boolean;
+          monthly_cap: number | null;
+          starts_at: string;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          studio_id: string;
+          artist_id: string;
+          is_active?: boolean;
+          percentage?: number;
+          cap_enabled?: boolean;
+          monthly_cap?: number | null;
+          starts_at?: string;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["artist_commission_rules"]["Insert"]>;
         Relationships: [];
       };
       studios: {
@@ -266,6 +332,8 @@ export type Database = {
           bio: string | null;
           instagram: string | null;
           whatsapp: string | null;
+          access_email: string | null;
+          auth_user_id: string | null;
           is_active: boolean;
           created_at: string;
         };
@@ -279,6 +347,8 @@ export type Database = {
           bio?: string | null;
           instagram?: string | null;
           whatsapp?: string | null;
+          access_email?: string | null;
+          auth_user_id?: string | null;
           is_active?: boolean;
           created_at?: string;
         };
@@ -308,6 +378,33 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      current_user_artist_id: {
+        Args: {
+          p_studio_id: string;
+        };
+        Returns: string | null;
+      };
+      current_user_can_view_client: {
+        Args: {
+          p_studio_id: string;
+          p_client_id: string;
+        };
+        Returns: boolean;
+      };
+      current_user_can_view_delivery: {
+        Args: {
+          p_studio_id: string;
+          p_appointment_id: string;
+        };
+        Returns: boolean;
+      };
+      current_user_is_artist_for_appointment: {
+        Args: {
+          p_studio_id: string;
+          p_artist_id: string;
+        };
+        Returns: boolean;
+      };
       get_booked_appointment_times: {
         Args: {
           p_studio_id: string;

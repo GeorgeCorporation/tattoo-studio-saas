@@ -6,14 +6,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { supabase } from "@/lib/supabase";
-import { createStoragePath, getStoragePathFromPublicUrl, validateUploadFile } from "@/services/storage.service";
+import { replaceStudioLogo } from "@/services/studio-brand.service";
 
 type WorkingHour = {
   id?: string;
   studio_id?: string;
   day_of_week: number;
-  open_time: string;
-  close_time: string;
+  open_time: string | null;
+  close_time: string | null;
   is_open: boolean;
 };
 
@@ -41,8 +41,33 @@ const weekDays = [
 ];
 
 const brStates = [
-  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG",
-  "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
+  "AC",
+  "AL",
+  "AP",
+  "AM",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MT",
+  "MS",
+  "MG",
+  "PA",
+  "PB",
+  "PR",
+  "PE",
+  "PI",
+  "RJ",
+  "RN",
+  "RS",
+  "RO",
+  "RR",
+  "SC",
+  "SP",
+  "SE",
+  "TO",
 ];
 
 const inputClass =
@@ -51,8 +76,8 @@ const inputClass =
 function makeDefaultHours(): WorkingHour[] {
   return Array.from({ length: 7 }, (_, day) => ({
     day_of_week: day,
-    open_time: "09:00",
-    close_time: "18:00",
+    open_time: day === 0 ? null : "09:00",
+    close_time: day === 0 ? null : "18:00",
     is_open: day !== 0,
   }));
 }
@@ -64,6 +89,14 @@ function initials(name: string) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join("");
+}
+
+function normalizeInstagram(value: string) {
+  return value.replace("@", "").trim();
+}
+
+function onlyDigits(value: string) {
+  return value.replace(/\D/g, "");
 }
 
 export function Settings() {
@@ -82,6 +115,7 @@ export function Settings() {
   const [workingHours, setWorkingHours] = useState<WorkingHour[]>(makeDefaultHours());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   useEffect(() => {
@@ -139,43 +173,60 @@ export function Settings() {
       }
     }
 
-    loadSettings();
+    void loadSettings();
   }, [user]);
 
   useEffect(() => {
     if (!toast) return;
-    const timer = window.setTimeout(() => setToast(null), 3000);
+    const timer = window.setTimeout(() => setToast(null), 3500);
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  function updateDay(day: number, field: keyof WorkingHour, value: boolean | string) {
+  function updateDay(day: number, field: keyof WorkingHour, value: boolean | string | null) {
     setWorkingHours((current) =>
-      current.map((item) => (item.day_of_week === day ? { ...item, [field]: value } : item)),
+      current.map((item) =>
+        item.day_of_week === day
+          ? {
+              ...item,
+              [field]: value,
+              open_time: field === "is_open" && value === false ? null : item.open_time ?? "09:00",
+              close_time: field === "is_open" && value === false ? null : item.close_time ?? "18:00",
+            }
+          : item,
+      ),
     );
   }
 
   async function uploadLogo(file: File) {
-    if (!studioId) return;
-
-    validateUploadFile(file);
-    const path = createStoragePath(studioId, file.name);
-
-    if (logoUrl) {
-      const previousPath = getStoragePathFromPublicUrl(logoUrl, "logos");
-      if (previousPath) {
-        await supabase.storage.from("logos").remove([previousPath]);
-      }
+    if (!studioId) {
+      throw new Error("O estúdio ainda está carregando. Aguarde um instante e tente novamente.");
     }
 
-    const { error } = await supabase.storage.from("logos").upload(path, file, {
-      cacheControl: "3600",
-      upsert: false,
-    });
+    const previousLogoUrl = logoUrl || null;
+    const previewUrl = URL.createObjectURL(file);
 
-    if (error) throw error;
+    setUploadingLogo(true);
+    setLogoUrl(previewUrl);
 
-    const { data } = supabase.storage.from("logos").getPublicUrl(path);
-    setLogoUrl(data.publicUrl);
+    try {
+      const { logoUrl: nextLogoUrl, removalWarning } = await replaceStudioLogo({
+        studioId,
+        file,
+        previousLogoUrl,
+      });
+
+      setLogoUrl(nextLogoUrl);
+      setToast({
+        type: "success",
+        message: removalWarning || "Logo atualizada com sucesso.",
+      });
+    } catch (caughtError) {
+      setLogoUrl(previousLogoUrl ?? "");
+      throw caughtError;
+    } finally {
+      URL.revokeObjectURL(previewUrl);
+      setUploadingLogo(false);
+    }
   }
 
   async function handleSave() {
@@ -196,10 +247,9 @@ export function Settings() {
         .from("studios")
         .update({
           name: name.trim(),
-          logo_url: logoUrl || null,
           description: description.trim() || null,
           whatsapp,
-          instagram: instagram ? `@${instagram.replace("@", "")}` : null,
+          instagram: instagram ? `@${normalizeInstagram(instagram)}` : null,
           website: website.trim() || null,
           address: address.trim() || null,
           city: city.trim() || null,
@@ -212,30 +262,19 @@ export function Settings() {
       const nextWorkingHours = workingHours.map((day) => ({ ...day }));
 
       for (const day of nextWorkingHours) {
-        if (day.id) {
-          const { error } = await supabase
-            .from("working_hours")
-            .update({
-              open_time: day.open_time,
-              close_time: day.close_time,
-              is_open: day.is_open,
-            })
-            .eq("id", day.id);
+        const payload = {
+          studio_id: studioId,
+          day_of_week: day.day_of_week,
+          open_time: day.is_open ? day.open_time : null,
+          close_time: day.is_open ? day.close_time : null,
+          is_open: day.is_open,
+        };
 
+        if (day.id) {
+          const { error } = await supabase.from("working_hours").update(payload).eq("id", day.id);
           if (error) throw error;
         } else {
-          const { data, error } = await supabase
-            .from("working_hours")
-            .insert({
-              studio_id: studioId,
-              day_of_week: day.day_of_week,
-              open_time: day.open_time,
-              close_time: day.close_time,
-              is_open: day.is_open,
-            })
-            .select("id")
-            .single<{ id: string }>();
-
+          const { data, error } = await supabase.from("working_hours").insert(payload).select("id").single<{ id: string }>();
           if (error) throw error;
           day.id = data.id;
         }
@@ -263,7 +302,7 @@ export function Settings() {
 
     setToast({
       type: error ? "error" : "success",
-      message: error ? "Não foi possível enviar o email de redefinição." : "Email de redefinição enviado com sucesso.",
+      message: error ? "Não foi possível enviar o e-mail de redefinição." : "E-mail de redefinição enviado com sucesso.",
     });
   }
 
@@ -307,30 +346,41 @@ export function Settings() {
                     {name ? <span className="text-2xl font-semibold text-white">{initials(name)}</span> : <img alt="Inkora" className="h-12 w-12" src={inkoraMark} />}
                   </div>
                 )}
-                <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[#2a2a2a] px-4 py-2 text-sm font-medium hover:border-[#E8650A]">
-                  <Upload size={16} />
-                  Atualizar logo
+                <label
+                  className={[
+                    "inline-flex items-center gap-2 rounded-xl border border-[#2a2a2a] px-4 py-2 text-sm font-medium",
+                    !studioId || uploadingLogo ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-[#E8650A]",
+                  ].join(" ")}
+                >
+                  {uploadingLogo ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}
+                  {uploadingLogo ? "Enviando logo..." : "Atualizar logo"}
                   <input
                     accept="image/*"
                     className="hidden"
+                    disabled={!studioId || uploadingLogo}
                     onChange={async (event) => {
                       const file = event.target.files?.[0];
                       if (!file) return;
+
                       try {
                         await uploadLogo(file);
-                        setToast({ type: "success", message: "Logo enviada com sucesso." });
                       } catch (caughtError) {
                         logger.error("Falha ao enviar logo", caughtError, { studioId });
                         setToast({
                           type: "error",
-                          message: getFriendlyErrorMessage(caughtError, "Não foi possível enviar a logo."),
+                          message:
+                            caughtError instanceof Error && caughtError.message
+                              ? caughtError.message
+                              : "Não foi possível enviar a logo agora. Sua logo anterior foi mantida.",
                         });
                       }
+
                       event.target.value = "";
                     }}
                     type="file"
                   />
                 </label>
+                {!studioId ? <p className="text-center text-xs text-zinc-500">Aguarde o carregamento do estúdio para liberar o upload.</p> : null}
               </div>
 
               <div className="grid flex-1 gap-4">
@@ -357,13 +407,13 @@ export function Settings() {
             <div className="mt-5 grid gap-4 md:grid-cols-3">
               <div>
                 <label className="text-sm font-medium">WhatsApp principal</label>
-                <input className={inputClass} maxLength={11} onChange={(event) => setWhatsapp(event.target.value.replace(/\D/g, ""))} value={whatsapp} />
+                <input className={inputClass} maxLength={11} onChange={(event) => setWhatsapp(onlyDigits(event.target.value))} value={whatsapp} />
               </div>
               <div>
                 <label className="text-sm font-medium">Instagram</label>
-                <div className="relative mt-2">
-                  <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">@</span>
-                  <input className="w-full rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] py-3 pl-8 pr-4 text-white outline-none transition focus:border-[#E8650A]" onChange={(event) => setInstagram(event.target.value.replace("@", ""))} value={instagram} />
+                <div className="mt-2 flex overflow-hidden rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] focus-within:border-[#E8650A]">
+                  <span className="flex items-center border-r border-[#2a2a2a] px-4 text-sm text-zinc-500">@</span>
+                  <input className="min-w-0 flex-1 bg-transparent px-4 py-3 text-white outline-none" onChange={(event) => setInstagram(normalizeInstagram(event.target.value))} value={instagram} />
                 </div>
               </div>
               <div>
@@ -375,8 +425,8 @@ export function Settings() {
 
           <div className="rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] p-5">
             <h2 className="text-lg font-semibold">Localização</h2>
-            <div className="mt-5 grid gap-4 md:grid-cols-[2fr_1fr_140px]">
-              <div>
+            <div className="mt-5 grid gap-4 md:grid-cols-3">
+              <div className="md:col-span-2">
                 <label className="text-sm font-medium">Endereço</label>
                 <input className={inputClass} onChange={(event) => setAddress(event.target.value)} value={address} />
               </div>
@@ -400,42 +450,31 @@ export function Settings() {
 
           <div className="rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] p-5">
             <h2 className="text-lg font-semibold">Horários de funcionamento</h2>
-            <div className="mt-5 space-y-3">
+            <div className="mt-5 space-y-4">
               {workingHours.map((day) => (
-                <div className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] p-4" key={day.day_of_week}>
-                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div className="flex items-center gap-3">
-                      <button
-                        aria-label={`Ativar ${weekDays[day.day_of_week]}`}
-                        className={[
-                          "relative h-7 w-12 rounded-full transition",
-                          day.is_open ? "bg-[#E8650A]" : "bg-zinc-700",
-                        ].join(" ")}
-                        onClick={() => updateDay(day.day_of_week, "is_open", !day.is_open)}
-                        type="button"
-                      >
-                        <span
-                          className={[
-                            "absolute top-1 h-5 w-5 rounded-full bg-white transition",
-                            day.is_open ? "left-6" : "left-1",
-                          ].join(" ")}
-                        />
-                      </button>
-                      <div>
-                        <p className="font-medium">{weekDays[day.day_of_week]}</p>
-                        <p className="text-sm text-zinc-500">{day.is_open ? "Atendimento ativo" : "Fechado"}</p>
-                      </div>
-                    </div>
-
-                    {day.is_open ? (
-                      <div className="grid grid-cols-2 gap-3 md:w-[260px]">
-                        <input className="rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] px-3 py-2 text-white outline-none focus:border-[#E8650A]" onChange={(event) => updateDay(day.day_of_week, "open_time", event.target.value)} type="time" value={day.open_time} />
-                        <input className="rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] px-3 py-2 text-white outline-none focus:border-[#E8650A]" onChange={(event) => updateDay(day.day_of_week, "close_time", event.target.value)} type="time" value={day.close_time} />
-                      </div>
-                    ) : (
-                      <p className="text-sm font-medium text-zinc-500">Sem expediente neste dia</p>
-                    )}
+                <div className="grid gap-4 rounded-xl border border-[#2a2a2a] bg-[#141414] p-4 md:grid-cols-[1.3fr_auto_auto_auto] md:items-center" key={day.day_of_week}>
+                  <div>
+                    <p className="font-medium">{weekDays[day.day_of_week]}</p>
+                    <p className="text-sm text-zinc-500">{day.is_open ? "Aberto" : "Fechado"}</p>
                   </div>
+                  <label className="inline-flex items-center gap-2 text-sm text-zinc-300">
+                    <input checked={day.is_open} onChange={(event) => updateDay(day.day_of_week, "is_open", event.target.checked)} type="checkbox" />
+                    Ativo
+                  </label>
+                  <input
+                    className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] px-4 py-3 text-white outline-none disabled:opacity-40"
+                    disabled={!day.is_open}
+                    onChange={(event) => updateDay(day.day_of_week, "open_time", event.target.value)}
+                    type="time"
+                    value={day.open_time ?? "09:00"}
+                  />
+                  <input
+                    className="rounded-xl border border-[#2a2a2a] bg-[#0f0f0f] px-4 py-3 text-white outline-none disabled:opacity-40"
+                    disabled={!day.is_open}
+                    onChange={(event) => updateDay(day.day_of_week, "close_time", event.target.value)}
+                    type="time"
+                    value={day.close_time ?? "18:00"}
+                  />
                 </div>
               ))}
             </div>
@@ -443,17 +482,19 @@ export function Settings() {
 
           <div className="rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] p-5">
             <h2 className="text-lg font-semibold">Conta</h2>
-            <div className="mt-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
               <div>
-                <p className="text-sm text-zinc-500">Email atual</p>
-                <p className="mt-1 font-medium">{user?.email || "-"}</p>
+                <label className="text-sm font-medium">E-mail atual</label>
+                <div className={`${inputClass} flex items-center justify-between`}>
+                  <span className="truncate text-zinc-300">{user?.email ?? "Sem e-mail"}</span>
+                  <Lock className="text-zinc-500" size={16} />
+                </div>
               </div>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <button className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#2a2a2a] px-4 py-3 font-medium hover:border-[#E8650A]" onClick={handlePasswordReset} type="button">
-                  <Lock size={16} />
-                  Redefinir senha
+              <div className="flex flex-wrap items-end gap-3">
+                <button className="rounded-xl border border-[#2a2a2a] px-4 py-3 text-sm font-medium hover:border-[#E8650A]" onClick={handlePasswordReset} type="button">
+                  Alterar senha
                 </button>
-                <button className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#2a2a2a] px-4 py-3 font-medium text-red-200 hover:border-red-500/40" onClick={handleSignOut} type="button">
+                <button className="inline-flex items-center gap-2 rounded-xl border border-red-500/30 px-4 py-3 text-sm font-medium text-red-200 hover:bg-red-500/10" onClick={handleSignOut} type="button">
                   <LogOut size={16} />
                   Sair da conta
                 </button>
@@ -463,11 +504,11 @@ export function Settings() {
         </>
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#2a2a2a] bg-[#0f0f0f]/95 px-4 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl justify-end">
+      <div className="fixed bottom-0 left-0 right-0 border-t border-[#2a2a2a] bg-[#111111]/95 px-4 py-4 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl justify-end">
           <button
-            className="inline-flex min-w-52 items-center justify-center gap-2 rounded-xl bg-[#E8650A] px-5 py-3 font-semibold text-white disabled:opacity-60"
-            disabled={saving || loading}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#E8650A] px-5 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={loading || saving || uploadingLogo}
             onClick={handleSave}
             type="button"
           >

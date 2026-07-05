@@ -12,32 +12,37 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { NavLink, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
 import { inkoraLogo } from "@/assets";
+import { useAccess } from "@/hooks/useAccess";
 import { useAuth } from "@/hooks/useAuth";
+import { getSidebarItemsForRole } from "@/lib/access-control";
 
 type SidebarProps = {
   studioName?: string;
   showMobileButton?: boolean;
 };
 
-const items = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Agenda", href: "/agenda", icon: CalendarDays },
-  { label: "Clientes", href: "/clientes", icon: Users },
-  { label: "Tatuadores", href: "/tatuadores", icon: Scissors },
-  { label: "Serviços", href: "/servicos", icon: Palette },
-  { label: "Galeria", href: "/galeria", icon: Camera },
-  { label: "Entregas", href: "/entregas", icon: Images },
-  { label: "Financeiro", href: "/financeiro", icon: Banknote },
-  { label: "Configurações", href: "/configuracoes", icon: Settings },
-];
+const icons = {
+  dashboard: LayoutDashboard,
+  agenda: CalendarDays,
+  clientes: Users,
+  tatuadores: Scissors,
+  servicos: Palette,
+  galeria: Camera,
+  entregas: Images,
+  financeiro: Banknote,
+  configuracoes: Settings,
+};
 
 export function Sidebar({ studioName = "Seu estúdio", showMobileButton = true }: SidebarProps) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const { access } = useAccess();
   const [open, setOpen] = useState(false);
+  const items = getSidebarItemsForRole(access?.role ?? "manager");
+  const subtitle = access?.role === "artist" ? "Painel do tatuador" : "Studio SaaS";
 
   async function handleSignOut() {
     await signOut();
@@ -51,7 +56,7 @@ export function Sidebar({ studioName = "Seu estúdio", showMobileButton = true }
           <img alt="Inkora" className="h-9 w-auto" src={inkoraLogo} />
           <div>
             <p className="text-lg font-semibold">Inkora</p>
-            <p className="text-xs text-zinc-500">Studio SaaS</p>
+            <p className="text-xs text-zinc-500">{subtitle}</p>
           </div>
         </div>
         <button className="rounded-lg p-2 lg:hidden" onClick={() => setOpen(false)} type="button">
@@ -61,7 +66,7 @@ export function Sidebar({ studioName = "Seu estúdio", showMobileButton = true }
 
       <nav className="flex-1 space-y-1 px-3 py-4">
         {items.map((item) => {
-          const Icon = item.icon;
+          const Icon = icons[item.icon];
 
           return (
             <NavLink

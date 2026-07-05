@@ -226,6 +226,7 @@ export async function createAppointment(data: CreateAppointmentData) {
       service_id: data.serviceId,
       date: data.date,
       time: data.time,
+      client_source: "artist_client",
       status: "pending",
       description: data.description,
       notes: data.notes || null,

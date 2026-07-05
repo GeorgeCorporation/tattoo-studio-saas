@@ -45,7 +45,7 @@ export function useDashboard() {
       setLoading(true);
       setError("");
 
-      const foundStudio = await getCurrentUserStudio(user.id);
+      const foundStudio = await getCurrentUserStudio(user.id, user.email);
       setStudio(foundStudio);
 
       if (!foundStudio) return;

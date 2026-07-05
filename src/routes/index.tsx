@@ -6,6 +6,7 @@ import { AuthCallback } from "@/pages/auth/AuthCallback";
 import { Login } from "@/pages/auth/Login";
 import { Register } from "@/pages/auth/Register";
 import { AgendaPage } from "@/pages/agenda/AgendaPage";
+import { ArtistPanelPage } from "@/pages/artist/ArtistPanelPage";
 import { Settings } from "@/pages/dashboard/Settings";
 import { ArtistProfile as DashboardArtistProfile } from "@/pages/artists/ArtistProfile";
 import { ArtistsPage } from "@/pages/artists/ArtistsPage";
@@ -79,7 +80,7 @@ const router = createBrowserRouter([
         ],
       },
       {
-        element: <PrivateRoute />,
+        element: <PrivateRoute requiredRole="manager" />,
         children: [
           {
             element: <DashboardLayout />,
@@ -127,6 +128,40 @@ const router = createBrowserRouter([
               {
                 path: "/configuracoes",
                 element: <Settings />,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        element: <PrivateRoute requiredRole="artist" />,
+        children: [
+          {
+            element: <DashboardLayout />,
+            children: [
+              {
+                path: "/painel",
+                element: <ArtistPanelPage />,
+              },
+              {
+                path: "/painel/agenda",
+                element: <AgendaPage />,
+              },
+              {
+                path: "/painel/clientes",
+                element: <ClientsPage />,
+              },
+              {
+                path: "/painel/clientes/:clientId",
+                element: <ClientProfile />,
+              },
+              {
+                path: "/painel/entregas",
+                element: <DeliveriesPage />,
+              },
+              {
+                path: "/painel/financeiro",
+                element: <FinancialPage />,
               },
             ],
           },

@@ -59,6 +59,7 @@ export function useArtist(artistId?: string) {
     bio?: string;
     instagram?: string;
     whatsapp?: string;
+    accessEmail?: string;
   }) {
     if (!artist) return;
     await updateArtist(artist.id, { ...data, studioId: artist.studio_id });

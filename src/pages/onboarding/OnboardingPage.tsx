@@ -21,7 +21,8 @@ import citiesByState from "@/lib/brazil-cities.json";
 import {
   buildDefaultWorkingHours,
   createStudioOnboarding,
-  getUserStudio,
+  getOnboardingProgress,
+  getOnboardingSnapshot,
   slugify,
   validateOnboardingStep,
   type OnboardingWorkingHour,
@@ -199,6 +200,7 @@ export function OnboardingPage() {
   const [slugEdited, setSlugEdited] = useState(draft.slugEdited ?? false);
   const [description, setDescription] = useState(draft.description ?? "");
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [savedLogoUrl, setSavedLogoUrl] = useState("");
   const [whatsapp, setWhatsapp] = useState(draft.whatsapp ?? "");
   const [instagram, setInstagram] = useState(draft.instagram ?? "");
   const [website, setWebsite] = useState(draft.website ?? "");
@@ -347,10 +349,60 @@ export function OnboardingPage() {
       }
 
       try {
-        const studio = await withTimeout(getUserStudio(user.id), 8000, "Tempo limite ao verificar estúdio.");
-        if (studio && isMounted) {
-          navigate("/dashboard", { replace: true });
-          return;
+        const snapshot = await withTimeout(getOnboardingSnapshot(user.id), 8000, "Tempo limite ao verificar estúdio.");
+        if (!isMounted) return;
+
+        if (snapshot.studio) {
+          setName((current) => current || snapshot.studio?.name || "");
+          setSlug((current) => current || snapshot.studio?.slug || "");
+          setDescription((current) => current || snapshot.studio?.description || "");
+          setWhatsapp((current) => current || snapshot.studio?.whatsapp || "");
+          setInstagram((current) => current || normalizeInstagram(snapshot.studio?.instagram || ""));
+          setWebsite((current) => current || snapshot.studio?.website || "");
+          setAddress((current) => current || snapshot.studio?.address || "");
+          setCity((current) => current || snapshot.studio?.city || "");
+          setStateUf((current) => current || snapshot.studio?.state || "");
+          setSavedLogoUrl(snapshot.studio.logo_url || "");
+
+          if (!draft.workingHours?.length && snapshot.workingHours.length) {
+            const merged = buildDefaultWorkingHours().map(
+              (item) => snapshot.workingHours.find((hour) => hour.day_of_week === item.day_of_week) ?? item,
+            );
+            setWorkingHours(merged);
+          }
+
+          if (!draft.artists?.length && !artistName.trim() && snapshot.artists.length) {
+            setArtists(
+              snapshot.artists.map((artist) => ({
+                name: artist.name,
+                slug: artist.slug,
+                specialty: artist.specialty ?? "",
+                instagram: normalizeInstagram(artist.instagram ?? ""),
+                whatsapp: onlyDigits(artist.whatsapp ?? ""),
+                photoFile: null,
+              })),
+            );
+          }
+
+          if (!draft.services?.length && !serviceName.trim() && snapshot.services.length) {
+            setServices(
+              snapshot.services.map((service) => ({
+                name: service.name,
+                category: service.category || "Outro",
+                description: service.description || "",
+                startingPrice: service.starting_price?.toString() || "",
+                durationMinutes: service.avg_duration_minutes?.toString() || "120",
+              })),
+            );
+          }
+
+          const progressState = getOnboardingProgress(snapshot, activateBooking);
+          if (progressState.canFinish) {
+            navigate("/dashboard", { replace: true });
+            return;
+          }
+
+          setStep(progressState.nextStep);
         }
       } catch (caughtError) {
         logger.error("Falha ao verificar estúdio no onboarding", caughtError, { userId: user.id });
@@ -368,7 +420,7 @@ export function OnboardingPage() {
     return () => {
       isMounted = false;
     };
-  }, [authLoading, navigate, user]);
+  }, [activateBooking, artistName, authLoading, draft.artists, draft.services, draft.workingHours, navigate, serviceName, user]);
 
   useEffect(() => {
     if (!authLoading && !checkingStudio) {
@@ -569,7 +621,11 @@ export function OnboardingPage() {
       navigate("/dashboard", { replace: true });
     } catch (caughtError) {
       logger.error("Falha ao criar estúdio no onboarding", caughtError, { userId: user.id });
-      setError(getFriendlyErrorMessage(caughtError, "Não foi possível ativar o estúdio. Se o problema continuar, tente novamente em alguns minutos."));
+      setError(
+        caughtError instanceof Error && caughtError.message
+          ? caughtError.message
+          : getFriendlyErrorMessage(caughtError, "Não foi possível ativar o estúdio. Se o problema continuar, tente novamente em alguns minutos."),
+      );
       setSubmitFailed(true);
     } finally {
       setSaving(false);
@@ -666,8 +722,8 @@ export function OnboardingPage() {
 
               <div className="grid gap-6 lg:grid-cols-[14rem_1fr]">
                 <div className="flex flex-col items-center gap-3 rounded-xl border border-white/10 bg-[#0f0f0f] p-4">
-                  {logoPreview ? (
-                    <img alt="Preview da logo" className="h-28 w-28 rounded-2xl object-cover" src={logoPreview} />
+                  {logoPreview || savedLogoUrl ? (
+                    <img alt="Preview da logo" className="h-28 w-28 rounded-2xl object-cover" src={logoPreview || savedLogoUrl} />
                   ) : (
                     <div className="flex h-28 w-28 items-center justify-center rounded-2xl bg-[#171717]">
                       {name ? <span className="text-3xl font-semibold text-white">{initials(name)}</span> : <img alt="Inkora" className="h-14 w-14" src={inkoraMark} />}

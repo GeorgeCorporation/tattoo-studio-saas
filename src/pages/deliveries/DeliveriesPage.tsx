@@ -26,7 +26,7 @@ export function DeliveriesPage() {
       setLoading(true);
       setError("");
 
-      const studio = await getCurrentUserStudio(user.id);
+      const studio = await getCurrentUserStudio(user.id, user.email);
       if (!studio) {
         setError("Estúdio não encontrado.");
         return;

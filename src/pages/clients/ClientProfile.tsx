@@ -1,6 +1,7 @@
 import { ArrowLeft, CalendarPlus, Edit, Phone } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { useAccess } from "@/hooks/useAccess";
 import { ClientModal } from "@/pages/clients/ClientModal";
 import {
   getClientAppointments,
@@ -32,6 +33,7 @@ function referencesFromNotes(notes?: string | null) {
 export function ClientProfile() {
   const navigate = useNavigate();
   const { clientId } = useParams();
+  const { access } = useAccess();
   const [client, setClient] = useState<ClientListItem | null>(null);
   const [appointments, setAppointments] = useState<ClientAppointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,6 +68,8 @@ export function ClientProfile() {
     () => appointments.flatMap((appointment) => referencesFromNotes(appointment.notes)),
     [appointments],
   );
+  const clientsPath = access?.role === "artist" ? "/painel/clientes" : "/clientes";
+  const agendaPath = access?.role === "artist" ? "/painel/agenda" : "/agenda";
 
   async function handleUpdate(data: {
     name: string;
@@ -85,7 +89,7 @@ export function ClientProfile() {
     return (
       <section className="rounded-xl border border-white/10 bg-[#1a1a1a] p-8 text-center">
         <p className="text-lg font-semibold">Cliente não encontrado.</p>
-        <button className="mt-4 rounded-xl bg-[#E8650A] px-4 py-3 font-semibold" onClick={() => navigate("/clientes")}>
+        <button className="mt-4 rounded-xl bg-[#E8650A] px-4 py-3 font-semibold" onClick={() => navigate(clientsPath)}>
           Voltar
         </button>
       </section>
@@ -96,7 +100,7 @@ export function ClientProfile() {
 
   return (
     <section className="space-y-6">
-      <Link className="inline-flex items-center gap-2 text-sm font-medium text-[#E8650A]" to="/clientes">
+      <Link className="inline-flex items-center gap-2 text-sm font-medium text-[#E8650A]" to={clientsPath}>
         <ArrowLeft size={16} />
         Voltar para clientes
       </Link>
@@ -133,7 +137,7 @@ export function ClientProfile() {
             </button>
             <Link
               className="inline-flex items-center gap-2 rounded-xl bg-[#E8650A] px-4 py-3 text-sm font-semibold"
-              to="/agenda"
+              to={agendaPath}
             >
               <CalendarPlus size={16} />
               Novo agendamento

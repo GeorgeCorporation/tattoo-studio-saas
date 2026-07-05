@@ -5,7 +5,7 @@ import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { getMockStudio, isMockMode } from "@/lib/mockMode";
 import { supabase } from "@/lib/supabase";
-import { getUserStudio } from "@/services/onboarding.service";
+import { getCurrentUserAccess } from "@/services/access.service";
 
 export function AuthCallback() {
   const navigate = useNavigate();
@@ -30,8 +30,12 @@ export function AuthCallback() {
         const user = data.session?.user;
 
         if (user) {
-          const studio = await getUserStudio(user.id);
-          if (isMounted) navigate(studio ? "/dashboard" : "/onboarding", { replace: true });
+          const access = await getCurrentUserAccess(user.id, user.email);
+          if (isMounted) {
+            navigate(access ? (access.role === "artist" ? "/painel" : "/dashboard") : "/onboarding", {
+              replace: true,
+            });
+          }
           return;
         }
 

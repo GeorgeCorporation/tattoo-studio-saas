@@ -39,9 +39,24 @@ create table if not exists public.tattoo_artists (
   bio text,
   instagram text,
   whatsapp text,
+  access_email text,
+  auth_user_id uuid references auth.users(id) on delete set null,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   unique (studio_id, slug)
+);
+
+create table if not exists public.artist_commission_rules (
+  id uuid primary key default gen_random_uuid(),
+  studio_id uuid not null references public.studios(id) on delete cascade,
+  artist_id uuid not null references public.tattoo_artists(id) on delete cascade,
+  is_active boolean not null default true,
+  percentage numeric not null,
+  cap_enabled boolean not null default false,
+  monthly_cap numeric,
+  starts_at date not null default current_date,
+  notes text,
+  created_at timestamptz not null default now()
 );
 
 create table if not exists public.services (
@@ -75,6 +90,7 @@ create table if not exists public.appointments (
   date date not null,
   time time not null,
   status text not null default 'pending',
+  client_source text not null default 'artist_client',
   description text,
   signal_paid numeric not null default 0,
   total_price numeric,
@@ -91,6 +107,24 @@ create table if not exists public.payments (
   method text check (method in ('pix', 'cash', 'card')),
   paid_at timestamptz,
   created_at timestamptz not null default now()
+);
+
+create table if not exists public.payment_commissions (
+  id uuid primary key default gen_random_uuid(),
+  studio_id uuid not null references public.studios(id) on delete cascade,
+  payment_id uuid not null references public.payments(id) on delete cascade,
+  appointment_id uuid references public.appointments(id) on delete set null,
+  artist_id uuid references public.tattoo_artists(id) on delete set null,
+  rule_id uuid references public.artist_commission_rules(id) on delete set null,
+  client_source text not null default 'artist_client',
+  base_amount numeric not null default 0,
+  percentage numeric not null default 0,
+  raw_commission_amount numeric not null default 0,
+  commission_amount numeric not null default 0,
+  cap_consumed_amount numeric not null default 0,
+  cap_applied boolean not null default false,
+  created_at timestamptz not null default now(),
+  unique (payment_id)
 );
 
 create table if not exists public.gallery (
@@ -151,15 +185,25 @@ create index if not exists working_hours_studio_id_idx on public.working_hours(s
 create unique index if not exists working_hours_studio_day_unique_idx on public.working_hours(studio_id, day_of_week);
 create index if not exists tattoo_artists_studio_id_idx on public.tattoo_artists(studio_id);
 create index if not exists tattoo_artists_slug_idx on public.tattoo_artists(slug);
+create unique index if not exists tattoo_artists_auth_user_id_unique_idx on public.tattoo_artists(auth_user_id)
+where auth_user_id is not null;
+create unique index if not exists tattoo_artists_access_email_unique_idx on public.tattoo_artists(access_email)
+where access_email is not null;
+create index if not exists artist_commission_rules_studio_id_idx on public.artist_commission_rules(studio_id);
+create index if not exists artist_commission_rules_artist_id_idx on public.artist_commission_rules(artist_id);
 create index if not exists services_studio_id_idx on public.services(studio_id);
 create index if not exists clients_studio_id_idx on public.clients(studio_id);
 create index if not exists appointments_studio_id_idx on public.appointments(studio_id);
 create index if not exists appointments_artist_id_idx on public.appointments(artist_id);
 create index if not exists appointments_client_id_idx on public.appointments(client_id);
+create index if not exists appointments_client_source_idx on public.appointments(client_source);
 create unique index if not exists appointments_active_slot_unique_idx
 on public.appointments(studio_id, artist_id, date, time)
 where artist_id is not null and status in ('pending', 'confirmed');
 create index if not exists payments_studio_id_idx on public.payments(studio_id);
+create index if not exists payment_commissions_studio_id_idx on public.payment_commissions(studio_id);
+create index if not exists payment_commissions_artist_id_idx on public.payment_commissions(artist_id);
+create index if not exists payment_commissions_payment_id_idx on public.payment_commissions(payment_id);
 create index if not exists gallery_studio_id_idx on public.gallery(studio_id);
 create index if not exists reviews_studio_id_idx on public.reviews(studio_id);
 create index if not exists appointment_reminders_studio_id_idx on public.appointment_reminders(studio_id);
@@ -171,6 +215,30 @@ create index if not exists client_delivery_photos_delivery_id_idx on public.clie
 create index if not exists client_delivery_photos_studio_id_idx on public.client_delivery_photos(studio_id);
 
 -- Slug guardrails
+do $$
+begin
+  alter table public.tattoo_artists
+  add column if not exists access_email text;
+exception when duplicate_column then
+  null;
+end $$;
+
+do $$
+begin
+  alter table public.tattoo_artists
+  add column if not exists auth_user_id uuid references auth.users(id) on delete set null;
+exception when duplicate_column then
+  null;
+end $$;
+
+do $$
+begin
+  alter table public.appointments
+  add column if not exists client_source text not null default 'artist_client';
+exception when duplicate_column then
+  null;
+end $$;
+
 do $$
 begin
   alter table public.studios
@@ -235,6 +303,15 @@ end $$;
 do $$
 begin
   alter table public.appointments
+  add constraint appointments_client_source_check
+  check (client_source in ('artist_client', 'studio_referral')) not valid;
+exception when duplicate_object then
+  null;
+end $$;
+
+do $$
+begin
+  alter table public.appointments
   add constraint appointments_signal_paid_non_negative_check
   check (signal_paid >= 0) not valid;
 exception when duplicate_object then
@@ -255,6 +332,39 @@ begin
   alter table public.payments
   add constraint payments_amount_positive_check
   check (amount > 0) not valid;
+exception when duplicate_object then
+  null;
+end $$;
+
+do $$
+begin
+  alter table public.artist_commission_rules
+  add constraint artist_commission_rules_percentage_non_negative_check
+  check (percentage >= 0) not valid;
+exception when duplicate_object then
+  null;
+end $$;
+
+do $$
+begin
+  alter table public.artist_commission_rules
+  add constraint artist_commission_rules_monthly_cap_non_negative_check
+  check (monthly_cap is null or monthly_cap >= 0) not valid;
+exception when duplicate_object then
+  null;
+end $$;
+
+do $$
+begin
+  alter table public.payment_commissions
+  add constraint payment_commissions_amounts_non_negative_check
+  check (
+    base_amount >= 0
+    and percentage >= 0
+    and raw_commission_amount >= 0
+    and commission_amount >= 0
+    and cap_consumed_amount >= 0
+  ) not valid;
 exception when duplicate_object then
   null;
 end $$;
@@ -307,14 +417,100 @@ $$;
 revoke all on function public.update_public_appointment_notes(uuid, text) from public;
 grant execute on function public.update_public_appointment_notes(uuid, text) to anon, authenticated;
 
+create or replace function public.current_user_artist_id(p_studio_id uuid)
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select tattoo_artists.id
+  from public.tattoo_artists
+  where tattoo_artists.studio_id = p_studio_id
+    and tattoo_artists.is_active = true
+    and (
+      tattoo_artists.auth_user_id = auth.uid()
+      or (
+        tattoo_artists.access_email is not null
+        and lower(tattoo_artists.access_email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+      )
+    )
+  limit 1;
+$$;
+
+revoke all on function public.current_user_artist_id(uuid) from public;
+grant execute on function public.current_user_artist_id(uuid) to authenticated;
+
+create or replace function public.current_user_is_artist_for_appointment(
+  p_studio_id uuid,
+  p_artist_id uuid
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select p_artist_id is not null and public.current_user_artist_id(p_studio_id) = p_artist_id;
+$$;
+
+revoke all on function public.current_user_is_artist_for_appointment(uuid, uuid) from public;
+grant execute on function public.current_user_is_artist_for_appointment(uuid, uuid) to authenticated;
+
+create or replace function public.current_user_can_view_client(
+  p_studio_id uuid,
+  p_client_id uuid
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.appointments
+    where appointments.studio_id = p_studio_id
+      and appointments.client_id = p_client_id
+      and appointments.artist_id = public.current_user_artist_id(p_studio_id)
+  );
+$$;
+
+revoke all on function public.current_user_can_view_client(uuid, uuid) from public;
+grant execute on function public.current_user_can_view_client(uuid, uuid) to authenticated;
+
+create or replace function public.current_user_can_view_delivery(
+  p_studio_id uuid,
+  p_appointment_id uuid
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.appointments
+    where appointments.studio_id = p_studio_id
+      and appointments.id = p_appointment_id
+      and appointments.artist_id = public.current_user_artist_id(p_studio_id)
+  );
+$$;
+
+revoke all on function public.current_user_can_view_delivery(uuid, uuid) from public;
+grant execute on function public.current_user_can_view_delivery(uuid, uuid) to authenticated;
+
 -- Row Level Security
 alter table public.studios enable row level security;
 alter table public.working_hours enable row level security;
 alter table public.tattoo_artists enable row level security;
+alter table public.artist_commission_rules enable row level security;
 alter table public.services enable row level security;
 alter table public.clients enable row level security;
 alter table public.appointments enable row level security;
 alter table public.payments enable row level security;
+alter table public.payment_commissions enable row level security;
 alter table public.gallery enable row level security;
 alter table public.reviews enable row level security;
 alter table public.appointment_reminders enable row level security;
@@ -379,6 +575,8 @@ with check (
 -- Tattoo artists policies
 drop policy if exists "Public can read tattoo artists" on public.tattoo_artists;
 drop policy if exists "Users can manage own tattoo artists" on public.tattoo_artists;
+drop policy if exists "Artists can read own tattoo artist profile" on public.tattoo_artists;
+drop policy if exists "Artists can update own tattoo artist profile" on public.tattoo_artists;
 
 create policy "Public can read tattoo artists"
 on public.tattoo_artists for select
@@ -401,6 +599,44 @@ with check (
     and studios.user_id = auth.uid()
   )
 );
+
+create policy "Artists can read own tattoo artist profile"
+on public.tattoo_artists for select
+to authenticated
+using (id = public.current_user_artist_id(studio_id));
+
+create policy "Artists can update own tattoo artist profile"
+on public.tattoo_artists for update
+to authenticated
+using (id = public.current_user_artist_id(studio_id))
+with check (id = public.current_user_artist_id(studio_id));
+
+-- Artist commission rules policies
+drop policy if exists "Users can manage own artist commission rules" on public.artist_commission_rules;
+drop policy if exists "Artists can read own commission rules" on public.artist_commission_rules;
+
+create policy "Users can manage own artist commission rules"
+on public.artist_commission_rules for all
+to authenticated
+using (
+  exists (
+    select 1 from public.studios
+    where studios.id = artist_commission_rules.studio_id
+    and studios.user_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1 from public.studios
+    where studios.id = artist_commission_rules.studio_id
+    and studios.user_id = auth.uid()
+  )
+);
+
+create policy "Artists can read own commission rules"
+on public.artist_commission_rules for select
+to authenticated
+using (artist_id = public.current_user_artist_id(studio_id));
 
 -- Services policies
 drop policy if exists "Public can read services" on public.services;
@@ -430,6 +666,7 @@ with check (
 
 -- Clients policies
 drop policy if exists "Users can manage own clients" on public.clients;
+drop policy if exists "Artists can read own clients" on public.clients;
 
 create policy "Users can manage own clients"
 on public.clients for all
@@ -461,8 +698,15 @@ with check (
   )
 );
 
+create policy "Artists can read own clients"
+on public.clients for select
+to authenticated
+using (public.current_user_can_view_client(studio_id, id));
+
 -- Appointments policies
 drop policy if exists "Users can manage own appointments" on public.appointments;
+drop policy if exists "Artists can read own appointments" on public.appointments;
+drop policy if exists "Artists can update own appointments" on public.appointments;
 
 create policy "Users can manage own appointments"
 on public.appointments for all
@@ -508,8 +752,20 @@ with check (
   and appointments.date > current_date
 );
 
+create policy "Artists can read own appointments"
+on public.appointments for select
+to authenticated
+using (public.current_user_is_artist_for_appointment(studio_id, artist_id));
+
+create policy "Artists can update own appointments"
+on public.appointments for update
+to authenticated
+using (public.current_user_is_artist_for_appointment(studio_id, artist_id))
+with check (public.current_user_is_artist_for_appointment(studio_id, artist_id));
+
 -- Payments policies
 drop policy if exists "Users can manage own payments" on public.payments;
+drop policy if exists "Artists can read own payments" on public.payments;
 
 create policy "Users can manage own payments"
 on public.payments for all
@@ -528,6 +784,46 @@ with check (
     and studios.user_id = auth.uid()
   )
 );
+
+create policy "Artists can read own payments"
+on public.payments for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.appointments
+    where appointments.id = payments.appointment_id
+      and appointments.studio_id = payments.studio_id
+      and public.current_user_is_artist_for_appointment(payments.studio_id, appointments.artist_id)
+  )
+);
+
+-- Payment commissions policies
+drop policy if exists "Users can manage own payment commissions" on public.payment_commissions;
+drop policy if exists "Artists can read own payment commissions" on public.payment_commissions;
+
+create policy "Users can manage own payment commissions"
+on public.payment_commissions for all
+to authenticated
+using (
+  exists (
+    select 1 from public.studios
+    where studios.id = payment_commissions.studio_id
+    and studios.user_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1 from public.studios
+    where studios.id = payment_commissions.studio_id
+    and studios.user_id = auth.uid()
+  )
+);
+
+create policy "Artists can read own payment commissions"
+on public.payment_commissions for select
+to authenticated
+using (artist_id = public.current_user_artist_id(studio_id));
 
 -- Gallery policies
 drop policy if exists "Public can read gallery" on public.gallery;
@@ -603,6 +899,8 @@ with check (
 
 drop policy if exists "Users can manage own client deliveries" on public.client_deliveries;
 drop policy if exists "Users can manage own client delivery photos" on public.client_delivery_photos;
+drop policy if exists "Artists can read own client deliveries" on public.client_deliveries;
+drop policy if exists "Artists can read own client delivery photos" on public.client_delivery_photos;
 
 create policy "Users can manage own client deliveries"
 on public.client_deliveries for all
@@ -637,6 +935,28 @@ with check (
     select 1 from public.studios
     where studios.id = client_delivery_photos.studio_id
     and studios.user_id = auth.uid()
+  )
+);
+
+create policy "Artists can read own client deliveries"
+on public.client_deliveries for select
+to authenticated
+using (
+  appointment_id is not null
+  and public.current_user_can_view_delivery(studio_id, appointment_id)
+);
+
+create policy "Artists can read own client delivery photos"
+on public.client_delivery_photos for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.client_deliveries
+    where client_deliveries.id = client_delivery_photos.delivery_id
+      and client_deliveries.studio_id = client_delivery_photos.studio_id
+      and client_deliveries.appointment_id is not null
+      and public.current_user_can_view_delivery(client_delivery_photos.studio_id, client_deliveries.appointment_id)
   )
 );
 

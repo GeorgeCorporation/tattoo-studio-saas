@@ -6,6 +6,7 @@ import { OnboardingPage } from "@/pages/onboarding/OnboardingPage";
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   createStudioOnboarding: vi.fn(),
+  getOnboardingSnapshot: vi.fn(),
 }));
 
 vi.mock("react-router-dom", async () => {
@@ -27,7 +28,7 @@ vi.mock("@/services/onboarding.service", async () => {
   const actual = await vi.importActual<typeof import("@/services/onboarding.service")>("@/services/onboarding.service");
   return {
     ...actual,
-    getUserStudio: vi.fn(() => Promise.resolve(null)),
+    getOnboardingSnapshot: mocks.getOnboardingSnapshot,
     createStudioOnboarding: mocks.createStudioOnboarding,
   };
 });
@@ -50,7 +51,6 @@ async function fillContact() {
   await screen.findByText("Contato e localização");
   fireEvent.change(screen.getByLabelText("WhatsApp"), { target: { value: "11999999999" } });
   fireEvent.change(screen.getByLabelText("Estado"), { target: { value: "SP" } });
-  await waitFor(() => expect(screen.getByRole("option", { name: "São Paulo" })).toBeInTheDocument());
   fireEvent.change(screen.getByLabelText("Cidade"), { target: { value: "São Paulo" } });
   fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
 }
@@ -60,20 +60,14 @@ describe("OnboardingPage", () => {
     localStorage.clear();
     mocks.navigate.mockClear();
     mocks.createStudioOnboarding.mockReset();
-    mocks.createStudioOnboarding.mockResolvedValue({ id: "studio-1", name: "Ideal Tattoo", slug: "ideal-tattoo" });
-    vi.stubGlobal(
-      "fetch",
-      vi.fn((url: string) => {
-        const cities = url.includes("/SP/")
-          ? [{ nome: "Campinas" }, { nome: "São Paulo" }]
-          : [{ nome: "Acari" }, { nome: "Natal" }, { nome: "Mossoró" }];
-
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve(cities),
-        });
-      }),
-    );
+    mocks.getOnboardingSnapshot.mockReset();
+    mocks.createStudioOnboarding.mockResolvedValue({ id: "studio-1", name: "Inkora", slug: "inkora" });
+    mocks.getOnboardingSnapshot.mockResolvedValue({
+      studio: null,
+      workingHours: [],
+      artists: [],
+      services: [],
+    });
     window.scrollTo = vi.fn();
   });
 
@@ -96,7 +90,6 @@ describe("OnboardingPage", () => {
     await fillIdentity();
     fireEvent.change(screen.getByLabelText("WhatsApp"), { target: { value: "1199" } });
     fireEvent.change(screen.getByLabelText("Estado"), { target: { value: "SP" } });
-    await waitFor(() => expect(screen.getByRole("option", { name: "São Paulo" })).toBeInTheDocument());
     fireEvent.change(screen.getByLabelText("Cidade"), { target: { value: "São Paulo" } });
     fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
 
@@ -114,14 +107,30 @@ describe("OnboardingPage", () => {
     expect(screen.getByDisplayValue("Cidade Teste")).toBeInTheDocument();
   });
 
-  it("mostra cidades completas do estado sem depender de API externa", async () => {
+  it("redireciona para o dashboard quando o setup já está concluído", async () => {
+    mocks.getOnboardingSnapshot.mockResolvedValueOnce({
+      studio: {
+        id: "studio-1",
+        name: "Inkora",
+        slug: "inkora",
+        whatsapp: "11999999999",
+        city: "São Paulo",
+        state: "SP",
+        logo_url: "https://cdn.test/logo.png",
+      },
+      workingHours: Array.from({ length: 7 }, (_, day) => ({
+        day_of_week: day,
+        open_time: day === 0 ? null : "09:00",
+        close_time: day === 0 ? null : "18:00",
+        is_open: day !== 0,
+      })),
+      artists: [{ id: "artist-1", name: "George", slug: "george", specialty: null, instagram: null, whatsapp: null, photo_url: null }],
+      services: [{ id: "service-1", name: "Tatuagem", category: "Outro", description: null, starting_price: null, avg_duration_minutes: 120 }],
+    });
+
     renderPage();
 
-    await fillIdentity();
-    fireEvent.change(screen.getByLabelText("Estado"), { target: { value: "RN" } });
-
-    await waitFor(() => expect(screen.getByRole("option", { name: "Ceará-Mirim" })).toBeInTheDocument());
-    expect(screen.getByLabelText("Cidade")).not.toBeDisabled();
+    await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith("/dashboard", { replace: true }));
   });
 
   it("envia dados completos e redireciona para dashboard", async () => {
@@ -136,7 +145,6 @@ describe("OnboardingPage", () => {
     fireEvent.change(screen.getByLabelText("Nome do tatuador"), { target: { value: "George Tattoo" } });
     fireEvent.change(screen.getByLabelText("Nome do serviço"), { target: { value: "Tatuagem pequena" } });
     fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
-
     fireEvent.click(screen.getByRole("button", { name: /ativar meu estúdio/i }));
 
     await waitFor(() => expect(mocks.createStudioOnboarding).toHaveBeenCalled());

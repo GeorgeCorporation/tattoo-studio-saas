@@ -16,6 +16,7 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
   const [specialty, setSpecialty] = useState(specialties[0]);
   const [instagram, setInstagram] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
+  const [accessEmail, setAccessEmail] = useState("");
   const [slug, setSlug] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
@@ -27,6 +28,7 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
     setSpecialty(specialties[0]);
     setInstagram("");
     setWhatsapp("");
+    setAccessEmail("");
     setSlug("");
     setPhoto(null);
     setError("");
@@ -47,7 +49,7 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
 
     try {
       setSaving(true);
-      const artist = await createArtist({ studioId, name, slug, specialty, instagram, whatsapp });
+      const artist = await createArtist({ studioId, name, slug, specialty, instagram, whatsapp, accessEmail });
 
       if (photo) {
         const photoUrl = await uploadArtistPhoto(photo, studioId, artist.id);
@@ -119,6 +121,17 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
               />
             </label>
           </div>
+
+          <label>
+            <span className="mb-2 block text-sm font-medium">E-mail de acesso do tatuador</span>
+            <input
+              className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
+              placeholder="tatuador@exemplo.com"
+              type="email"
+              value={accessEmail}
+              onChange={(event) => setAccessEmail(event.target.value)}
+            />
+          </label>
 
           <label>
             <span className="mb-2 block text-sm font-medium">Slug</span>
