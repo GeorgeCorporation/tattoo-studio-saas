@@ -18,6 +18,7 @@ import { ArtistPage } from "@/pages/public/ArtistPage";
 import { BookingPage } from "@/pages/public/BookingPage";
 import { ClientDeliveryPage } from "@/pages/public/ClientDeliveryPage";
 import { NotFoundPage } from "@/pages/public/NotFoundPage";
+import { ArtistActivationPage } from "@/pages/public/ArtistActivationPage";
 import { StudioPage } from "@/pages/public/StudioPage";
 import { FinancialPage } from "@/pages/financial/FinancialPage";
 import { GalleryPage } from "@/pages/gallery/GalleryPage";
@@ -170,6 +171,10 @@ const router = createBrowserRouter([
       {
         path: "/entrega/:token",
         element: <ClientDeliveryPage />,
+      },
+      {
+        path: "/ativar-tatuador/:token",
+        element: <ArtistActivationPage />,
       },
       {
         path: "/:slug",

@@ -77,19 +77,13 @@ export async function getCurrentUserAccess(
     };
   }
 
-  let artistLookup = supabase
+  const { data: memberByAuth, error: memberByAuthError } = await supabase
     .from("tattoo_artists")
     .select("id, studio_id, studios(id, name, slug, logo_url)")
     .eq("is_active", true)
-    .limit(1);
-
-  if (userEmail) {
-    artistLookup = artistLookup.or(`auth_user_id.eq.${userId},access_email.eq.${userEmail}`);
-  } else {
-    artistLookup = artistLookup.eq("auth_user_id", userId);
-  }
-
-  const { data: member, error: memberError } = await artistLookup.maybeSingle<{
+    .eq("auth_user_id", userId)
+    .limit(1)
+    .maybeSingle<{
       id: string;
       studio_id: string;
       studios:
@@ -108,7 +102,42 @@ export async function getCurrentUserAccess(
         | null;
     }>();
 
-  if (memberError) throw memberError;
+  if (memberByAuthError) throw memberByAuthError;
+
+  const member =
+    memberByAuth ??
+    (userEmail
+      ? await (async () => {
+          const { data, error } = await supabase
+            .from("tattoo_artists")
+            .select("id, studio_id, studios(id, name, slug, logo_url)")
+            .eq("is_active", true)
+            .eq("access_email", userEmail)
+            .limit(1)
+            .maybeSingle<{
+              id: string;
+              studio_id: string;
+              studios:
+                | {
+                    id: string;
+                    name: string;
+                    slug: string;
+                    logo_url: string | null;
+                  }
+                | {
+                    id: string;
+                    name: string;
+                    slug: string;
+                    logo_url: string | null;
+                  }[]
+                | null;
+            }>();
+
+          if (error) throw error;
+          return data;
+        })()
+      : null);
+
   if (!member?.studios) return null;
 
   const studio = Array.isArray(member.studios) ? member.studios[0] : member.studios;

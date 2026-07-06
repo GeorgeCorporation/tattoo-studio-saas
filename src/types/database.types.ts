@@ -287,6 +287,34 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["artist_commission_rules"]["Insert"]>;
         Relationships: [];
       };
+      artist_access_invites: {
+        Row: {
+          id: string;
+          studio_id: string;
+          artist_id: string;
+          email: string;
+          token: string;
+          status: "pending" | "accepted" | "expired" | "revoked";
+          expires_at: string;
+          accepted_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          studio_id: string;
+          artist_id: string;
+          email: string;
+          token?: string;
+          status?: "pending" | "accepted" | "expired" | "revoked";
+          expires_at?: string;
+          accepted_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["artist_access_invites"]["Insert"]>;
+        Relationships: [];
+      };
       studios: {
         Row: {
           id: string;
@@ -397,6 +425,19 @@ export type Database = {
           p_appointment_id: string;
         };
         Returns: boolean;
+      };
+      get_artist_invite_by_token: {
+        Args: {
+          p_token: string;
+        };
+        Returns: Json;
+      };
+      accept_artist_invite: {
+        Args: {
+          p_token: string;
+          p_email: string;
+        };
+        Returns: Json;
       };
       current_user_is_artist_for_appointment: {
         Args: {

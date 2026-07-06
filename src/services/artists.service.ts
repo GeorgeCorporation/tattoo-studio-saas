@@ -3,6 +3,21 @@ import { assertPublicSlug } from "@/lib/slugs";
 import type { Database } from "@/types/database.types";
 import { createStoragePath, getStoragePathFromPublicUrl, validateUploadFile } from "@/services/storage.service";
 
+export type ArtistAccessInviteStatus = "pending" | "accepted" | "expired" | "revoked";
+
+export type ArtistAccessInvite = {
+  id: string;
+  studio_id: string;
+  artist_id: string;
+  email: string;
+  token: string;
+  status: ArtistAccessInviteStatus;
+  expires_at: string;
+  accepted_at: string | null;
+  created_at: string;
+  updated_at?: string;
+};
+
 export type Artist = {
   id: string;
   studio_id: string;
@@ -17,6 +32,7 @@ export type Artist = {
   auth_user_id?: string | null;
   is_active: boolean;
   studios?: { slug: string; name: string } | null;
+  artist_access_invites?: ArtistAccessInvite[] | null;
 };
 
 export type ArtistGalleryPhoto = {
@@ -58,6 +74,20 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+async function assertArtistAccessEmailAvailable(email: string, ignoreArtistId?: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail) return;
+
+  let query = supabase.from("tattoo_artists").select("id").eq("access_email", normalizedEmail).limit(1);
+  if (ignoreArtistId) query = query.neq("id", ignoreArtistId);
+
+  const { data, error } = await query.maybeSingle<{ id: string }>();
+  if (error) throw error;
+  if (data) {
+    throw new Error("Este e-mail já está em uso por outro tatuador.");
+  }
+}
+
 async function ensureUniqueSlug(studioId: string, slug: string, ignoreArtistId?: string) {
   const base = slugify(slug) || "tatuador";
   assertPublicSlug(base);
@@ -88,7 +118,9 @@ export { slugify };
 export async function getArtists(studioId: string) {
   const { data, error } = await supabase
     .from("tattoo_artists")
-    .select("id, studio_id, name, slug, photo_url, specialty, bio, instagram, whatsapp, access_email, auth_user_id, is_active")
+    .select(
+      "id, studio_id, name, slug, photo_url, specialty, bio, instagram, whatsapp, access_email, auth_user_id, is_active, artist_access_invites(id, studio_id, artist_id, email, token, status, expires_at, accepted_at, created_at, updated_at)",
+    )
     .eq("studio_id", studioId)
     .order("name", { ascending: true })
     .returns<Artist[]>();
@@ -101,7 +133,7 @@ export async function getArtistById(id: string) {
   const { data, error } = await supabase
     .from("tattoo_artists")
     .select(
-      "id, studio_id, name, slug, photo_url, specialty, bio, instagram, whatsapp, access_email, auth_user_id, is_active, studios(slug, name)",
+      "id, studio_id, name, slug, photo_url, specialty, bio, instagram, whatsapp, access_email, auth_user_id, is_active, studios(slug, name), artist_access_invites(id, studio_id, artist_id, email, token, status, expires_at, accepted_at, created_at, updated_at)",
     )
     .eq("id", id)
     .maybeSingle<Artist>();
@@ -112,6 +144,9 @@ export async function getArtistById(id: string) {
 
 export async function createArtist(data: ArtistFormData) {
   const slug = await ensureUniqueSlug(data.studioId, data.slug || data.name);
+  if (data.accessEmail?.trim()) {
+    await assertArtistAccessEmailAvailable(data.accessEmail);
+  }
 
   const { data: artist, error } = await supabase
     .from("tattoo_artists")
@@ -131,6 +166,15 @@ export async function createArtist(data: ArtistFormData) {
     .single<{ id: string }>();
 
   if (error) throw error;
+
+  if (artist?.id && data.accessEmail?.trim()) {
+    await upsertArtistAccessInvite({
+      artistId: artist.id,
+      studioId: data.studioId,
+      email: data.accessEmail,
+    });
+  }
+
   return artist;
 }
 
@@ -138,6 +182,10 @@ export async function updateArtist(id: string, data: Partial<ArtistFormData>) {
   let slug = data.slug;
   if (data.studioId && data.slug) {
     slug = await ensureUniqueSlug(data.studioId, data.slug, id);
+  }
+
+  if (data.accessEmail?.trim()) {
+    await assertArtistAccessEmailAvailable(data.accessEmail, id);
   }
 
   const payload: Database["public"]["Tables"]["tattoo_artists"]["Update"] = {};
@@ -157,6 +205,80 @@ export async function updateArtist(id: string, data: Partial<ArtistFormData>) {
     .eq("id", id);
 
   if (error) throw error;
+}
+
+export async function getArtistAccessInvite(artistId: string) {
+  const { data, error } = await supabase
+    .from("artist_access_invites")
+    .select("id, studio_id, artist_id, email, token, status, expires_at, accepted_at, created_at, updated_at")
+    .eq("artist_id", artistId)
+    .maybeSingle<ArtistAccessInvite>();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function upsertArtistAccessInvite({
+  artistId,
+  studioId,
+  email,
+}: {
+  artistId: string;
+  studioId: string;
+  email: string;
+}) {
+  const token = crypto.randomUUID();
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data, error } = await supabase
+    .from("artist_access_invites")
+    .upsert(
+      {
+        artist_id: artistId,
+        studio_id: studioId,
+        email: email.trim().toLowerCase(),
+        token,
+        status: "pending",
+        expires_at: expiresAt,
+        accepted_at: null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "artist_id" },
+    )
+    .select("id, studio_id, artist_id, email, token, status, expires_at, accepted_at, created_at, updated_at")
+    .single<ArtistAccessInvite>();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function revokeArtistAccessInvite(artistId: string) {
+  const { error } = await supabase
+    .from("artist_access_invites")
+    .update({
+      status: "revoked",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("artist_id", artistId);
+
+  if (error) throw error;
+}
+
+export function buildArtistActivationLink(token: string) {
+  if (typeof window === "undefined") return `/ativar-tatuador/${token}`;
+  return `${window.location.origin}/ativar-tatuador/${token}`;
+}
+
+export function getArtistAccessStatus(artist: Artist) {
+  const invite = artist.artist_access_invites?.[0] ?? null;
+
+  if (artist.auth_user_id) return "Acesso ativo";
+  if (!invite && artist.access_email) return "Convite pendente";
+  if (!invite) return "Sem acesso";
+  if (invite.status === "accepted") return "Acesso ativo";
+  if (invite.status === "expired") return "Convite expirado";
+  if (invite.status === "revoked") return "Convite revogado";
+  return "Convite pendente";
 }
 
 export async function toggleArtistStatus(id: string, isActive: boolean) {

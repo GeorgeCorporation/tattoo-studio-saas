@@ -3,11 +3,15 @@ import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import {
   addArtistPhoto,
+  buildArtistActivationLink,
   deleteArtistPhoto,
   deleteStorageFile,
   getArtistById,
   getArtistGallery,
   getArtistNextAppointments,
+  getArtistAccessStatus,
+  revokeArtistAccessInvite,
+  upsertArtistAccessInvite,
   toggleArtistStatus,
   updateArtist,
   uploadArtistPhoto,
@@ -63,6 +67,37 @@ export function useArtist(artistId?: string) {
   }) {
     if (!artist) return;
     await updateArtist(artist.id, { ...data, studioId: artist.studio_id });
+    if (data.accessEmail !== undefined) {
+      const email = data.accessEmail?.trim();
+      if (email) {
+        await upsertArtistAccessInvite({
+          artistId: artist.id,
+          studioId: artist.studio_id,
+          email,
+        });
+      } else {
+        await revokeArtistAccessInvite(artist.id);
+      }
+    }
+    await loadArtist();
+  }
+
+  async function refreshAccessInvite() {
+    if (!artist) return;
+    const invite = artist.access_email
+      ? await upsertArtistAccessInvite({
+          artistId: artist.id,
+          studioId: artist.studio_id,
+          email: artist.access_email,
+        })
+      : null;
+    await loadArtist();
+    return invite;
+  }
+
+  async function removeAccessInvite() {
+    if (!artist) return;
+    await revokeArtistAccessInvite(artist.id);
     await loadArtist();
   }
 
@@ -102,5 +137,11 @@ export function useArtist(artistId?: string) {
     addPhoto,
     deletePhoto,
     toggleStatus,
+    accessStatus: artist ? getArtistAccessStatus(artist) : "",
+    activationLink: artist?.artist_access_invites?.[0]?.token
+      ? buildArtistActivationLink(artist.artist_access_invites[0].token)
+      : "",
+    refreshAccessInvite,
+    removeAccessInvite,
   };
 }

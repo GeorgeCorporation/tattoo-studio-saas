@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { ArtistModal } from "@/pages/artists/ArtistModal";
-import { getArtists, toggleArtistStatus, type Artist } from "@/services/artists.service";
+import { getArtistAccessStatus, getArtists, toggleArtistStatus, type Artist } from "@/services/artists.service";
 import { getCurrentUserStudio } from "@/services/dashboard.service";
 
 export function ArtistsPage() {
@@ -95,6 +95,7 @@ export function ArtistsPage() {
                 >
                   {artist.is_active ? "Ativo" : "Inativo"}
                 </span>
+                <p className="mt-2 text-xs text-zinc-500">{getArtistAccessStatus(artist)}</p>
               </div>
             </div>
 

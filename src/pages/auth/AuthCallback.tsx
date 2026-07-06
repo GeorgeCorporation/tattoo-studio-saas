@@ -5,12 +5,21 @@ import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { getMockStudio, isMockMode } from "@/lib/mockMode";
 import { supabase } from "@/lib/supabase";
+import { acceptArtistInvite } from "@/services/artist-invites.service";
 import { getCurrentUserAccess } from "@/services/access.service";
 
 export function AuthCallback() {
   const navigate = useNavigate();
-  const params = useMemo(() => new URLSearchParams(window.location.hash.slice(1)), []);
+  const params = useMemo(() => {
+    const url = new URL(window.location.href);
+    const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
+
+    const merged = new URLSearchParams(url.search);
+    hashParams.forEach((value, key) => merged.set(key, value));
+    return merged;
+  }, []);
   const errorDescription = params.get("error_description");
+  const inviteToken = params.get("invite_token");
   const [callbackError, setCallbackError] = useState("");
 
   useEffect(() => {
@@ -30,6 +39,17 @@ export function AuthCallback() {
         const user = data.session?.user;
 
         if (user) {
+          if (inviteToken) {
+            if (!user.email) {
+              throw new Error("Este e-mail nao corresponde ao convite.");
+            }
+            await acceptArtistInvite(inviteToken, user.email);
+            if (isMounted) {
+              navigate("/painel", { replace: true });
+            }
+            return;
+          }
+
           const access = await getCurrentUserAccess(user.id, user.email);
           if (isMounted) {
             navigate(access ? (access.role === "artist" ? "/painel" : "/dashboard") : "/onboarding", {
@@ -51,7 +71,7 @@ export function AuthCallback() {
     return () => {
       isMounted = false;
     };
-  }, [errorDescription, navigate]);
+  }, [errorDescription, inviteToken, navigate]);
 
   if (errorDescription) {
     return (

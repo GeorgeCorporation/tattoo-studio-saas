@@ -1,5 +1,6 @@
 import { Copy, Download, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import { useAuth } from "@/hooks/useAuth";
 import { getCurrentUserStudio } from "@/services/dashboard.service";
 import {
@@ -18,6 +19,7 @@ export function DeliveriesPage() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState("");
+  const [copyFeedback, setCopyFeedback] = useState("");
 
   const loadDeliveries = useCallback(async () => {
     if (!user) return;
@@ -53,8 +55,15 @@ export function DeliveriesPage() {
   const origin = useMemo(() => window.location.origin, []);
 
   async function copyLink(token: string) {
-    await navigator.clipboard.writeText(`${origin}/entrega/${token}`);
+    const copied = await copyTextToClipboard(`${origin}/entrega/${token}`);
+    setCopyFeedback(copied ? "Link copiado." : "Nao consegui copiar. Copie manualmente.");
   }
+
+  useEffect(() => {
+    if (!copyFeedback) return;
+    const timer = window.setTimeout(() => setCopyFeedback(""), 3000);
+    return () => window.clearTimeout(timer);
+  }, [copyFeedback]);
 
   return (
     <section className="space-y-6">
@@ -75,6 +84,7 @@ export function DeliveriesPage() {
       </div>
 
       {error ? <p className="rounded-xl bg-red-500/10 p-4 text-sm text-red-300">{error}</p> : null}
+      {copyFeedback ? <p className="rounded-xl bg-white/5 p-4 text-sm text-zinc-300">{copyFeedback}</p> : null}
       {loading ? <p className="text-sm text-zinc-400">Carregando entregas...</p> : null}
 
       {!loading && !clients.length ? (

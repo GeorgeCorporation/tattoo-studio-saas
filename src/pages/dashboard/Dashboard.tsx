@@ -1,5 +1,7 @@
 import { CalendarPlus, Check, Copy, ExternalLink, Image, Palette, Scissors, Settings, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import { useDashboard } from "@/hooks/useDashboard";
 import { getAppointmentStatusClass, getAppointmentStatusLabel } from "@/lib/appointment-domain";
 
@@ -10,6 +12,7 @@ const currency = new Intl.NumberFormat("pt-BR", {
 
 export function Dashboard() {
   const { studio, summary, nextAppointments, setupStatus, loading, error, setAppointmentStatus } = useDashboard();
+  const [copyFeedback, setCopyFeedback] = useState("");
 
   const cards = [
     { label: "Agendamentos de hoje", value: summary.todayAppointments },
@@ -68,8 +71,15 @@ export function Dashboard() {
 
   async function copyPublicLink() {
     if (!publicLink) return;
-    await navigator.clipboard.writeText(publicLink);
+    const copied = await copyTextToClipboard(publicLink);
+    setCopyFeedback(copied ? "Link copiado." : "Nao consegui copiar. Copie manualmente.");
   }
+
+  useEffect(() => {
+    if (!copyFeedback) return;
+    const timer = window.setTimeout(() => setCopyFeedback(""), 3000);
+    return () => window.clearTimeout(timer);
+  }, [copyFeedback]);
 
   if (loading) {
     return <p className="text-sm text-zinc-400">Carregando visão geral do estúdio...</p>;
@@ -114,6 +124,7 @@ export function Dashboard() {
             ) : null}
           </div>
         </div>
+        {copyFeedback ? <p className="mt-3 text-sm text-zinc-400">{copyFeedback}</p> : null}
 
         <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/10">
           <div

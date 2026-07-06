@@ -75,6 +75,10 @@ export function getFriendlyErrorMessage(error: unknown, fallback = "Não foi pos
     return supabaseCodeMessages["23505"];
   }
 
+  if (message.includes("access_email") || message.includes("e-mail já está em uso")) {
+    return "Este e-mail já está em uso por outro tatuador.";
+  }
+
   if (message.includes("permission") || message.includes("row-level security")) {
     return supabaseCodeMessages["42501"];
   }

@@ -1,5 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { getFriendlyErrorMessage } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import { createArtist, slugify, updateArtist, uploadArtistPhoto } from "@/services/artists.service";
 
 type ArtistModalProps = {
@@ -9,11 +11,11 @@ type ArtistModalProps = {
   onCreated: (artistId: string) => void;
 };
 
-const specialties = ["Fine line", "Blackwork", "Old school", "Realismo", "Anime", "Aquarela", "Minimalista"];
+const specialtySuggestions = ["Fine line", "Blackwork", "Old school", "Realismo", "Anime", "Aquarela", "Minimalista"];
 
 export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalProps) {
   const [name, setName] = useState("");
-  const [specialty, setSpecialty] = useState(specialties[0]);
+  const [specialty, setSpecialty] = useState("");
   const [instagram, setInstagram] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [accessEmail, setAccessEmail] = useState("");
@@ -21,17 +23,19 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
   const [photo, setPhoto] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
     if (!open) return;
     setName("");
-    setSpecialty(specialties[0]);
+    setSpecialty("");
     setInstagram("");
     setWhatsapp("");
     setAccessEmail("");
     setSlug("");
     setPhoto(null);
     setError("");
+    setNotice("");
   }, [open]);
 
   useEffect(() => {
@@ -41,6 +45,7 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setNotice("");
 
     if (!name.trim()) {
       setError("Nome e obrigatorio.");
@@ -52,13 +57,21 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
       const artist = await createArtist({ studioId, name, slug, specialty, instagram, whatsapp, accessEmail });
 
       if (photo) {
-        const photoUrl = await uploadArtistPhoto(photo, studioId, artist.id);
-        await updateArtist(artist.id, { photoUrl });
+        try {
+          const photoUrl = await uploadArtistPhoto(photo, studioId, artist.id);
+          await updateArtist(artist.id, { photoUrl });
+        } catch (caughtError) {
+          logger.warn("Foto do tatuador nao enviada", { studioId, artistId: artist.id });
+          setNotice("Tatuador salvo. Foto pode ser enviada depois.");
+          window.setTimeout(() => onCreated(artist.id), 900);
+          return;
+        }
       }
 
       onCreated(artist.id);
-    } catch {
-      setError("Não foi possível criar tatuador.");
+    } catch (caughtError) {
+      logger.error("Falha ao criar tatuador", caughtError, { studioId });
+      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel criar tatuador."));
     } finally {
       setSaving(false);
     }
@@ -72,7 +85,7 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
         <header className="flex items-center justify-between border-b border-white/10 p-5">
           <div>
             <h2 className="text-xl font-semibold">Adicionar tatuador</h2>
-            <p className="mt-1 text-sm text-zinc-400">Crie perfil do profissional.</p>
+            <p className="mt-1 text-sm text-zinc-400">Crie o perfil do profissional.</p>
           </div>
           <button className="rounded-lg p-2 hover:bg-white/5" onClick={onClose} type="button">
             <X size={20} />
@@ -84,23 +97,26 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
             <span className="mb-2 block text-sm font-medium">Nome</span>
             <input
               className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-              value={name}
               onChange={(event) => setName(event.target.value)}
               required
+              value={name}
             />
           </label>
 
           <label>
             <span className="mb-2 block text-sm font-medium">Especialidade</span>
-            <select
+            <input
               className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-              value={specialty}
+              list="artist-specialty-suggestions"
               onChange={(event) => setSpecialty(event.target.value)}
-            >
-              {specialties.map((item) => (
-                <option key={item}>{item}</option>
+              placeholder="Ex: Fine line, realismo, blackwork"
+              value={specialty}
+            />
+            <datalist id="artist-specialty-suggestions">
+              {specialtySuggestions.map((item) => (
+                <option key={item} value={item} />
               ))}
-            </select>
+            </datalist>
           </label>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -108,37 +124,40 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
               <span className="mb-2 block text-sm font-medium">Instagram</span>
               <input
                 className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                value={instagram}
                 onChange={(event) => setInstagram(event.target.value)}
+                value={instagram}
               />
             </label>
             <label>
               <span className="mb-2 block text-sm font-medium">WhatsApp</span>
               <input
                 className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                value={whatsapp}
                 onChange={(event) => setWhatsapp(event.target.value)}
+                value={whatsapp}
               />
             </label>
           </div>
 
           <label>
-            <span className="mb-2 block text-sm font-medium">E-mail de acesso do tatuador</span>
+            <span className="mb-2 block text-sm font-medium">E-mail para ativacao do tatuador</span>
             <input
               className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
+              onChange={(event) => setAccessEmail(event.target.value)}
               placeholder="tatuador@exemplo.com"
               type="email"
               value={accessEmail}
-              onChange={(event) => setAccessEmail(event.target.value)}
             />
+            <p className="mt-2 text-xs text-zinc-500">
+              Sistema gera link de ativacao para tatuador criar proprio acesso.
+            </p>
           </label>
 
           <label>
             <span className="mb-2 block text-sm font-medium">Slug</span>
             <input
               className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-              value={slug}
               onChange={(event) => setSlug(event.target.value)}
+              value={slug}
             />
           </label>
 
@@ -153,6 +172,7 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
           </label>
 
           {error ? <p className="text-sm text-red-400">{error}</p> : null}
+          {notice ? <p className="text-sm text-yellow-300">{notice}</p> : null}
 
           <button
             className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold disabled:opacity-60"

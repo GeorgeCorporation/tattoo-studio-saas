@@ -1,18 +1,42 @@
 import { Camera, Copy, Trash2, Upload, X } from "lucide-react";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import { useArtist } from "@/hooks/useArtist";
 
-const specialties = ["Fine line", "Blackwork", "Old school", "Realismo", "Anime", "Aquarela", "Minimalista"];
+const specialtySuggestions = ["Fine line", "Blackwork", "Old school", "Realismo", "Anime", "Aquarela", "Minimalista"];
 
 function statusClass(status: string) {
   if (status === "confirmed") return "bg-green-500/15 text-green-300";
   return "bg-yellow-500/15 text-yellow-300";
 }
 
+function accessStatusClass(status: string) {
+  if (status === "Acesso ativo") return "bg-green-500/15 text-green-300";
+  if (status === "Convite pendente") return "bg-yellow-500/15 text-yellow-300";
+  if (status === "Convite expirado") return "bg-red-500/15 text-red-300";
+  if (status === "Convite revogado") return "bg-zinc-500/15 text-zinc-300";
+  return "bg-zinc-500/15 text-zinc-300";
+}
+
 export function ArtistProfile() {
   const { artistId } = useParams();
-  const { artist, gallery, appointments, loading, error, updateArtist, uploadPhoto, addPhoto, deletePhoto, toggleStatus } =
+  const {
+    artist,
+    gallery,
+    appointments,
+    loading,
+    error,
+    updateArtist,
+    uploadPhoto,
+    addPhoto,
+    deletePhoto,
+    toggleStatus,
+    accessStatus,
+    activationLink,
+    refreshAccessInvite,
+    removeAccessInvite,
+  } =
     useArtist(artistId);
   const [name, setName] = useState("");
   const [specialty, setSpecialty] = useState("");
@@ -23,11 +47,12 @@ export function ArtistProfile() {
   const [slug, setSlug] = useState("");
   const [saving, setSaving] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState("");
 
   useEffect(() => {
     if (!artist) return;
     setName(artist.name);
-    setSpecialty(artist.specialty ?? specialties[0]);
+    setSpecialty(artist.specialty ?? "");
     setBio(artist.bio ?? "");
     setInstagram(artist.instagram ?? "");
     setWhatsapp(artist.whatsapp ?? "");
@@ -77,8 +102,30 @@ export function ArtistProfile() {
 
   async function copyPublicLink() {
     if (!publicLink) return;
-    await navigator.clipboard.writeText(publicLink);
+    const copied = await copyTextToClipboard(publicLink);
+    setCopyFeedback(copied ? "Link copiado." : "Nao consegui copiar. Copie manualmente.");
   }
+
+  async function copyActivationLink() {
+    if (!activationLink) return;
+    const copied = await copyTextToClipboard(activationLink);
+    setCopyFeedback(copied ? "Link de ativacao copiado." : "Nao consegui copiar. Copie manualmente.");
+  }
+
+  async function handleRefreshInvite() {
+    await refreshAccessInvite();
+  }
+
+  async function handleRemoveAccess() {
+    if (!window.confirm("Remover acesso deste tatuador?")) return;
+    await removeAccessInvite();
+  }
+
+  useEffect(() => {
+    if (!copyFeedback) return;
+    const timer = window.setTimeout(() => setCopyFeedback(""), 3000);
+    return () => window.clearTimeout(timer);
+  }, [copyFeedback]);
 
   if (loading) return <p className="text-sm text-zinc-400">Carregando tatuador...</p>;
   if (!artist) return <p className="rounded-xl bg-red-500/10 p-4 text-sm text-red-300">Tatuador não encontrado.</p>;
@@ -129,6 +176,9 @@ export function ArtistProfile() {
                 >
                   {artist.is_active ? "Ativo" : "Inativo"}
                 </button>
+                <span className={["rounded-full px-3 py-1 text-xs font-semibold", accessStatusClass(accessStatus)].join(" ")}>
+                  {accessStatus}
+                </span>
                 {publicLink ? (
                   <button
                     className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-xs font-semibold text-zinc-300"
@@ -139,7 +189,36 @@ export function ArtistProfile() {
                     Copiar link
                   </button>
                 ) : null}
+                {artist.access_email ? (
+                  <>
+                    {activationLink ? (
+                      <button
+                        className="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1 text-xs font-semibold text-zinc-300"
+                        onClick={copyActivationLink}
+                        type="button"
+                      >
+                        <Copy size={13} />
+                        Copiar link de ativacao
+                      </button>
+                    ) : null}
+                    <button
+                      className="rounded-full bg-white/5 px-3 py-1 text-xs font-semibold text-zinc-300"
+                      onClick={handleRefreshInvite}
+                      type="button"
+                    >
+                      Gerar novo link
+                    </button>
+                    <button
+                      className="rounded-full bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-200"
+                      onClick={handleRemoveAccess}
+                      type="button"
+                    >
+                      Remover acesso
+                    </button>
+                  </>
+                ) : null}
               </div>
+              {copyFeedback ? <p className="text-xs text-zinc-400">{copyFeedback}</p> : null}
             </div>
           </div>
 
@@ -163,11 +242,18 @@ export function ArtistProfile() {
           </label>
           <label>
             <span className="mb-2 block text-sm font-medium">Especialidade</span>
-            <select className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3" value={specialty} onChange={(event) => setSpecialty(event.target.value)}>
-              {specialties.map((item) => (
-                <option key={item}>{item}</option>
+            <input
+              className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
+              list="artist-profile-specialty-suggestions"
+              onChange={(event) => setSpecialty(event.target.value)}
+              placeholder="Ex: Fine line, realismo, blackwork"
+              value={specialty}
+            />
+            <datalist id="artist-profile-specialty-suggestions">
+              {specialtySuggestions.map((item) => (
+                <option key={item} value={item} />
               ))}
-            </select>
+            </datalist>
           </label>
           <label>
             <span className="mb-2 block text-sm font-medium">Instagram</span>
@@ -178,8 +264,11 @@ export function ArtistProfile() {
             <input className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3" value={whatsapp} onChange={(event) => setWhatsapp(event.target.value)} />
           </label>
           <label>
-            <span className="mb-2 block text-sm font-medium">E-mail de acesso</span>
+            <span className="mb-2 block text-sm font-medium">E-mail para ativacao do tatuador</span>
             <input className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3" type="email" value={accessEmail} onChange={(event) => setAccessEmail(event.target.value)} />
+            <p className="mt-2 text-xs text-zinc-500">
+              Sistema gera link de ativacao. Tatuador cria proprio acesso ao abrir convite.
+            </p>
           </label>
           <label className="sm:col-span-2">
             <span className="mb-2 block text-sm font-medium">Slug</span>
