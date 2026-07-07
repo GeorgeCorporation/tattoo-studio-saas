@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { logger } from "@/lib/logger";
 import { assertPublicSlug } from "@/lib/slugs";
 import type { Database } from "@/types/database.types";
 import { createStoragePath, getStoragePathFromPublicUrl, validateUploadFile } from "@/services/storage.service";
@@ -64,6 +65,11 @@ export type ArtistFormData = {
   photoUrl?: string;
 };
 
+type ArtistCreateResult = {
+  id: string;
+  accessWarning?: string;
+};
+
 function slugify(value: string) {
   return value
     .normalize("NFD")
@@ -86,6 +92,24 @@ async function assertArtistAccessEmailAvailable(email: string, ignoreArtistId?: 
   if (data) {
     throw new Error("Este e-mail já está em uso por outro tatuador.");
   }
+}
+
+function normalizeAccessEmail(email?: string) {
+  const normalizedEmail = email?.trim().toLowerCase() ?? "";
+  return normalizedEmail || null;
+}
+
+function isAccessEmailConflict(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const maybeError = error as { code?: string; message?: string; details?: string; hint?: string };
+  const text = `${maybeError.message ?? ""} ${maybeError.details ?? ""} ${maybeError.hint ?? ""}`.toLowerCase();
+  return (
+    maybeError.code === "23505" &&
+    (text.includes("access_email") ||
+      text.includes("artist_access_invites") ||
+      text.includes("email") ||
+      text.includes("duplicate"))
+  );
 }
 
 async function ensureUniqueSlug(studioId: string, slug: string, ignoreArtistId?: string) {
@@ -119,14 +143,39 @@ export async function getArtists(studioId: string) {
   const { data, error } = await supabase
     .from("tattoo_artists")
     .select(
-      "id, studio_id, name, slug, photo_url, specialty, bio, instagram, whatsapp, access_email, auth_user_id, is_active, artist_access_invites(id, studio_id, artist_id, email, token, status, expires_at, accepted_at, created_at, updated_at)",
+      "id, studio_id, name, slug, photo_url, specialty, bio, instagram, whatsapp, access_email, auth_user_id, is_active",
     )
     .eq("studio_id", studioId)
     .order("name", { ascending: true })
     .returns<Artist[]>();
 
   if (error) throw error;
-  return data ?? [];
+
+  const artists = data ?? [];
+  if (!artists.length) return artists;
+
+  const { data: invites, error: invitesError } = await supabase
+    .from("artist_access_invites")
+    .select("id, studio_id, artist_id, email, token, status, expires_at, accepted_at, created_at, updated_at")
+    .eq("studio_id", studioId)
+    .returns<ArtistAccessInvite[]>();
+
+  if (invitesError) {
+    logger.warn("Convites de tatuadores nao carregados", { studioId, error: invitesError.message });
+    return artists.map((artist) => ({ ...artist, artist_access_invites: [] }));
+  }
+
+  const invitesByArtistId = new Map<string, ArtistAccessInvite[]>();
+  for (const invite of invites ?? []) {
+    const current = invitesByArtistId.get(invite.artist_id) ?? [];
+    current.push(invite);
+    invitesByArtistId.set(invite.artist_id, current);
+  }
+
+  return artists.map((artist) => ({
+    ...artist,
+    artist_access_invites: invitesByArtistId.get(artist.id) ?? [],
+  }));
 }
 
 export async function getArtistById(id: string) {
@@ -142,13 +191,8 @@ export async function getArtistById(id: string) {
   return data;
 }
 
-export async function createArtist(data: ArtistFormData) {
-  const slug = await ensureUniqueSlug(data.studioId, data.slug || data.name);
-  if (data.accessEmail?.trim()) {
-    await assertArtistAccessEmailAvailable(data.accessEmail);
-  }
-
-  const { data: artist, error } = await supabase
+async function insertArtist(data: ArtistFormData, slug: string, accessEmail: string | null) {
+  return supabase
     .from("tattoo_artists")
     .insert({
       studio_id: data.studioId,
@@ -158,24 +202,57 @@ export async function createArtist(data: ArtistFormData) {
       bio: data.bio || null,
       instagram: data.instagram || null,
       whatsapp: data.whatsapp || null,
-      access_email: data.accessEmail || null,
+      access_email: accessEmail,
       photo_url: data.photoUrl || null,
       is_active: true,
     })
     .select("id")
     .single<{ id: string }>();
+}
 
-  if (error) throw error;
+export async function createArtist(data: ArtistFormData): Promise<ArtistCreateResult> {
+  const slug = await ensureUniqueSlug(data.studioId, data.slug || data.name);
+  let accessEmail = normalizeAccessEmail(data.accessEmail);
+  let accessWarning: string | undefined;
 
-  if (artist?.id && data.accessEmail?.trim()) {
-    await upsertArtistAccessInvite({
-      artistId: artist.id,
-      studioId: data.studioId,
-      email: data.accessEmail,
-    });
+  if (accessEmail) {
+    try {
+      await assertArtistAccessEmailAvailable(accessEmail);
+    } catch (error) {
+      logger.warn("Validacao de e-mail do tatuador falhou", { studioId: data.studioId });
+      accessEmail = null;
+      accessWarning = "Tatuador salvo. E-mail de ativacao pode ser ajustado depois.";
+    }
   }
 
-  return artist;
+  let { data: artist, error } = await insertArtist(data, slug, accessEmail);
+
+  if (error && accessEmail && isAccessEmailConflict(error)) {
+    logger.warn("E-mail de acesso duplicado. Criando tatuador sem e-mail.", { studioId: data.studioId });
+    accessEmail = null;
+    accessWarning = "Tatuador salvo sem e-mail de ativacao. Ajuste o acesso depois.";
+    const retry = await insertArtist(data, slug, null);
+    artist = retry.data;
+    error = retry.error;
+  }
+
+  if (error) throw error;
+  if (!artist?.id) throw new Error("Nao foi possivel criar tatuador.");
+
+  if (accessEmail) {
+    try {
+      await upsertArtistAccessInvite({
+        artistId: artist.id,
+        studioId: data.studioId,
+        email: accessEmail,
+      });
+    } catch (error) {
+      logger.warn("Convite do tatuador nao criado", { studioId: data.studioId, artistId: artist.id });
+      accessWarning = "Tatuador salvo. Link de ativacao pode ser gerado depois.";
+    }
+  }
+
+  return { ...artist, accessWarning };
 }
 
 export async function updateArtist(id: string, data: Partial<ArtistFormData>) {

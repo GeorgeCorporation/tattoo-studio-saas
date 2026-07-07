@@ -25,6 +25,11 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
+  function clearMessages() {
+    if (error) setError("");
+    if (notice) setNotice("");
+  }
+
   useEffect(() => {
     if (!open) return;
     setName("");
@@ -62,10 +67,16 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
           await updateArtist(artist.id, { photoUrl });
         } catch (caughtError) {
           logger.warn("Foto do tatuador nao enviada", { studioId, artistId: artist.id });
-          setNotice("Tatuador salvo. Foto pode ser enviada depois.");
+          setNotice(artist.accessWarning ?? "Tatuador salvo. Foto pode ser enviada depois.");
           window.setTimeout(() => onCreated(artist.id), 900);
           return;
         }
+      }
+
+      if (artist.accessWarning) {
+        setNotice(artist.accessWarning);
+        window.setTimeout(() => onCreated(artist.id), 900);
+        return;
       }
 
       onCreated(artist.id);
@@ -97,7 +108,10 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
             <span className="mb-2 block text-sm font-medium">Nome</span>
             <input
               className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-              onChange={(event) => setName(event.target.value)}
+              onChange={(event) => {
+                setName(event.target.value);
+                clearMessages();
+              }}
               required
               value={name}
             />
@@ -108,7 +122,10 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
             <input
               className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
               list="artist-specialty-suggestions"
-              onChange={(event) => setSpecialty(event.target.value)}
+              onChange={(event) => {
+                setSpecialty(event.target.value);
+                clearMessages();
+              }}
               placeholder="Ex: Fine line, realismo, blackwork"
               value={specialty}
             />
@@ -124,7 +141,10 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
               <span className="mb-2 block text-sm font-medium">Instagram</span>
               <input
                 className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                onChange={(event) => setInstagram(event.target.value)}
+                onChange={(event) => {
+                  setInstagram(event.target.value);
+                  clearMessages();
+                }}
                 value={instagram}
               />
             </label>
@@ -132,7 +152,10 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
               <span className="mb-2 block text-sm font-medium">WhatsApp</span>
               <input
                 className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                onChange={(event) => setWhatsapp(event.target.value)}
+                onChange={(event) => {
+                  setWhatsapp(event.target.value);
+                  clearMessages();
+                }}
                 value={whatsapp}
               />
             </label>
@@ -142,7 +165,10 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
             <span className="mb-2 block text-sm font-medium">E-mail para ativacao do tatuador</span>
             <input
               className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-              onChange={(event) => setAccessEmail(event.target.value)}
+              onChange={(event) => {
+                setAccessEmail(event.target.value);
+                clearMessages();
+              }}
               placeholder="tatuador@exemplo.com"
               type="email"
               value={accessEmail}
@@ -156,7 +182,10 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
             <span className="mb-2 block text-sm font-medium">Slug</span>
             <input
               className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-              onChange={(event) => setSlug(event.target.value)}
+              onChange={(event) => {
+                setSlug(event.target.value);
+                clearMessages();
+              }}
               value={slug}
             />
           </label>
@@ -166,7 +195,10 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
             <input
               accept="image/*"
               className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-              onChange={(event) => setPhoto(event.target.files?.[0] ?? null)}
+              onChange={(event) => {
+                setPhoto(event.target.files?.[0] ?? null);
+                clearMessages();
+              }}
               type="file"
             />
           </label>
