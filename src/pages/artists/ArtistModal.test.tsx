@@ -62,8 +62,8 @@ describe("ArtistModal", () => {
     expect(mocks.uploadArtistPhoto).toHaveBeenCalledTimes(1);
   });
 
-  it("mostra erro claro quando e-mail já está em uso", async () => {
-    mocks.createArtist.mockRejectedValue(new Error("Este e-mail já está em uso por outro tatuador."));
+  it("orienta remover e-mail quando acesso nao puder ser criado", async () => {
+    mocks.createArtist.mockRejectedValue(new Error("Este e-mail ja esta em uso por outro tatuador."));
 
     render(<ArtistModal open studioId="studio-1" onClose={vi.fn()} onCreated={vi.fn()} />);
 
@@ -71,6 +71,10 @@ describe("ArtistModal", () => {
     fireEvent.change(screen.getByPlaceholderText("tatuador@exemplo.com"), { target: { value: "jason@inkora.app" } });
     fireEvent.click(screen.getByRole("button", { name: /salvar/i }));
 
-    expect(await screen.findByText("Este e-mail já está em uso por outro tatuador.")).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "Nao foi possivel criar o acesso agora. Remova o e-mail e salve o perfil, ou tente outro e-mail depois.",
+      ),
+    ).toBeInTheDocument();
   });
 });

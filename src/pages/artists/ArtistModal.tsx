@@ -82,7 +82,12 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
       onCreated(artist.id);
     } catch (caughtError) {
       logger.error("Falha ao criar tatuador", caughtError, { studioId });
-      setError(getFriendlyErrorMessage(caughtError, "Nao foi possivel criar tatuador."));
+      const friendlyError = getFriendlyErrorMessage(caughtError, "Nao foi possivel criar tatuador.");
+      if (friendlyError.toLowerCase().includes("e-mail") && friendlyError.toLowerCase().includes("tatuador")) {
+        setError("Nao foi possivel criar o acesso agora. Remova o e-mail e salve o perfil, ou tente outro e-mail depois.");
+        return;
+      }
+      setError(friendlyError);
     } finally {
       setSaving(false);
     }
