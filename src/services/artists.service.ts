@@ -212,18 +212,11 @@ async function insertArtist(data: ArtistFormData, slug: string, accessEmail: str
 
 export async function createArtist(data: ArtistFormData): Promise<ArtistCreateResult> {
   const slug = await ensureUniqueSlug(data.studioId, data.slug || data.name);
-  let accessEmail = normalizeAccessEmail(data.accessEmail);
-  let accessWarning: string | undefined;
-
-  if (accessEmail) {
-    try {
-      await assertArtistAccessEmailAvailable(accessEmail);
-    } catch (error) {
-      logger.warn("Validacao de e-mail do tatuador falhou", { studioId: data.studioId });
-      accessEmail = null;
-      accessWarning = "Tatuador salvo. E-mail de ativacao pode ser ajustado depois.";
-    }
-  }
+  const requestedAccessEmail = normalizeAccessEmail(data.accessEmail);
+  let accessEmail: string | null = null;
+  let accessWarning = requestedAccessEmail
+    ? "Tatuador salvo. Link de acesso pode ser gerado depois no perfil."
+    : undefined;
 
   let { data: artist, error } = await insertArtist(data, slug, accessEmail);
 

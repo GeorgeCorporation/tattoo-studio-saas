@@ -62,19 +62,20 @@ describe("ArtistModal", () => {
     expect(mocks.uploadArtistPhoto).toHaveBeenCalledTimes(1);
   });
 
-  it("orienta remover e-mail quando acesso nao puder ser criado", async () => {
-    mocks.createArtist.mockRejectedValue(new Error("Este e-mail ja esta em uso por outro tatuador."));
+  it("salva perfil e avisa quando e-mail sera configurado depois", async () => {
+    mocks.createArtist.mockResolvedValue({
+      id: "artist-1",
+      accessWarning: "Tatuador salvo. Link de acesso pode ser gerado depois no perfil.",
+    });
+    const onCreated = vi.fn();
 
-    render(<ArtistModal open studioId="studio-1" onClose={vi.fn()} onCreated={vi.fn()} />);
+    render(<ArtistModal open studioId="studio-1" onClose={vi.fn()} onCreated={onCreated} />);
 
     fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "Jason Tattoo" } });
     fireEvent.change(screen.getByPlaceholderText("tatuador@exemplo.com"), { target: { value: "jason@inkora.app" } });
     fireEvent.click(screen.getByRole("button", { name: /salvar/i }));
 
-    expect(
-      await screen.findByText(
-        "Nao foi possivel criar o acesso agora. Remova o e-mail e salve o perfil, ou tente outro e-mail depois.",
-      ),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Tatuador salvo. Link de acesso pode ser gerado depois no perfil.")).toBeInTheDocument();
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith("artist-1"));
   });
 });
