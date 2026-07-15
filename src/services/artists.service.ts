@@ -215,7 +215,7 @@ export async function createArtist(data: ArtistFormData): Promise<ArtistCreateRe
   const requestedAccessEmail = normalizeAccessEmail(data.accessEmail);
   let accessEmail: string | null = null;
   let accessWarning = requestedAccessEmail
-    ? "Tatuador salvo. Link de acesso pode ser gerado depois no perfil."
+    ? "Tatuador salvo. Link de ativacao criado no perfil."
     : undefined;
 
   let { data: artist, error } = await insertArtist(data, slug, accessEmail);
@@ -232,12 +232,12 @@ export async function createArtist(data: ArtistFormData): Promise<ArtistCreateRe
   if (error) throw error;
   if (!artist?.id) throw new Error("Nao foi possivel criar tatuador.");
 
-  if (accessEmail) {
+  if (requestedAccessEmail) {
     try {
       await upsertArtistAccessInvite({
         artistId: artist.id,
         studioId: data.studioId,
-        email: accessEmail,
+        email: requestedAccessEmail,
       });
     } catch (error) {
       logger.warn("Convite do tatuador nao criado", { studioId: data.studioId, artistId: artist.id });

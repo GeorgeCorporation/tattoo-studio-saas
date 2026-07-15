@@ -43,7 +43,6 @@ export function resolveAccessRole(input: ResolveAccessRoleInput) {
 
 export async function getCurrentUserAccess(
   userId: string,
-  userEmail?: string | null,
 ): Promise<AccessContext | null> {
   if (isMockMode && userId === mockUser.id) {
     return {
@@ -104,43 +103,9 @@ export async function getCurrentUserAccess(
 
   if (memberByAuthError) throw memberByAuthError;
 
-  const member =
-    memberByAuth ??
-    (userEmail
-      ? await (async () => {
-          const { data, error } = await supabase
-            .from("tattoo_artists")
-            .select("id, studio_id, studios(id, name, slug, logo_url)")
-            .eq("is_active", true)
-            .eq("access_email", userEmail)
-            .limit(1)
-            .maybeSingle<{
-              id: string;
-              studio_id: string;
-              studios:
-                | {
-                    id: string;
-                    name: string;
-                    slug: string;
-                    logo_url: string | null;
-                  }
-                | {
-                    id: string;
-                    name: string;
-                    slug: string;
-                    logo_url: string | null;
-                  }[]
-                | null;
-            }>();
+  if (!memberByAuth?.studios) return null;
 
-          if (error) throw error;
-          return data;
-        })()
-      : null);
-
-  if (!member?.studios) return null;
-
-  const studio = Array.isArray(member.studios) ? member.studios[0] : member.studios;
+  const studio = Array.isArray(memberByAuth.studios) ? memberByAuth.studios[0] : memberByAuth.studios;
   if (!studio) return null;
 
   return {
@@ -149,7 +114,7 @@ export async function getCurrentUserAccess(
     studioSlug: studio.slug,
     studioLogoUrl: studio.logo_url,
     role: "artist",
-    artistId: member.id,
+    artistId: memberByAuth.id,
     isOwner: false,
   };
 }

@@ -31,7 +31,7 @@ export function useAccess(options: UseAccessOptions = {}) {
       setLoading(true);
       setError("");
 
-      const resolvedAccess = await getCurrentUserAccess(user.id, user.email);
+      const resolvedAccess = await getCurrentUserAccess(user.id);
       setAccess(resolvedAccess);
     } catch (caughtError) {
       logger.error("Falha ao carregar acesso do usuário", caughtError, { userId: user.id });

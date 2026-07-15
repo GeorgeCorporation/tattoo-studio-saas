@@ -23,7 +23,7 @@ export function ArtistsPage() {
     try {
       setLoading(true);
       setError("");
-      const studio = await getCurrentUserStudio(user.id, user.email);
+      const studio = await getCurrentUserStudio(user.id);
       if (!studio) {
         setError("Estúdio não encontrado.");
         return;

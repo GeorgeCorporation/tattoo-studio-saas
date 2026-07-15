@@ -28,10 +28,10 @@ export type DashboardSetupStatus = {
   appointmentsCount: number;
 };
 
-export async function getCurrentUserStudio(userId: string, userEmail?: string | null) {
+export async function getCurrentUserStudio(userId: string) {
   if (isMockMode && userId === mockUser.id) return getMockDashboardStudio();
 
-  const access = await getCurrentUserAccess(userId, userEmail);
+  const access = await getCurrentUserAccess(userId);
   if (!access) return null;
 
   return {

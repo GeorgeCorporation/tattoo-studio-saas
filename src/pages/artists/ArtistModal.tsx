@@ -67,7 +67,11 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
           await updateArtist(artist.id, { photoUrl });
         } catch (caughtError) {
           logger.warn("Foto do tatuador nao enviada", { studioId, artistId: artist.id });
-          setNotice(artist.accessWarning ?? "Tatuador salvo. Foto pode ser enviada depois.");
+          setNotice(
+            artist.accessWarning
+              ? `${artist.accessWarning} Foto pode ser enviada depois.`
+              : "Tatuador salvo. Foto pode ser enviada depois.",
+          );
           window.setTimeout(() => onCreated(artist.id), 900);
           return;
         }

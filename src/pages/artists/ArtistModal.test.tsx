@@ -65,7 +65,7 @@ describe("ArtistModal", () => {
   it("salva perfil e avisa quando e-mail sera configurado depois", async () => {
     mocks.createArtist.mockResolvedValue({
       id: "artist-1",
-      accessWarning: "Tatuador salvo. Link de acesso pode ser gerado depois no perfil.",
+      accessWarning: "Tatuador salvo. Link de ativacao criado no perfil.",
     });
     const onCreated = vi.fn();
 
@@ -75,7 +75,7 @@ describe("ArtistModal", () => {
     fireEvent.change(screen.getByPlaceholderText("tatuador@exemplo.com"), { target: { value: "jason@inkora.app" } });
     fireEvent.click(screen.getByRole("button", { name: /salvar/i }));
 
-    expect(await screen.findByText("Tatuador salvo. Link de acesso pode ser gerado depois no perfil.")).toBeInTheDocument();
+    expect(await screen.findByText("Tatuador salvo. Link de ativacao criado no perfil.")).toBeInTheDocument();
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith("artist-1"));
   });
 });

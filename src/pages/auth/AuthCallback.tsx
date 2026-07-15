@@ -50,7 +50,7 @@ export function AuthCallback() {
             return;
           }
 
-          const access = await getCurrentUserAccess(user.id, user.email);
+          const access = await getCurrentUserAccess(user.id);
           if (isMounted) {
             navigate(access ? (access.role === "artist" ? "/painel" : "/dashboard") : "/onboarding", {
               replace: true,

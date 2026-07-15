@@ -66,7 +66,8 @@ export function useArtist(artistId?: string) {
     accessEmail?: string;
   }) {
     if (!artist) return;
-    await updateArtist(artist.id, { ...data, studioId: artist.studio_id });
+    const { accessEmail, ...profileData } = data;
+    await updateArtist(artist.id, { ...profileData, studioId: artist.studio_id });
     if (data.accessEmail !== undefined) {
       const email = data.accessEmail?.trim();
       if (email) {
@@ -82,13 +83,14 @@ export function useArtist(artistId?: string) {
     await loadArtist();
   }
 
-  async function refreshAccessInvite() {
+  async function refreshAccessInvite(nextEmail?: string) {
     if (!artist) return;
-    const invite = artist.access_email
+    const email = nextEmail?.trim() || artist.artist_access_invites?.[0]?.email || artist.access_email;
+    const invite = email
       ? await upsertArtistAccessInvite({
           artistId: artist.id,
           studioId: artist.studio_id,
-          email: artist.access_email,
+          email,
         })
       : null;
     await loadArtist();

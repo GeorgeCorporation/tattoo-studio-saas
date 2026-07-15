@@ -1,0 +1,22 @@
+# Inkora — Memory Index
+
+- [Project](project.md) — perfil, stack, versões, comandos, estrutura
+- [Architecture](architecture.md) — camadas Pages→Hooks→Services→Supabase
+- [Frontend](frontend.md) — React, Vite, Tailwind, componentes, páginas
+- [Backend](backend.md) — Supabase como backend, services, RPC
+- [Database](database.md) — 14 tabelas, índices, constraints, relacionamentos
+- [Supabase](supabase.md) — client, RLS, storage, auth, RPC functions
+- [Authentication](authentication.md) — login, registro, sessão, rate limit
+- [Authorization](authorization.md) — manager vs artist, PrivateRoute, access control
+- [Routing](routing.md) — rotas públicas, privadas, slugs, SPA fallback
+- [Components](components.md) — layouts, shared, UI (vazio), páginas
+- [Hooks](hooks.md) — useAuth, useAccess, useDashboard, useArtist
+- [State](state.md) — estado local, sem store global, hooks como camada
+- [Services](services.md) — ~20 services, padrões, responsabilidades
+- [Storage](storage.md) — 5 buckets, upload, validação, ownership
+- [Deployment](deployment.md) — Cloudflare Pages, CI/CD GitHub Actions
+- [Environment](environment.md) — variáveis, .env, modo mock
+- [Business Rules](business-rules.md) — domínio de agendamento, financeiro, booking
+- [Coding Style](coding-style.md) — padrões de código, imports, nomes, tipos
+- [Security](security.md) — 3 camadas, RLS, logs, vulnerabilidades
+- [Performance](performance.md) — bundle, queries, lazy loading ausente, gargalos

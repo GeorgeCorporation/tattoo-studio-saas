@@ -56,7 +56,7 @@ export function ArtistProfile() {
     setBio(artist.bio ?? "");
     setInstagram(artist.instagram ?? "");
     setWhatsapp(artist.whatsapp ?? "");
-    setAccessEmail(artist.access_email ?? "");
+    setAccessEmail(artist.artist_access_invites?.[0]?.email ?? artist.access_email ?? "");
     setSlug(artist.slug);
   }, [artist]);
 
@@ -113,7 +113,7 @@ export function ArtistProfile() {
   }
 
   async function handleRefreshInvite() {
-    await refreshAccessInvite();
+    await refreshAccessInvite(accessEmail);
   }
 
   async function handleRemoveAccess() {
@@ -189,7 +189,7 @@ export function ArtistProfile() {
                     Copiar link
                   </button>
                 ) : null}
-                {artist.access_email ? (
+                {accessEmail || activationLink ? (
                   <>
                     {activationLink ? (
                       <button
