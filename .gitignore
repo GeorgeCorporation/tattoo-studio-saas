@@ -5,6 +5,7 @@ coverage
 *.local
 .env
 vite-dev.*.log
+.worktrees/
 
 .wrangler
 .dev.vars*
