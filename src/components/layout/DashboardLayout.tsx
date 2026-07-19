@@ -3,7 +3,8 @@ import { Sidebar, StudioIdentity } from "@/components/layout/Sidebar";
 import type { PrivateRouteOutletContext } from "@/components/layout/PrivateRoute";
 
 export function DashboardLayout() {
-  const { access } = useOutletContext<PrivateRouteOutletContext>();
+  const outletContext = useOutletContext<PrivateRouteOutletContext>();
+  const { access } = outletContext;
   const studioName = access?.studioName ?? "Seu estúdio";
   const studioLogoUrl = access?.studioLogoUrl ?? null;
   const role = access?.role ?? "manager";
@@ -19,7 +20,7 @@ export function DashboardLayout() {
         </header>
 
         <main className="px-4 py-6 sm:px-6 lg:px-8">
-          <Outlet />
+          <Outlet context={outletContext} />
         </main>
       </div>
     </div>

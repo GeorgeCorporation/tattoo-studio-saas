@@ -139,6 +139,24 @@ describe("onboarding.service", () => {
     expect(progress.nextStep).toBe(5);
   });
 
+  it("bloqueia conclusão com serviço nomeado inválido e agenda pública desligada", () => {
+    const progress = getOnboardingProgress(completeSnapshot(30.5), false);
+
+    expect(progress.isBookingReady).toBe(false);
+    expect(progress.canFinish).toBe(false);
+    expect(progress.nextStep).toBe(4);
+  });
+
+  it("permite conclusão sem serviço quando a agenda pública está desligada", () => {
+    const progress = getOnboardingProgress(
+      { ...completeSnapshot(null), artists: [], services: [] },
+      false,
+    );
+
+    expect(progress.canFinish).toBe(true);
+    expect(progress.nextStep).toBe(5);
+  });
+
   it("permite concluir sem serviço quando a agenda pública está desligada", () => {
     expect(
       validateOnboardingStep(4, {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useAccess } from "@/hooks/useAccess";
+import { useDashboardAccess } from "@/hooks/useDashboardAccess";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { getArtistNextAppointments } from "@/services/artists.service";
 import { getClients } from "@/services/clients.service";
@@ -23,7 +23,7 @@ type PanelState = {
 };
 
 export function ArtistPanelPage() {
-  const { access } = useAccess({ requiredRole: "artist" });
+  const access = useDashboardAccess();
   const [state, setState] = useState<PanelState>({
     nextAppointmentsCount: 0,
     clientsCount: 0,

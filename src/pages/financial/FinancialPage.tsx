@@ -1,7 +1,7 @@
 import { Edit, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useAccess } from "@/hooks/useAccess";
 import { useAuth } from "@/hooks/useAuth";
+import { useDashboardAccess } from "@/hooks/useDashboardAccess";
 import { paymentMethodLabels, paymentTypeLabels } from "@/lib/appointment-domain";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
@@ -41,7 +41,7 @@ const monthNames = [
 
 export function FinancialPage() {
   const { user } = useAuth();
-  const { access } = useAccess();
+  const access = useDashboardAccess();
   const isManager = access?.role === "manager";
   const now = new Date();
   const [studioId, setStudioId] = useState("");

@@ -305,17 +305,23 @@ export function getOnboardingProgress(snapshot: OnboardingSnapshot, activateBook
   const servicesCount = snapshot.services.length;
   const namedArtists = snapshot.artists.filter((artist) => artist.name.trim());
   const namedServices = snapshot.services.filter((service) => service.name.trim());
+  const hasInvalidNamedService = namedServices.some(
+    (service) => !isValidServiceDuration(service.avg_duration_minutes),
+  );
   const isBookingReady =
-    namedArtists.length > 0 &&
-    namedServices.length > 0 &&
-    namedServices.every((service) => isValidServiceDuration(service.avg_duration_minutes));
-  const canFinish = hasStudio && hasRequiredStudioData && hasWorkingHours && (!activateBooking || isBookingReady);
+    namedArtists.length > 0 && namedServices.length > 0 && !hasInvalidNamedService;
+  const canFinish =
+    hasStudio &&
+    hasRequiredStudioData &&
+    hasWorkingHours &&
+    !hasInvalidNamedService &&
+    (!activateBooking || isBookingReady);
 
   let nextStep: number;
   if (!hasStudio || !studio?.name?.trim() || !studio?.slug?.trim()) nextStep = 1;
   else if (!studio?.whatsapp?.trim() || !studio?.city?.trim() || !studio?.state?.trim()) nextStep = 2;
   else if (!hasWorkingHours) nextStep = 3;
-  else if (activateBooking && !isBookingReady) nextStep = 4;
+  else if (hasInvalidNamedService || (activateBooking && !isBookingReady)) nextStep = 4;
   else nextStep = 5;
 
   return {

@@ -1,7 +1,7 @@
 import { ArrowLeft, CalendarPlus, Edit, Phone } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useAccess } from "@/hooks/useAccess";
+import { useDashboardAccess } from "@/hooks/useDashboardAccess";
 import { ClientModal } from "@/pages/clients/ClientModal";
 import {
   getClientAppointments,
@@ -33,7 +33,7 @@ function referencesFromNotes(notes?: string | null) {
 export function ClientProfile() {
   const navigate = useNavigate();
   const { clientId } = useParams();
-  const { access } = useAccess();
+  const access = useDashboardAccess();
   const [client, setClient] = useState<ClientListItem | null>(null);
   const [appointments, setAppointments] = useState<ClientAppointment[]>([]);
   const [loading, setLoading] = useState(true);

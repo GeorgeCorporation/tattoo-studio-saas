@@ -1,8 +1,8 @@
 import { Plus, Search } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useAccess } from "@/hooks/useAccess";
 import { useAuth } from "@/hooks/useAuth";
+import { useDashboardAccess } from "@/hooks/useDashboardAccess";
 import { ClientModal } from "@/pages/clients/ClientModal";
 import { getCurrentUserStudio } from "@/services/dashboard.service";
 import {
@@ -19,7 +19,7 @@ function phoneUrl(phone?: string | null) {
 
 export function ClientsPage() {
   const { user } = useAuth();
-  const { access } = useAccess();
+  const access = useDashboardAccess();
   const [studioId, setStudioId] = useState("");
   const [clients, setClients] = useState<ClientListItem[]>([]);
   const [search, setSearch] = useState("");
