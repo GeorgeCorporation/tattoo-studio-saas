@@ -1,23 +1,21 @@
 import { Outlet } from "react-router-dom";
-import { inkoraMark } from "@/assets";
-import { Sidebar } from "@/components/layout/Sidebar";
+import { Sidebar, StudioIdentity } from "@/components/layout/Sidebar";
 import { useAccess } from "@/hooks/useAccess";
 
 export function DashboardLayout() {
   const { access } = useAccess();
+  const studioName = access?.studioName ?? "Seu estúdio";
+  const studioLogoUrl = access?.studioLogoUrl ?? null;
+  const role = access?.role ?? "manager";
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white lg:grid lg:grid-cols-[18rem_1fr]">
-      <Sidebar showMobileButton={false} studioName={access?.studioName} />
+      <Sidebar role={role} showMobileButton={false} studioLogoUrl={studioLogoUrl} studioName={studioName} />
 
       <div className="min-w-0">
         <header className="flex h-16 items-center gap-3 border-b border-white/10 px-4 lg:hidden">
-          <Sidebar studioName={access?.studioName} />
-          <img alt="Inkora" className="h-8 w-8" src={inkoraMark} />
-          <div>
-            <p className="font-semibold">Inkora</p>
-            <p className="text-xs text-zinc-500">{access?.role === "artist" ? "Painel do tatuador" : access?.studioName ?? "Studio SaaS"}</p>
-          </div>
+          <Sidebar role={role} studioLogoUrl={studioLogoUrl} studioName={studioName} />
+          <StudioIdentity compact studioLogoUrl={studioLogoUrl} studioName={studioName} />
         </header>
 
         <main className="px-4 py-6 sm:px-6 lg:px-8">
