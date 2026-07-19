@@ -1,8 +1,7 @@
 import { Copy, Download, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { copyTextToClipboard } from "@/lib/clipboard";
-import { useAuth } from "@/hooks/useAuth";
-import { getCurrentUserStudio } from "@/services/dashboard.service";
+import { useDashboardAccess } from "@/hooks/useDashboardAccess";
 import {
   getDeliveries,
   getDeliveryClients,
@@ -12,8 +11,7 @@ import {
 import { DeliveryModal } from "@/pages/deliveries/DeliveryModal";
 
 export function DeliveriesPage() {
-  const { user } = useAuth();
-  const [studioId, setStudioId] = useState("");
+  const studioId = useDashboardAccess()?.studioId ?? "";
   const [clients, setClients] = useState<DeliveryClient[]>([]);
   const [deliveries, setDeliveries] = useState<ClientDelivery[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,22 +20,15 @@ export function DeliveriesPage() {
   const [copyFeedback, setCopyFeedback] = useState("");
 
   const loadDeliveries = useCallback(async () => {
-    if (!user) return;
+    if (!studioId) return;
 
     try {
       setLoading(true);
       setError("");
 
-      const studio = await getCurrentUserStudio(user.id);
-      if (!studio) {
-        setError("Estúdio não encontrado.");
-        return;
-      }
-
-      setStudioId(studio.id);
       const [foundClients, foundDeliveries] = await Promise.all([
-        getDeliveryClients(studio.id),
-        getDeliveries(studio.id),
+        getDeliveryClients(studioId),
+        getDeliveries(studioId),
       ]);
       setClients(foundClients);
       setDeliveries(foundDeliveries);
@@ -46,7 +37,7 @@ export function DeliveriesPage() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [studioId]);
 
   useEffect(() => {
     loadDeliveries();

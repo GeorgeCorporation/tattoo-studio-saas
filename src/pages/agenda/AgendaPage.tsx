@@ -1,9 +1,8 @@
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useDashboardAccess } from "@/hooks/useDashboardAccess";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { getCurrentUserStudio } from "@/services/dashboard.service";
 import {
   getAppointmentsByDate,
   updateAppointmentStatus,
@@ -26,8 +25,7 @@ function formatLongDate(date: Date) {
 }
 
 export function AgendaPage() {
-  const { user } = useAuth();
-  const [studioId, setStudioId] = useState("");
+  const studioId = useDashboardAccess()?.studioId ?? "";
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [appointments, setAppointments] = useState<AgendaAppointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,27 +36,20 @@ export function AgendaPage() {
   const formattedDate = useMemo(() => formatLongDate(selectedDate), [selectedDate]);
 
   const loadAppointments = useCallback(async () => {
-    if (!user) return;
+    if (!studioId) return;
 
     try {
       setLoading(true);
       setError("");
 
-      const studio = await getCurrentUserStudio(user.id);
-      if (!studio) {
-        setError("Estúdio não encontrado.");
-        return;
-      }
-
-      setStudioId(studio.id);
-      setAppointments(await getAppointmentsByDate(studio.id, selectedDateInput));
+      setAppointments(await getAppointmentsByDate(studioId, selectedDateInput));
     } catch (caughtError) {
       logger.error("Falha ao carregar agenda", caughtError, { selectedDate: selectedDateInput });
       setError(getFriendlyErrorMessage(caughtError, "Não foi possível carregar agenda."));
     } finally {
       setLoading(false);
     }
-  }, [selectedDateInput, user]);
+  }, [selectedDateInput, studioId]);
 
   useEffect(() => {
     loadAppointments();

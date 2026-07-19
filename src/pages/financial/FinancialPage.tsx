@@ -1,6 +1,5 @@
 import { Edit, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
 import { useDashboardAccess } from "@/hooks/useDashboardAccess";
 import { paymentMethodLabels, paymentTypeLabels } from "@/lib/appointment-domain";
 import { getFriendlyErrorMessage } from "@/lib/errors";
@@ -8,7 +7,6 @@ import { logger } from "@/lib/logger";
 import { CommissionRuleModal } from "@/pages/financial/CommissionRuleModal";
 import { PaymentModal } from "@/pages/financial/PaymentModal";
 import { getArtists, type Artist } from "@/services/artists.service";
-import { getCurrentUserStudio } from "@/services/dashboard.service";
 import {
   getArtistCommissionSummaries,
   getClientSourceLabel,
@@ -40,11 +38,10 @@ const monthNames = [
 ];
 
 export function FinancialPage() {
-  const { user } = useAuth();
   const access = useDashboardAccess();
+  const studioId = access?.studioId ?? "";
   const isManager = access?.role === "manager";
   const now = new Date();
-  const [studioId, setStudioId] = useState("");
   const [artists, setArtists] = useState<Artist[]>([]);
   const [rules, setRules] = useState<CommissionRule[]>([]);
   const [year] = useState(now.getFullYear());
@@ -67,26 +64,18 @@ export function FinancialPage() {
   const [error, setError] = useState("");
 
   const loadFinancial = useCallback(async () => {
-    if (!user) return;
+    if (!studioId) return;
 
     try {
       setLoading(true);
       setError("");
 
-      const studio = await getCurrentUserStudio(user.id);
-      if (!studio) {
-        setError("Estúdio não encontrado.");
-        return;
-      }
-
-      setStudioId(studio.id);
-
       const [foundPayments, foundSummary, foundArtistSummaries, foundRules, foundArtists] = await Promise.all([
-        getPaymentsByMonth(studio.id, year, month),
-        getMonthSummary(studio.id, year, month),
-        getArtistCommissionSummaries(studio.id, year, month),
-        isManager ? getCommissionRules(studio.id) : Promise.resolve([]),
-        isManager ? getArtists(studio.id) : Promise.resolve([]),
+        getPaymentsByMonth(studioId, year, month),
+        getMonthSummary(studioId, year, month),
+        getArtistCommissionSummaries(studioId, year, month),
+        isManager ? getCommissionRules(studioId) : Promise.resolve([]),
+        isManager ? getArtists(studioId) : Promise.resolve([]),
       ]);
 
       setPayments(foundPayments);
@@ -100,7 +89,7 @@ export function FinancialPage() {
     } finally {
       setLoading(false);
     }
-  }, [isManager, month, user, year]);
+  }, [isManager, month, studioId, year]);
 
   useEffect(() => {
     loadFinancial();

@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useDashboardAccess } from "@/hooks/useDashboardAccess";
 import type { AppointmentStatus } from "@/lib/appointment-domain";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import {
-  getCurrentUserStudio,
   getMonthRevenue,
   getNextAppointments,
   getSetupStatus,
@@ -25,8 +24,19 @@ type DashboardSummary = {
 };
 
 export function useDashboard() {
-  const { user } = useAuth();
-  const [studio, setStudio] = useState<DashboardStudio | null>(null);
+  const access = useDashboardAccess();
+  const studio = useMemo<DashboardStudio | null>(
+    () =>
+      access
+        ? {
+            id: access.studioId,
+            name: access.studioName,
+            slug: access.studioSlug,
+            logo_url: access.studioLogoUrl,
+          }
+        : null,
+    [access],
+  );
   const [summary, setSummary] = useState<DashboardSummary>({
     todayAppointments: 0,
     weekAppointments: 0,
@@ -39,25 +49,20 @@ export function useDashboard() {
   const [error, setError] = useState("");
 
   const loadDashboard = useCallback(async () => {
-    if (!user) return;
+    if (!studio) return;
 
     try {
       setLoading(true);
       setError("");
 
-      const foundStudio = await getCurrentUserStudio(user.id);
-      setStudio(foundStudio);
-
-      if (!foundStudio) return;
-
       const [todayAppointments, weekAppointments, monthRevenue, totalClients, appointments, setup] =
         await Promise.all([
-          getTodayAppointments(foundStudio.id),
-          getWeekAppointments(foundStudio.id),
-          getMonthRevenue(foundStudio.id),
-          getTotalClients(foundStudio.id),
-          getNextAppointments(foundStudio.id, 5),
-          getSetupStatus(foundStudio.id),
+          getTodayAppointments(studio.id),
+          getWeekAppointments(studio.id),
+          getMonthRevenue(studio.id),
+          getTotalClients(studio.id),
+          getNextAppointments(studio.id, 5),
+          getSetupStatus(studio.id),
         ]);
 
       setSummary({
@@ -74,7 +79,7 @@ export function useDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [studio]);
 
   useEffect(() => {
     loadDashboard();

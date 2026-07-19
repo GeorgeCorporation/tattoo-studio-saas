@@ -1,16 +1,14 @@
 import { Filter, ImageIcon, Plus, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useDashboardAccess } from "@/hooks/useDashboardAccess";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { UploadModal } from "@/pages/gallery/UploadModal";
 import { getArtists, type Artist } from "@/services/artists.service";
-import { getCurrentUserStudio } from "@/services/dashboard.service";
 import { deletePhoto, getGallery, type GalleryPhoto } from "@/services/gallery.service";
 
 export function GalleryPage() {
-  const { user } = useAuth();
-  const [studioId, setStudioId] = useState("");
+  const studioId = useDashboardAccess()?.studioId ?? "";
   const [artists, setArtists] = useState<Artist[]>([]);
   const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
   const [artistFilter, setArtistFilter] = useState("");
@@ -30,20 +28,13 @@ export function GalleryPage() {
   );
 
   const loadInitialData = useCallback(async () => {
-    if (!user) return;
+    if (!studioId) return;
 
     try {
       setLoading(true);
       setError("");
 
-      const studio = await getCurrentUserStudio(user.id);
-      if (!studio) {
-        setError("Estúdio não encontrado.");
-        return;
-      }
-
-      setStudioId(studio.id);
-      const [artistList, gallery] = await Promise.all([getArtists(studio.id), getGallery(studio.id)]);
+      const [artistList, gallery] = await Promise.all([getArtists(studioId), getGallery(studioId)]);
       setArtists(artistList);
       setPhotos(gallery);
     } catch (caughtError) {
@@ -52,7 +43,7 @@ export function GalleryPage() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [studioId]);
 
   useEffect(() => {
     loadInitialData();

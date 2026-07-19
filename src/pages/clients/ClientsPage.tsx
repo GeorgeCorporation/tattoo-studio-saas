@@ -1,10 +1,8 @@
 import { Plus, Search } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
 import { useDashboardAccess } from "@/hooks/useDashboardAccess";
 import { ClientModal } from "@/pages/clients/ClientModal";
-import { getCurrentUserStudio } from "@/services/dashboard.service";
 import {
   createClient,
   getClients,
@@ -18,9 +16,8 @@ function phoneUrl(phone?: string | null) {
 }
 
 export function ClientsPage() {
-  const { user } = useAuth();
   const access = useDashboardAccess();
-  const [studioId, setStudioId] = useState("");
+  const studioId = access?.studioId ?? "";
   const [clients, setClients] = useState<ClientListItem[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -28,26 +25,19 @@ export function ClientsPage() {
   const [error, setError] = useState("");
 
   const loadClients = useCallback(async () => {
-    if (!user) return;
+    if (!studioId) return;
 
     try {
       setLoading(true);
       setError("");
 
-      const studio = await getCurrentUserStudio(user.id);
-      if (!studio) {
-        setError("Estúdio não encontrado.");
-        return;
-      }
-
-      setStudioId(studio.id);
-      setClients(await getClients(studio.id, search));
+      setClients(await getClients(studioId, search));
     } catch {
       setError("Não foi possível carregar os clientes.");
     } finally {
       setLoading(false);
     }
-  }, [search, user]);
+  }, [search, studioId]);
 
   useEffect(() => {
     const timeout = window.setTimeout(loadClients, 250);

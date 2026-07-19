@@ -1,9 +1,8 @@
 import { Edit, Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useDashboardAccess } from "@/hooks/useDashboardAccess";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { getCurrentUserStudio } from "@/services/dashboard.service";
 import {
   createService,
   getServices,
@@ -32,8 +31,7 @@ const categoryStyles: Record<string, string> = {
 };
 
 export function ServicesPage() {
-  const { user } = useAuth();
-  const [studioId, setStudioId] = useState("");
+  const studioId = useDashboardAccess()?.studioId ?? "";
   const [services, setServices] = useState<StudioService[]>([]);
   const [selectedService, setSelectedService] = useState<StudioService | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -41,27 +39,20 @@ export function ServicesPage() {
   const [error, setError] = useState("");
 
   const loadServices = useCallback(async () => {
-    if (!user) return;
+    if (!studioId) return;
 
     try {
       setLoading(true);
       setError("");
 
-      const studio = await getCurrentUserStudio(user.id);
-      if (!studio) {
-        setError("Estúdio não encontrado.");
-        return;
-      }
-
-      setStudioId(studio.id);
-      setServices(await getServices(studio.id));
+      setServices(await getServices(studioId));
     } catch (caughtError) {
       logger.error("Falha ao carregar serviços", caughtError);
       setError(getFriendlyErrorMessage(caughtError, "Não foi possível carregar serviços."));
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [studioId]);
 
   useEffect(() => {
     loadServices();

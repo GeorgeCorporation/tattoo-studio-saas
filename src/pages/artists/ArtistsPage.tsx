@@ -1,42 +1,34 @@
 import { Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { useDashboardAccess } from "@/hooks/useDashboardAccess";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { ArtistModal } from "@/pages/artists/ArtistModal";
 import { getArtistAccessStatus, getArtists, toggleArtistStatus, type Artist } from "@/services/artists.service";
-import { getCurrentUserStudio } from "@/services/dashboard.service";
 
 export function ArtistsPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [studioId, setStudioId] = useState("");
+  const studioId = useDashboardAccess()?.studioId ?? "";
   const [artists, setArtists] = useState<Artist[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState("");
 
   const loadArtists = useCallback(async () => {
-    if (!user) return;
+    if (!studioId) return;
 
     try {
       setLoading(true);
       setError("");
-      const studio = await getCurrentUserStudio(user.id);
-      if (!studio) {
-        setError("Estúdio não encontrado.");
-        return;
-      }
-      setStudioId(studio.id);
-      setArtists(await getArtists(studio.id));
+      setArtists(await getArtists(studioId));
     } catch (caughtError) {
       logger.error("Falha ao carregar tatuadores", caughtError);
       setError(getFriendlyErrorMessage(caughtError, "Não foi possível carregar tatuadores."));
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [studioId]);
 
   useEffect(() => {
     loadArtists();
