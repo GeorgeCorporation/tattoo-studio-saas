@@ -176,6 +176,22 @@ describe("OnboardingPage", () => {
     expect(mocks.navigate).toHaveBeenCalledWith("/dashboard", { replace: true });
   });
 
+  it("mostra somente os campos essenciais do serviço inicial", async () => {
+    renderPage();
+
+    await fillIdentity();
+    await fillContact();
+    await screen.findByRole("heading", { name: "Funcionamento" });
+    fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
+
+    expect(screen.getByLabelText("Nome do serviço")).toBeInTheDocument();
+    expect(screen.getByLabelText("Duração média em minutos")).toBeInTheDocument();
+    expect(screen.getByLabelText("Preço inicial (opcional)")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Categoria")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Descrição")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Orçamento" })).not.toBeInTheDocument();
+  });
+
   it("permite deixar tatuadores e serviços para depois quando agenda pública está desligada", async () => {
     renderPage();
 

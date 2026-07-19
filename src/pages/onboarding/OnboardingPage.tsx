@@ -63,24 +63,6 @@ const brStates = [
 ];
 
 const weekDays = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
-const serviceCategories = [
-  "Fine Line",
-  "Black Work",
-  "Realismo",
-  "Old School",
-  "New School",
-  "Colorido",
-  "Fechamento",
-  "Piercing",
-  "Outro",
-];
-
-const serviceExamples = [
-  { name: "Orçamento", category: "Outro", duration: "30", price: "" },
-  { name: "Tatuagem pequena", category: "Fine Line", duration: "120", price: "250" },
-  { name: "Sessão de tatuagem", category: "Outro", duration: "240", price: "" },
-  { name: "Retoque", category: "Outro", duration: "60", price: "" },
-];
 
 type ArtistDraft = {
   name: string;
@@ -122,8 +104,6 @@ type DraftData = {
   artistInstagram: string;
   artistWhatsapp: string;
   serviceName: string;
-  serviceCategory: string;
-  serviceDescription: string;
   startingPrice: string;
   durationMinutes: string;
 };
@@ -220,10 +200,13 @@ export function OnboardingPage() {
   const [artistInstagram, setArtistInstagram] = useState(draft.artistInstagram ?? "");
   const [artistWhatsapp, setArtistWhatsapp] = useState(draft.artistWhatsapp ?? "");
   const [artistPhotoFile, setArtistPhotoFile] = useState<File | null>(null);
-  const [services, setServices] = useState<ServiceDraft[]>(draft.services ?? []);
+  const [services, setServices] = useState<ServiceDraft[]>(
+    (draft.services ?? []).map((service) => ({
+      ...service,
+      durationMinutes: service.durationMinutes || "120",
+    })),
+  );
   const [serviceName, setServiceName] = useState(draft.serviceName ?? "");
-  const [serviceCategory, setServiceCategory] = useState(draft.serviceCategory ?? "Outro");
-  const [serviceDescription, setServiceDescription] = useState(draft.serviceDescription ?? "");
   const [startingPrice, setStartingPrice] = useState(draft.startingPrice ?? "");
   const [durationMinutes, setDurationMinutes] = useState(draft.durationMinutes ?? "120");
   const [checkingStudio, setCheckingStudio] = useState(true);
@@ -249,10 +232,10 @@ export function OnboardingPage() {
     whatsapp: artistWhatsapp,
     photoFile: artistPhotoFile,
   };
-  const currentService = {
+  const currentService: ServiceDraft = {
     name: serviceName,
-    category: serviceCategory,
-    description: serviceDescription,
+    category: "Outro",
+    description: "",
     startingPrice,
     durationMinutes,
   };
@@ -271,7 +254,10 @@ export function OnboardingPage() {
       workingHours,
       activateBooking,
       firstArtists: artistsToSave,
-      firstServices: servicesToSave,
+      firstServices: servicesToSave.map((service) => ({
+        name: service.name,
+        avg_duration_minutes: service.durationMinutes ? Number(service.durationMinutes) : null,
+      })),
     }),
     [activateBooking, artistsToSave, city, name, servicesToSave, slug, stateUf, whatsapp, workingHours],
   );
@@ -306,8 +292,6 @@ export function OnboardingPage() {
       artistInstagram,
       artistWhatsapp,
       serviceName,
-      serviceCategory,
-      serviceDescription,
       startingPrice,
       durationMinutes,
     };
@@ -329,8 +313,6 @@ export function OnboardingPage() {
     instagram,
     manualCity,
     name,
-    serviceCategory,
-    serviceDescription,
     serviceName,
     services,
     slug,
@@ -487,16 +469,15 @@ export function OnboardingPage() {
     setArtists((current) => current.filter((_, currentIndex) => currentIndex !== index));
   }
 
-  function applyServiceExample(example: (typeof serviceExamples)[number]) {
-    setServiceName(example.name);
-    setServiceCategory(example.category);
-    setDurationMinutes(example.duration);
-    setStartingPrice(example.price);
-  }
-
   function addCurrentService() {
     if (!serviceName.trim()) {
       setError("Informe o nome do serviço antes de adicionar outro.");
+      return;
+    }
+
+    const duration = Number(durationMinutes);
+    if (!Number.isFinite(duration) || duration < 30) {
+      setError("Informe uma duração média válida de pelo menos 30 minutos.");
       return;
     }
 
@@ -504,15 +485,13 @@ export function OnboardingPage() {
       ...current,
       {
         name: serviceName.trim(),
-        category: serviceCategory,
-        description: serviceDescription,
+        category: "Outro",
+        description: "",
         startingPrice,
         durationMinutes,
       },
     ]);
     setServiceName("");
-    setServiceCategory("Outro");
-    setServiceDescription("");
     setStartingPrice("");
     setDurationMinutes("120");
     setError("");
@@ -1002,7 +981,9 @@ export function OnboardingPage() {
                       <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#0f0f0f] p-4" key={`${service.name}-${index}`}>
                         <div>
                           <p className="font-semibold">{service.name}</p>
-                          <p className="text-sm text-zinc-500">{service.category}</p>
+                          <p className="text-sm text-zinc-500">
+                            {service.durationMinutes} min{service.startingPrice ? ` • A partir de R$ ${service.startingPrice}` : ""}
+                          </p>
                         </div>
                         <button className="rounded-lg border border-white/10 px-3 py-2 text-sm text-zinc-300" onClick={() => removeService(index)} type="button">
                           Remover
@@ -1012,40 +993,18 @@ export function OnboardingPage() {
                   </div>
                 ) : null}
 
-                <div className="flex flex-wrap gap-2">
-                  {serviceExamples.map((example) => (
-                    <button className="rounded-xl border border-white/10 px-3 py-2 text-sm hover:border-[#E8650A]" key={example.name} onClick={() => applyServiceExample(example)} type="button">
-                      {example.name}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="grid gap-5 md:grid-cols-2">
+                <div className="grid gap-5 md:grid-cols-3">
                   <label className="block">
                     <span className="text-sm font-medium">Nome do serviço</span>
                     <input className={inputClass} onChange={(event) => setServiceName(event.target.value)} placeholder="Tatuagem pequena" value={serviceName} />
                   </label>
                   <label className="block">
-                    <span className="text-sm font-medium">Categoria</span>
-                    <select className={inputClass} onChange={(event) => setServiceCategory(event.target.value)} value={serviceCategory}>
-                      {serviceCategories.map((category) => (
-                        <option key={category} value={category}>
-                          {category}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="block">
-                    <span className="text-sm font-medium">Preço inicial</span>
-                    <input className={inputClass} min="0" onChange={(event) => setStartingPrice(event.target.value)} placeholder="250" type="number" value={startingPrice} />
-                  </label>
-                  <label className="block">
                     <span className="text-sm font-medium">Duração média em minutos</span>
                     <input className={inputClass} min="30" onChange={(event) => setDurationMinutes(event.target.value)} type="number" value={durationMinutes} />
                   </label>
-                  <label className="block md:col-span-2">
-                    <span className="text-sm font-medium">Descrição</span>
-                    <textarea className={`${inputClass} min-h-28 resize-none`} onChange={(event) => setServiceDescription(event.target.value)} value={serviceDescription} />
+                  <label className="block">
+                    <span className="text-sm font-medium">Preço inicial (opcional)</span>
+                    <input className={inputClass} min="0" onChange={(event) => setStartingPrice(event.target.value)} placeholder="250" type="number" value={startingPrice} />
                   </label>
                 </div>
               </section>

@@ -51,4 +51,32 @@ describe("onboarding.service", () => {
 
     expect(validateOnboardingStep(3, { workingHours: hours })).toContain("horários");
   });
+
+  it("exige duração válida quando um serviço é informado", () => {
+    expect(
+      validateOnboardingStep(4, {
+        activateBooking: true,
+        firstArtists: [{ name: "Ana" }],
+        firstServices: [{ name: "Fine Line", avg_duration_minutes: null }],
+      }),
+    ).toContain("duração");
+
+    expect(
+      validateOnboardingStep(4, {
+        activateBooking: true,
+        firstArtists: [{ name: "Ana" }],
+        firstServices: [{ name: "Fine Line", avg_duration_minutes: 120 }],
+      }),
+    ).toBe("");
+  });
+
+  it("permite concluir sem serviço quando a agenda pública está desligada", () => {
+    expect(
+      validateOnboardingStep(4, {
+        activateBooking: false,
+        firstArtists: [],
+        firstServices: [],
+      }),
+    ).toBe("");
+  });
 });

@@ -179,11 +179,21 @@ export function validateOnboardingStep(step: number, data: OnboardingValidationD
     if (invalidHour) return "Confira os horários: abertura precisa ser antes do fechamento.";
   }
 
-  if (step === 4 && data.activateBooking !== false) {
-    const hasArtist = Boolean(data.firstArtist?.name?.trim() || data.firstArtists?.some((artist) => artist.name?.trim()));
-    const hasService = Boolean(data.firstService?.name?.trim() || data.firstServices?.some((service) => service.name?.trim()));
+  if (step === 4) {
+    const artists = data.firstArtists?.length ? data.firstArtists : data.firstArtist ? [data.firstArtist] : [];
+    const services = data.firstServices?.length ? data.firstServices : data.firstService ? [data.firstService] : [];
+    const namedArtists = artists.filter((artist) => artist.name?.trim());
+    const namedServices = services.filter((service) => service.name?.trim());
+    const invalidDuration = namedServices.some(
+      (service) =>
+        typeof service.avg_duration_minutes !== "number" ||
+        !Number.isFinite(service.avg_duration_minutes) ||
+        service.avg_duration_minutes < 30,
+    );
 
-    if (!hasArtist || !hasService) {
+    if (invalidDuration) return "Informe uma duração média válida de pelo menos 30 minutos para cada serviço.";
+
+    if (data.activateBooking !== false && (!namedArtists.length || !namedServices.length)) {
       return "Para ativar a agenda pública agora, informe pelo menos um tatuador e um serviço. Ou desmarque a opção para fazer depois.";
     }
   }
