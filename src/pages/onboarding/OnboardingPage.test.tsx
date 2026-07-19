@@ -84,6 +84,24 @@ describe("OnboardingPage", () => {
     expect(screen.getByDisplayValue("estudio-sao-jorge")).toBeInTheDocument();
   });
 
+  it("permite exatamente 200 caracteres visuais e limita o excedente", async () => {
+    renderPage();
+
+    await screen.findByText("Identidade do estúdio");
+    const description = screen.getByLabelText(/Descrição/);
+    const exactLimit = "🎨".repeat(200);
+
+    fireEvent.change(description, { target: { value: exactLimit } });
+
+    expect(description).toHaveValue(exactLimit);
+    expect(screen.getByText("200/200")).toBeInTheDocument();
+
+    fireEvent.change(description, { target: { value: `${exactLimit}🎨` } });
+
+    expect(description).toHaveValue(exactLimit);
+    expect(screen.getByText("200/200")).toBeInTheDocument();
+  });
+
   it("bloqueia avanço com WhatsApp inválido", async () => {
     renderPage();
 

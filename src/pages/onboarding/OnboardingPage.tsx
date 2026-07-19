@@ -17,6 +17,7 @@ import { inkoraLogo, inkoraMark } from "@/assets";
 import { useAuth } from "@/hooks/useAuth";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { countVisualCharacters, limitVisualCharacters } from "@/lib/text-limit";
 import citiesByState from "@/lib/brazil-cities.json";
 import {
   buildDefaultWorkingHours,
@@ -29,6 +30,7 @@ import {
 } from "@/services/onboarding.service";
 
 const DRAFT_KEY = "tattoo:onboarding:draft:v2";
+const DESCRIPTION_LIMIT = 200;
 
 const brStates = [
   "AC",
@@ -237,6 +239,7 @@ export function OnboardingPage() {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const progress = Math.round((step / steps.length) * 100);
   const cityOptions = stateUf ? citiesByState[stateUf as keyof typeof citiesByState] ?? [] : [];
+  const descriptionLength = countVisualCharacters(description);
 
   const currentArtist = {
     name: artistName,
@@ -442,6 +445,10 @@ export function OnboardingPage() {
   function handleNameChange(value: string) {
     setName(value);
     if (!slugEdited) setSlug(slugify(value));
+  }
+
+  function handleDescriptionChange(value: string) {
+    setDescription(limitVisualCharacters(value, DESCRIPTION_LIMIT));
   }
 
   function handleArtistNameChange(value: string) {
@@ -761,8 +768,15 @@ export function OnboardingPage() {
 
                   <label className="block">
                     <span className="text-sm font-medium">Descrição</span>
-                    <textarea className={`${inputClass} min-h-28 resize-none`} maxLength={200} onChange={(event) => setDescription(event.target.value)} value={description} />
-                    <p className="mt-2 text-right text-xs text-zinc-500">{description.length}/200</p>
+                    <textarea
+                      aria-describedby="studio-description-counter"
+                      className={`${inputClass} min-h-28 resize-none`}
+                      onChange={(event) => handleDescriptionChange(event.target.value)}
+                      value={description}
+                    />
+                    <p aria-live="polite" className="mt-2 text-right text-xs text-zinc-500" id="studio-description-counter">
+                      {descriptionLength}/{DESCRIPTION_LIMIT}
+                    </p>
                   </label>
                 </div>
               </div>
