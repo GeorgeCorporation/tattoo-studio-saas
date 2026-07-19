@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { PrivateRoute } from "@/components/layout/PrivateRoute";
 
 const mocks = vi.hoisted(() => ({
   useAccess: vi.fn(() => ({
@@ -14,6 +15,9 @@ const mocks = vi.hoisted(() => ({
       artistId: null,
       isOwner: true,
     },
+    loading: false,
+    error: "",
+    hasRequiredRole: true,
   })),
 }));
 
@@ -22,16 +26,18 @@ vi.mock("@/hooks/useAccess", () => ({
 }));
 
 vi.mock("@/hooks/useAuth", () => ({
-  useAuth: () => ({ signOut: vi.fn() }),
+  useAuth: () => ({ user: { id: "user-1" }, loading: false, signOut: vi.fn() }),
 }));
 
 describe("DashboardLayout", () => {
-  it("reutiliza um único acesso e mostra o branding no desktop e mobile", () => {
+  it("carrega o acesso uma vez na árvore real e mostra o branding no desktop e mobile", () => {
     render(
       <MemoryRouter initialEntries={["/dashboard"]}>
         <Routes>
-          <Route element={<DashboardLayout />}>
-            <Route element={<p>Conteúdo</p>} path="/dashboard" />
+          <Route element={<PrivateRoute requiredRole="manager" />}>
+            <Route element={<DashboardLayout />}>
+              <Route element={<p>Conteúdo</p>} path="/dashboard" />
+            </Route>
           </Route>
         </Routes>
       </MemoryRouter>,

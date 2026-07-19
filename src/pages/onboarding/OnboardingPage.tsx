@@ -180,7 +180,7 @@ export function OnboardingPage() {
   const [name, setName] = useState(draft.name ?? "");
   const [slug, setSlug] = useState(draft.slug ?? "");
   const [slugEdited, setSlugEdited] = useState(draft.slugEdited ?? false);
-  const [description, setDescription] = useState(draft.description ?? "");
+  const [description, setDescription] = useState(() => limitVisualCharacters(draft.description ?? "", DESCRIPTION_LIMIT));
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [savedLogoUrl, setSavedLogoUrl] = useState("");
   const [whatsapp, setWhatsapp] = useState(draft.whatsapp ?? "");
@@ -340,7 +340,9 @@ export function OnboardingPage() {
         if (snapshot.studio) {
           setName((current) => current || snapshot.studio?.name || "");
           setSlug((current) => current || snapshot.studio?.slug || "");
-          setDescription((current) => current || snapshot.studio?.description || "");
+          setDescription((current) =>
+            current || limitVisualCharacters(snapshot.studio?.description || "", DESCRIPTION_LIMIT),
+          );
           setWhatsapp((current) => current || snapshot.studio?.whatsapp || "");
           setInstagram((current) => current || normalizeInstagram(snapshot.studio?.instagram || ""));
           setWebsite((current) => current || snapshot.studio?.website || "");
@@ -476,7 +478,7 @@ export function OnboardingPage() {
     }
 
     const duration = Number(durationMinutes);
-    if (!Number.isFinite(duration) || duration < 30) {
+    if (!Number.isFinite(duration) || !Number.isInteger(duration) || duration < 30) {
       setError("Informe uma duração média válida de pelo menos 30 minutos.");
       return;
     }
@@ -1000,7 +1002,7 @@ export function OnboardingPage() {
                   </label>
                   <label className="block">
                     <span className="text-sm font-medium">Duração média em minutos</span>
-                    <input className={inputClass} min="30" onChange={(event) => setDurationMinutes(event.target.value)} type="number" value={durationMinutes} />
+                    <input className={inputClass} min="30" onChange={(event) => setDurationMinutes(event.target.value)} step="1" type="number" value={durationMinutes} />
                   </label>
                   <label className="block">
                     <span className="text-sm font-medium">Preço inicial (opcional)</span>

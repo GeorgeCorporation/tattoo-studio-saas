@@ -102,6 +102,42 @@ describe("OnboardingPage", () => {
     expect(screen.getByText("200/200")).toBeInTheDocument();
   });
 
+  it("normaliza uma descrição acima do limite restaurada do localStorage", async () => {
+    const exactLimit = "🎨".repeat(200);
+    localStorage.setItem("tattoo:onboarding:draft:v2", JSON.stringify({ description: `${exactLimit}🎨` }));
+
+    renderPage();
+
+    const description = await screen.findByLabelText(/Descrição/);
+    expect(description).toHaveValue(exactLimit);
+    expect(screen.getByText("200/200")).toBeInTheDocument();
+  });
+
+  it("normaliza uma descrição acima do limite restaurada de snapshot parcial", async () => {
+    const exactLimit = "🎨".repeat(200);
+    mocks.getOnboardingSnapshot.mockResolvedValueOnce({
+      studio: {
+        id: "studio-1",
+        name: "",
+        slug: "",
+        description: `${exactLimit}🎨`,
+        whatsapp: "",
+        city: "",
+        state: "",
+        logo_url: null,
+      },
+      workingHours: [],
+      artists: [],
+      services: [],
+    });
+
+    renderPage();
+
+    const description = await screen.findByLabelText(/Descrição/);
+    await waitFor(() => expect(description).toHaveValue(exactLimit));
+    expect(screen.getByText("200/200")).toBeInTheDocument();
+  });
+
   it("bloqueia avanço com WhatsApp inválido", async () => {
     renderPage();
 
@@ -185,11 +221,26 @@ describe("OnboardingPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
 
     expect(screen.getByLabelText("Nome do serviço")).toBeInTheDocument();
-    expect(screen.getByLabelText("Duração média em minutos")).toBeInTheDocument();
+    expect(screen.getByLabelText("Duração média em minutos")).toHaveAttribute("step", "1");
     expect(screen.getByLabelText("Preço inicial (opcional)")).toBeInTheDocument();
     expect(screen.queryByLabelText("Categoria")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Descrição")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Orçamento" })).not.toBeInTheDocument();
+  });
+
+  it("rejeita duração fracionária ao adicionar um serviço", async () => {
+    renderPage();
+
+    await fillIdentity();
+    await fillContact();
+    await screen.findByRole("heading", { name: "Funcionamento" });
+    fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
+
+    fireEvent.change(screen.getByLabelText("Nome do serviço"), { target: { value: "Fine Line" } });
+    fireEvent.change(screen.getByLabelText("Duração média em minutos"), { target: { value: "30.5" } });
+    fireEvent.click(screen.getByRole("button", { name: /adicionar outro serviço/i }));
+
+    expect(screen.getByText(/duração média válida/i)).toBeInTheDocument();
   });
 
   it("permite deixar tatuadores e serviços para depois quando agenda pública está desligada", async () => {

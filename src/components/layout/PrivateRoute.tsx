@@ -2,6 +2,11 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAccess } from "@/hooks/useAccess";
 import type { UserRole } from "@/lib/access-control";
+import type { AccessContext } from "@/services/access.service";
+
+export type PrivateRouteOutletContext = {
+  access: AccessContext | null;
+};
 
 type PrivateRouteProps = {
   requireStudio?: boolean;
@@ -47,13 +52,13 @@ export function PrivateRoute({ requireStudio = true, requiredRole }: PrivateRout
     return <Navigate replace to="/onboarding" />;
   }
 
-  if (!requireStudio && access?.studioId && location.pathname === "/onboarding") {
-    return <Navigate replace to={access.role === "artist" ? "/painel" : "/dashboard"} />;
+  if (!requireStudio && access?.role === "artist" && location.pathname === "/onboarding") {
+    return <Navigate replace to="/painel" />;
   }
 
   if (requiredRole && !hasRequiredRole) {
     return <Navigate replace to={access?.role === "artist" ? "/painel" : "/dashboard"} />;
   }
 
-  return <Outlet />;
+  return <Outlet context={{ access } satisfies PrivateRouteOutletContext} />;
 }

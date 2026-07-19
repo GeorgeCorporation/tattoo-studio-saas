@@ -1,12 +1,32 @@
 import { describe, expect, it } from "vitest";
 import {
   buildDefaultWorkingHours,
+  getOnboardingProgress,
   makeDefaultWorkingHours,
   slugify,
   validateOnboardingStep,
 } from "@/services/onboarding.service";
 
 describe("onboarding.service", () => {
+  const completeSnapshot = (duration: number | null) => ({
+    studio: {
+      id: "studio-1",
+      name: "Inkora",
+      slug: "inkora",
+      whatsapp: "11999999999",
+      city: "São Paulo",
+      state: "SP",
+      logo_url: null,
+      description: null,
+      instagram: null,
+      website: null,
+      address: null,
+    },
+    workingHours: buildDefaultWorkingHours(),
+    artists: [{ id: "artist-1", name: "Ana", slug: "ana", specialty: null, instagram: null, whatsapp: null, photo_url: null }],
+    services: [{ id: "service-1", name: "Fine Line", category: null, description: null, starting_price: null, avg_duration_minutes: duration }],
+  });
+
   it("gera slug limpo sem acentos e espaços", () => {
     expect(slugify("Estúdio São Jorge Tattoo!")).toBe("estudio-sao-jorge-tattoo");
   });
@@ -68,6 +88,55 @@ describe("onboarding.service", () => {
         firstServices: [{ name: "Fine Line", avg_duration_minutes: 120 }],
       }),
     ).toBe("");
+  });
+
+  it.each([29, 30.5, Number.NaN, Number.POSITIVE_INFINITY])("rejeita a duração inválida %s no domínio", (duration) => {
+    expect(
+      validateOnboardingStep(4, {
+        activateBooking: true,
+        firstArtists: [{ name: "Ana" }],
+        firstServices: [{ name: "Fine Line", avg_duration_minutes: duration }],
+      }),
+    ).toContain("duração");
+  });
+
+  it("aceita a duração inteira mínima de 30 minutos", () => {
+    expect(
+      validateOnboardingStep(4, {
+        activateBooking: true,
+        firstArtists: [{ name: "Ana" }],
+        firstServices: [{ name: "Fine Line", avg_duration_minutes: 30 }],
+      }),
+    ).toBe("");
+  });
+
+  it("rejeita serviço nomeado com duração inválida mesmo com agenda pública desligada", () => {
+    expect(
+      validateOnboardingStep(4, {
+        activateBooking: false,
+        firstArtists: [],
+        firstServices: [{ name: "Fine Line", avg_duration_minutes: 30.5 }],
+      }),
+    ).toContain("duração");
+  });
+
+  it.each([null, 29, 30.5, Number.NaN, Number.POSITIVE_INFINITY])(
+    "não considera o snapshot pronto com duração %s",
+    (duration) => {
+      const progress = getOnboardingProgress(completeSnapshot(duration));
+
+      expect(progress.isBookingReady).toBe(false);
+      expect(progress.canFinish).toBe(false);
+      expect(progress.nextStep).toBe(4);
+    },
+  );
+
+  it.each([30, 120])("considera o snapshot pronto com duração inteira válida %s", (duration) => {
+    const progress = getOnboardingProgress(completeSnapshot(duration));
+
+    expect(progress.isBookingReady).toBe(true);
+    expect(progress.canFinish).toBe(true);
+    expect(progress.nextStep).toBe(5);
   });
 
   it("permite concluir sem serviço quando a agenda pública está desligada", () => {

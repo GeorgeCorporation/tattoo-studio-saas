@@ -1,9 +1,9 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useOutletContext } from "react-router-dom";
 import { Sidebar, StudioIdentity } from "@/components/layout/Sidebar";
-import { useAccess } from "@/hooks/useAccess";
+import type { PrivateRouteOutletContext } from "@/components/layout/PrivateRoute";
 
 export function DashboardLayout() {
-  const { access } = useAccess();
+  const { access } = useOutletContext<PrivateRouteOutletContext>();
   const studioName = access?.studioName ?? "Seu estúdio";
   const studioLogoUrl = access?.studioLogoUrl ?? null;
   const role = access?.role ?? "manager";

@@ -153,6 +153,10 @@ export function makeDefaultWorkingHours(studioId: string) {
   }));
 }
 
+function isValidServiceDuration(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && Number.isInteger(value) && value >= 30;
+}
+
 export function validateOnboardingStep(step: number, data: OnboardingValidationData) {
   if (step === 1) {
     if (!data.name?.trim()) return "Informe o nome do estúdio.";
@@ -184,12 +188,7 @@ export function validateOnboardingStep(step: number, data: OnboardingValidationD
     const services = data.firstServices?.length ? data.firstServices : data.firstService ? [data.firstService] : [];
     const namedArtists = artists.filter((artist) => artist.name?.trim());
     const namedServices = services.filter((service) => service.name?.trim());
-    const invalidDuration = namedServices.some(
-      (service) =>
-        typeof service.avg_duration_minutes !== "number" ||
-        !Number.isFinite(service.avg_duration_minutes) ||
-        service.avg_duration_minutes < 30,
-    );
+    const invalidDuration = namedServices.some((service) => !isValidServiceDuration(service.avg_duration_minutes));
 
     if (invalidDuration) return "Informe uma duração média válida de pelo menos 30 minutos para cada serviço.";
 
@@ -304,7 +303,12 @@ export function getOnboardingProgress(snapshot: OnboardingSnapshot, activateBook
   const hasLogo = Boolean(studio?.logo_url);
   const artistsCount = snapshot.artists.length;
   const servicesCount = snapshot.services.length;
-  const isBookingReady = artistsCount > 0 && servicesCount > 0;
+  const namedArtists = snapshot.artists.filter((artist) => artist.name.trim());
+  const namedServices = snapshot.services.filter((service) => service.name.trim());
+  const isBookingReady =
+    namedArtists.length > 0 &&
+    namedServices.length > 0 &&
+    namedServices.every((service) => isValidServiceDuration(service.avg_duration_minutes));
   const canFinish = hasStudio && hasRequiredStudioData && hasWorkingHours && (!activateBooking || isBookingReady);
 
   let nextStep: number;
