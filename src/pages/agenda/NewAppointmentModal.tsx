@@ -1,17 +1,24 @@
 import { FormEvent, useEffect, useState } from "react";
 import { X } from "lucide-react";
 import {
+  AgendaAvailabilityError,
+  AgendaWorkingHoursOverrideRequiredError,
   createAppointment,
   getAgendaArtists,
   getAgendaClients,
   getAgendaServices,
+  getAgendaWorkingHours,
   type AgendaOption,
+  type AgendaServiceOption,
+  type AgendaWorkingHour,
 } from "@/services/agenda.service";
+import type { UserRole } from "@/lib/access-control";
 
 type NewAppointmentModalProps = {
   open: boolean;
   studioId: string;
   defaultDate: string;
+  role: UserRole;
   onClose: () => void;
   onCreated: () => void;
 };
@@ -22,12 +29,14 @@ export function NewAppointmentModal({
   open,
   studioId,
   defaultDate,
+  role,
   onClose,
   onCreated,
 }: NewAppointmentModalProps) {
   const [clients, setClients] = useState<AgendaOption[]>([]);
   const [artists, setArtists] = useState<AgendaOption[]>([]);
-  const [services, setServices] = useState<AgendaOption[]>([]);
+  const [services, setServices] = useState<AgendaServiceOption[]>([]);
+  const [workingHours, setWorkingHours] = useState<AgendaWorkingHour[]>([]);
   const [clientId, setClientId] = useState("");
   const [artistId, setArtistId] = useState("");
   const [serviceId, setServiceId] = useState("");
@@ -40,25 +49,47 @@ export function NewAppointmentModal({
 
   useEffect(() => {
     if (!open) return;
+    let active = true;
 
     async function loadOptions() {
-      const [foundClients, foundArtists, foundServices] = await Promise.all([
-        getAgendaClients(studioId),
-        getAgendaArtists(studioId),
-        getAgendaServices(studioId),
-      ]);
+      try {
+        setError("");
+        const [foundClients, foundArtists, foundServices, foundWorkingHours] = await Promise.all([
+          getAgendaClients(studioId).catch(() => {
+            throw new Error("Não foi possível carregar clientes.");
+          }),
+          getAgendaArtists(studioId).catch(() => {
+            throw new Error("Não foi possível carregar tatuadores.");
+          }),
+          getAgendaServices(studioId).catch(() => {
+            throw new Error("Não foi possível carregar serviços.");
+          }),
+          getAgendaWorkingHours(studioId).catch(() => {
+            throw new Error("Não foi possível carregar horários.");
+          }),
+        ]);
 
-      setClients(foundClients);
-      setArtists(foundArtists);
-      setServices(foundServices);
-      setClientId(foundClients[0]?.id ?? "");
-      setArtistId(foundArtists[0]?.id ?? "");
-      setServiceId(foundServices[0]?.id ?? "");
-      setDate(defaultDate);
-      setClientSource("artist_client");
+        if (!active) return;
+        setClients(foundClients);
+        setArtists(foundArtists);
+        setServices(foundServices);
+        setWorkingHours(foundWorkingHours);
+        setClientId(foundClients[0]?.id ?? "");
+        setArtistId(foundArtists[0]?.id ?? "");
+        setServiceId(foundServices[0]?.id ?? "");
+        setDate(defaultDate);
+        setClientSource("artist_client");
+      } catch (caughtError) {
+        if (!active) return;
+        setError(caughtError instanceof Error ? caughtError.message : "Não foi possível carregar opções.");
+      }
     }
 
     loadOptions();
+
+    return () => {
+      active = false;
+    };
   }, [defaultDate, open, studioId]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -72,7 +103,8 @@ export function NewAppointmentModal({
 
     try {
       setSaving(true);
-      await createAppointment({
+      const selectedService = services.find((service) => service.id === serviceId);
+      const appointmentData = {
         studioId,
         clientId,
         artistId,
@@ -81,10 +113,28 @@ export function NewAppointmentModal({
         time,
         description,
         clientSource,
-      });
+        role,
+        durationMinutes: selectedService?.avg_duration_minutes ?? null,
+        workingHours,
+      };
+
+      try {
+        await createAppointment(appointmentData);
+      } catch (caughtError) {
+        if (!(caughtError instanceof AgendaWorkingHoursOverrideRequiredError) || role !== "manager") {
+          throw caughtError;
+        }
+
+        if (!window.confirm(caughtError.message)) return;
+        await createAppointment({ ...appointmentData, allowOutsideWorkingHours: true });
+      }
       onCreated();
       onClose();
-    } catch {
+    } catch (caughtError) {
+      if (caughtError instanceof AgendaAvailabilityError) {
+        setError(caughtError.message);
+        return;
+      }
       setError("Não foi possível criar agendamento.");
     } finally {
       setSaving(false);

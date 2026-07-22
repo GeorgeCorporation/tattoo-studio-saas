@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDashboardAccess } from "@/hooks/useDashboardAccess";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
@@ -25,29 +25,37 @@ function formatLongDate(date: Date) {
 }
 
 export function AgendaPage() {
-  const studioId = useDashboardAccess()?.studioId ?? "";
+  const access = useDashboardAccess();
+  const studioId = access?.studioId ?? "";
+  const role = access?.role;
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [appointments, setAppointments] = useState<AgendaAppointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState("");
+  const latestRequestId = useRef(0);
 
   const selectedDateInput = useMemo(() => toDateInput(selectedDate), [selectedDate]);
   const formattedDate = useMemo(() => formatLongDate(selectedDate), [selectedDate]);
 
   const loadAppointments = useCallback(async () => {
     if (!studioId) return;
+    const requestId = latestRequestId.current + 1;
+    latestRequestId.current = requestId;
 
     try {
       setLoading(true);
       setError("");
 
-      setAppointments(await getAppointmentsByDate(studioId, selectedDateInput));
+      const foundAppointments = await getAppointmentsByDate(studioId, selectedDateInput);
+      if (latestRequestId.current !== requestId) return;
+      setAppointments(foundAppointments);
     } catch (caughtError) {
+      if (latestRequestId.current !== requestId) return;
       logger.error("Falha ao carregar agenda", caughtError, { selectedDate: selectedDateInput });
       setError(getFriendlyErrorMessage(caughtError, "Não foi possível carregar agenda."));
     } finally {
-      setLoading(false);
+      if (latestRequestId.current === requestId) setLoading(false);
     }
   }, [selectedDateInput, studioId]);
 
@@ -137,12 +145,13 @@ export function AgendaPage() {
         ) : null}
       </div>
 
-      {studioId ? (
+      {studioId && role ? (
         <NewAppointmentModal
           defaultDate={selectedDateInput}
           onClose={() => setModalOpen(false)}
           onCreated={loadAppointments}
           open={modalOpen}
+          role={role}
           studioId={studioId}
         />
       ) : null}

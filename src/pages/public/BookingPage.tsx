@@ -121,6 +121,16 @@ export function BookingPage() {
     loadBookingData();
   }, [slug, artistSlug]);
 
+  const selectedArtist = useMemo(
+    () => artists.find((artist) => artist.id === selectedArtistId) ?? null,
+    [artists, selectedArtistId],
+  );
+
+  const selectedService = useMemo(
+    () => services.find((service) => service.id === selectedServiceId) ?? null,
+    [services, selectedServiceId],
+  );
+
   useEffect(() => {
     if (!studio?.id || !selectedArtistId || !date) {
       setAvailableTimes([]);
@@ -136,7 +146,12 @@ export function BookingPage() {
         setAvailabilityLoading(true);
         setAvailabilityError("");
 
-        const slots = await getAvailableTimeSlots(studioId, selectedArtistId, date);
+        const slots = await getAvailableTimeSlots(
+          studioId,
+          selectedArtistId,
+          date,
+          selectedService?.avg_duration_minutes,
+        );
 
         if (!active) return;
 
@@ -162,7 +177,7 @@ export function BookingPage() {
     return () => {
       active = false;
     };
-  }, [date, selectedArtistId, studio?.id]);
+  }, [date, selectedArtistId, selectedService?.avg_duration_minutes, studio?.id]);
 
   useEffect(() => {
     const urls = referenceFiles.map((file) => URL.createObjectURL(file));
@@ -172,16 +187,6 @@ export function BookingPage() {
       urls.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [referenceFiles]);
-
-  const selectedArtist = useMemo(
-    () => artists.find((artist) => artist.id === selectedArtistId) ?? null,
-    [artists, selectedArtistId],
-  );
-
-  const selectedService = useMemo(
-    () => services.find((service) => service.id === selectedServiceId) ?? null,
-    [services, selectedServiceId],
-  );
 
   const confirmationText = useMemo(() => {
     return [

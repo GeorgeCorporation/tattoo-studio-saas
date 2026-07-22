@@ -28,6 +28,14 @@ describe("booking.service", () => {
     expect(buildHourlySlots("18:00", "09:00")).toEqual([]);
   });
 
+  it("reserva duas horas para servico de 120 minutos", () => {
+    expect(buildHourlySlots("09:00", "12:00", 120)).toEqual(["09:00", "10:00"]);
+  });
+
+  it("usa 60 minutos para servico legado sem duracao", () => {
+    expect(buildHourlySlots("09:00", "12:00", null)).toEqual(["09:00", "10:00", "11:00"]);
+  });
+
   it("calcula dia da semana usando a data do formulario", () => {
     expect(getDayOfWeekFromDateInput("2026-06-28")).toBe(0);
     expect(getDayOfWeekFromDateInput("2026-06-29")).toBe(1);

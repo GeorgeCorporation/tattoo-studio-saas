@@ -10,6 +10,8 @@ let workingHour: {
 } | null = null;
 let bookedTimes: { booked_time: string }[] = [];
 let appointmentInsertError: { code?: string; message: string } | null = null;
+let appointmentInsertCount = 0;
+let serviceDuration: number | null = 60;
 
 vi.mock("@/lib/supabase", () => ({
   supabase: {
@@ -25,7 +27,10 @@ vi.mock("@/lib/supabase", () => ({
 
       if (table === "appointments") {
         const builder = {
-          insert: vi.fn(() => builder),
+          insert: vi.fn(() => {
+            appointmentInsertCount += 1;
+            return builder;
+          }),
           select: vi.fn(() => builder),
           single: vi.fn(() =>
             Promise.resolve({
@@ -43,7 +48,10 @@ vi.mock("@/lib/supabase", () => ({
           eq: vi.fn(() => builder),
           maybeSingle: vi.fn(() =>
             Promise.resolve({
-              data: { id: table === "tattoo_artists" ? "artist-1" : "service-1" },
+              data:
+                table === "tattoo_artists"
+                  ? { id: "artist-1" }
+                  : { id: "service-1", avg_duration_minutes: serviceDuration },
               error: null,
             }),
           ),
@@ -72,6 +80,8 @@ describe("booking flow", () => {
     };
     bookedTimes = [];
     appointmentInsertError = null;
+    appointmentInsertCount = 0;
+    serviceDuration = 60;
   });
 
   it("remove horario ja ocupado da disponibilidade", async () => {
@@ -89,6 +99,78 @@ describe("booking flow", () => {
     const { getAvailableTimeSlots } = await import("@/services/booking.service");
 
     await expect(getAvailableTimeSlots("studio-1", "artist-1", "2099-07-01")).resolves.toEqual([]);
+  });
+
+  it("bloqueia cliente online fora do expediente", async () => {
+    const { BookingAvailabilityError, createAppointment } = await import("@/services/booking.service");
+
+    await expect(
+      createAppointment({
+        studioId: "studio-1",
+        artistId: "artist-1",
+        clientId: "client-1",
+        serviceId: "service-1",
+        date: "2099-07-01",
+        time: "12:00",
+        description: "tattoo",
+      }),
+    ).rejects.toBeInstanceOf(BookingAvailabilityError);
+    expect(appointmentInsertCount).toBe(0);
+  });
+
+  it("bloqueia conflito por sobreposicao", async () => {
+    bookedTimes = [{ booked_time: "10:00:00" }];
+    serviceDuration = 120;
+    const { BookingAvailabilityError, createAppointment } = await import("@/services/booking.service");
+
+    await expect(
+      createAppointment({
+        studioId: "studio-1",
+        artistId: "artist-1",
+        clientId: "client-1",
+        serviceId: "service-1",
+        date: "2099-07-01",
+        time: "09:00",
+        description: "tattoo",
+      }),
+    ).rejects.toBeInstanceOf(BookingAvailabilityError);
+    expect(appointmentInsertCount).toBe(0);
+  });
+
+  it("duracao de 120 minutos ocupa duas horas", async () => {
+    bookedTimes = [{ booked_time: "11:00:00" }];
+    const { getAvailableTimeSlots } = await import("@/services/booking.service");
+
+    await expect(getAvailableTimeSlots("studio-1", "artist-1", "2099-07-01", 120)).resolves.toEqual([
+      "09:00",
+    ]);
+  });
+
+  it("usa 60 minutos quando servico legado nao tem duracao", async () => {
+    bookedTimes = [{ booked_time: "11:00:00" }];
+    const { getAvailableTimeSlots } = await import("@/services/booking.service");
+
+    await expect(getAvailableTimeSlots("studio-1", "artist-1", "2099-07-01", null)).resolves.toEqual([
+      "09:00",
+      "10:00",
+    ]);
+  });
+
+  it("bloqueia data passada antes de salvar", async () => {
+    const { BookingAvailabilityError, createAppointment } = await import("@/services/booking.service");
+
+    await expect(
+      createAppointment({
+        studioId: "studio-1",
+        artistId: "artist-1",
+        clientId: "client-1",
+        serviceId: "service-1",
+        date: "2000-01-01",
+        time: "09:00",
+        description: "tattoo",
+      }),
+    ).rejects.toBeInstanceOf(BookingAvailabilityError);
+    expect(appointmentInsertCount).toBe(0);
   });
 
   it("cria appointment quando horario esta disponivel", async () => {

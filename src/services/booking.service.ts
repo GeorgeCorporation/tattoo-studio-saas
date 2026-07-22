@@ -1,4 +1,11 @@
 import { supabase } from "@/lib/supabase";
+import {
+  getAppointmentDuration,
+  getDayOfWeekFromDateInput as getSchedulingDayOfWeek,
+  hasAppointmentConflict,
+  timeToMinutes,
+  toLocalDateInputValue,
+} from "@/lib/scheduling-domain";
 import { createBookingReferencePath, validateUploadFile } from "@/services/storage.service";
 
 export type BookingService = {
@@ -56,10 +63,7 @@ export function normalizeTime(value: string) {
 }
 
 export function toDateInputValue(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return toLocalDateInputValue(date);
 }
 
 export function getMinimumBookingDate() {
@@ -73,13 +77,7 @@ export function isFutureDate(date: string) {
 }
 
 export function getDayOfWeekFromDateInput(date: string) {
-  const [year, month, day] = date.split("-").map(Number);
-  return new Date(year, month - 1, day).getDay();
-}
-
-function timeToMinutes(value: string) {
-  const [hours, minutes] = normalizeTime(value).split(":").map(Number);
-  return hours * 60 + minutes;
+  return getSchedulingDayOfWeek(date);
 }
 
 function minutesToTime(minutes: number) {
@@ -88,17 +86,22 @@ function minutesToTime(minutes: number) {
   return `${String(hours).padStart(2, "0")}:${String(rest).padStart(2, "0")}`;
 }
 
-export function buildHourlySlots(openTime: string | null, closeTime: string | null) {
+export function buildHourlySlots(
+  openTime: string | null,
+  closeTime: string | null,
+  durationMinutes: number | null = 60,
+) {
   if (!openTime || !closeTime) return [];
 
   const openMinutes = timeToMinutes(openTime);
   const closeMinutes = timeToMinutes(closeTime);
+  const duration = getAppointmentDuration(durationMinutes);
 
   if (closeMinutes <= openMinutes) return [];
 
   const slots: string[] = [];
 
-  for (let minutes = openMinutes; minutes + 60 <= closeMinutes; minutes += 60) {
+  for (let minutes = openMinutes; minutes + duration <= closeMinutes; minutes += 60) {
     slots.push(minutesToTime(minutes));
   }
 
@@ -146,17 +149,25 @@ export async function getBookedTimes(studioId: string, artistId: string, date: s
   return new Set((data ?? []).map((item) => normalizeTime(item.booked_time)));
 }
 
-export async function getAvailableTimeSlots(studioId: string, artistId: string, date: string) {
+export async function getAvailableTimeSlots(
+  studioId: string,
+  artistId: string,
+  date: string,
+  durationMinutes: number | null = 60,
+) {
   if (!studioId || !artistId || !date || !isFutureDate(date)) return [];
 
   const workingHour = await getWorkingHourByDate(studioId, date);
 
   if (!workingHour?.is_open) return [];
 
-  const allSlots = buildHourlySlots(workingHour.open_time, workingHour.close_time);
+  const allSlots = buildHourlySlots(workingHour.open_time, workingHour.close_time, durationMinutes);
   const bookedTimes = await getBookedTimes(studioId, artistId, date);
 
-  return allSlots.filter((slot) => !bookedTimes.has(slot));
+  const bookedAppointments = Array.from(bookedTimes, (time) => ({ time, durationMinutes: null }));
+  return allSlots.filter(
+    (slot) => !hasAppointmentConflict(slot, durationMinutes, bookedAppointments),
+  );
 }
 
 export async function createClient(data: CreateClientData) {
@@ -193,11 +204,11 @@ export async function validateBookingEntities(studioId: string, artistId: string
       .maybeSingle<{ id: string }>(),
     supabase
       .from("services")
-      .select("id")
+      .select("id, avg_duration_minutes")
       .eq("id", serviceId)
       .eq("studio_id", studioId)
       .eq("is_active", true)
-      .maybeSingle<{ id: string }>(),
+      .maybeSingle<{ id: string; avg_duration_minutes: number | null }>(),
   ]);
 
   if (artistResult.error) throw artistResult.error;
@@ -206,11 +217,18 @@ export async function validateBookingEntities(studioId: string, artistId: string
   if (!artistResult.data || !serviceResult.data) {
     throw new BookingAvailabilityError("Dados de agendamento inválidos. Recarregue a página e tente novamente.");
   }
+
+  return serviceResult.data;
 }
 
 export async function createAppointment(data: CreateAppointmentData) {
-  await validateBookingEntities(data.studioId, data.artistId, data.serviceId);
-  const availableSlots = await getAvailableTimeSlots(data.studioId, data.artistId, data.date);
+  const service = await validateBookingEntities(data.studioId, data.artistId, data.serviceId);
+  const availableSlots = await getAvailableTimeSlots(
+    data.studioId,
+    data.artistId,
+    data.date,
+    service.avg_duration_minutes,
+  );
 
   if (!availableSlots.includes(normalizeTime(data.time))) {
     throw new BookingAvailabilityError();

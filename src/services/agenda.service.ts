@@ -1,5 +1,14 @@
 import { supabase } from "@/lib/supabase";
 import { assertAppointmentStatus, type AppointmentStatus } from "@/lib/appointment-domain";
+import {
+  getAppointmentDuration,
+  hasAppointmentConflict,
+  isPastDate,
+  isWithinWorkingHours,
+} from "@/lib/scheduling-domain";
+import { findWorkingHourForDate } from "@/lib/working-hours";
+import type { UserRole } from "@/lib/access-control";
+import type { OnboardingWorkingHour } from "@/services/onboarding.service";
 
 export type AgendaAppointmentStatus = AppointmentStatus;
 
@@ -20,6 +29,32 @@ export type AgendaOption = {
   name: string;
 };
 
+export type AgendaServiceOption = AgendaOption & {
+  starting_price: number | null;
+  avg_duration_minutes: number | null;
+};
+
+export type AgendaWorkingHour = OnboardingWorkingHour;
+
+type AgendaScheduledAppointment = {
+  time: string;
+  services: { avg_duration_minutes: number | null } | null;
+};
+
+export class AgendaAvailabilityError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AgendaAvailabilityError";
+  }
+}
+
+export class AgendaWorkingHoursOverrideRequiredError extends AgendaAvailabilityError {
+  constructor() {
+    super("O horário está fora do expediente do estúdio. Deseja continuar mesmo assim?");
+    this.name = "AgendaWorkingHoursOverrideRequiredError";
+  }
+}
+
 export type CreateAgendaAppointmentData = {
   studioId: string;
   clientId: string;
@@ -29,6 +64,10 @@ export type CreateAgendaAppointmentData = {
   time: string;
   description: string;
   clientSource: "artist_client" | "studio_referral";
+  role: UserRole;
+  durationMinutes: number | null;
+  workingHours: AgendaWorkingHour[];
+  allowOutsideWorkingHours?: boolean;
 };
 
 export async function getAppointmentsByDate(studioId: string, date: string) {
@@ -55,6 +94,49 @@ export async function updateAppointmentStatus(id: string, status: AgendaAppointm
 }
 
 export async function createAppointment(data: CreateAgendaAppointmentData) {
+  if (isPastDate(data.date)) {
+    throw new AgendaAvailabilityError("Não é possível agendar em uma data passada.");
+  }
+
+  const { data: scheduledAppointments, error: scheduleError } = await supabase
+    .from("appointments")
+    .select("time, services(avg_duration_minutes)")
+    .eq("studio_id", data.studioId)
+    .eq("artist_id", data.artistId)
+    .eq("date", data.date)
+    .in("status", ["pending", "confirmed"])
+    .returns<AgendaScheduledAppointment[]>();
+
+  if (scheduleError) throw scheduleError;
+
+  const hasConflict = hasAppointmentConflict(
+    data.time,
+    data.durationMinutes,
+    (scheduledAppointments ?? []).map((appointment) => ({
+      time: appointment.time,
+      durationMinutes: appointment.services?.avg_duration_minutes,
+    })),
+  );
+
+  if (hasConflict) {
+    throw new AgendaAvailabilityError("Esse horário entra em conflito com outro agendamento.");
+  }
+
+  const workingHour = findWorkingHourForDate(data.workingHours, data.date);
+  const isWithinHours =
+    workingHour != null &&
+    isWithinWorkingHours(data.time, getAppointmentDuration(data.durationMinutes), workingHour);
+
+  if (!isWithinHours) {
+    if (data.role !== "manager") {
+      throw new AgendaAvailabilityError("Esse horário está fora do expediente do estúdio.");
+    }
+
+    if (!data.allowOutsideWorkingHours) {
+      throw new AgendaWorkingHoursOverrideRequiredError();
+    }
+  }
+
   const { error } = await supabase.from("appointments").insert({
     studio_id: data.studioId,
     client_id: data.clientId,
@@ -98,11 +180,23 @@ export async function getAgendaArtists(studioId: string) {
 export async function getAgendaServices(studioId: string) {
   const { data, error } = await supabase
     .from("services")
-    .select("id, name")
+    .select("id, name, starting_price, avg_duration_minutes")
     .eq("studio_id", studioId)
     .eq("is_active", true)
     .order("name", { ascending: true })
-    .returns<AgendaOption[]>();
+    .returns<AgendaServiceOption[]>();
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getAgendaWorkingHours(studioId: string) {
+  const { data, error } = await supabase
+    .from("working_hours")
+    .select("day_of_week, open_time, close_time, is_open")
+    .eq("studio_id", studioId)
+    .order("day_of_week", { ascending: true })
+    .returns<AgendaWorkingHour[]>();
 
   if (error) throw error;
   return data ?? [];

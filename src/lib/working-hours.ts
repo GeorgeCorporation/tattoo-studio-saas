@@ -1,5 +1,5 @@
 import type { OnboardingWorkingHour } from "@/services/onboarding.service";
-import { timeToMinutes } from "@/lib/scheduling-domain";
+import { getDayOfWeekFromDateInput, timeToMinutes } from "@/lib/scheduling-domain";
 
 export type WorkingHourField = "is_open" | "open_time" | "close_time";
 
@@ -33,4 +33,9 @@ export function validateWorkingHours(hours: OnboardingWorkingHour[]): string {
   );
 
   return invalidHour ? "Confira os horários: abertura precisa ser antes do fechamento." : "";
+}
+
+export function findWorkingHourForDate(hours: OnboardingWorkingHour[], date: string) {
+  const dayOfWeek = getDayOfWeekFromDateInput(date);
+  return hours.find((hour) => hour.day_of_week === dayOfWeek) ?? null;
 }
