@@ -227,6 +227,30 @@ describe("createStudioOnboarding", () => {
     expect(calls.filter((call) => call.action === "insert" || call.action === "update")).toHaveLength(0);
   });
 
+  it.each([29, 30.5, Number.NaN, Number.POSITIVE_INFINITY])(
+    "rejeita duração inicial inválida %s antes de acessar o Supabase",
+    async (avg_duration_minutes) => {
+      const { createStudioOnboarding } = await import("@/services/onboarding.service");
+
+      await expect(
+        createStudioOnboarding({
+          userId: "user-1",
+          name: "Inkora",
+          slug: "inkora",
+          whatsapp: "11999999999",
+          city: "São Paulo",
+          state: "SP",
+          firstService: {
+            name: "Tatuagem pequena",
+            avg_duration_minutes,
+          },
+        }),
+      ).rejects.toThrow(/duração média válida/i);
+
+      expect(mocks.from).not.toHaveBeenCalled();
+    },
+  );
+
   it("retoma setup parcial sem criar outro estúdio", async () => {
     studioRow = {
       id: "studio-1",

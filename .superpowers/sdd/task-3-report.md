@@ -63,6 +63,15 @@ A re-revisão identificou que a UI bloqueava preço negativo, mas chamadas diret
 - `npm.cmd run test -- src/services/onboarding.service.test.ts` — 21/21.
 - `npm.cmd run typecheck` — exit 0.
 
+## Duração no limite de persistência do onboarding
+
+- RED: `createStudioOnboarding` aceitava duração `29`, `30.5`, `NaN` e infinita porque a defesa usava `30` fixo.
+- GREEN: o helper foi renomeado para `assertValidInitialServices` e encaminha `avg_duration_minutes` ao domínio quando presente; apenas duração ausente usa `30` para preservar a compatibilidade legada.
+- O teste de fluxo prova a rejeição e que `supabase.from` não foi chamado para todos os quatro valores inválidos.
+- `npm.cmd run test -- src/pages/onboarding/OnboardingPage.test.tsx src/services/onboarding.service.test.ts src/services/onboarding.flow.test.ts` — 46/46.
+- `npm.cmd run test -- src/lib/service-domain.test.ts src/services/services.service.test.ts src/pages/services/ServiceModal.test.tsx src/pages/services/ServicesPage.test.tsx` — 11/11.
+- `npm.cmd run typecheck` — exit 0.
+
 ## Preço zero no onboarding
 
 - Adicionado teste que reidrata um serviço existente com `starting_price: 0`, confirma a prévia `A partir de R$ 0` e confirma `starting_price: 0` no payload de `createStudioOnboarding`.

@@ -233,12 +233,12 @@ function normalizeDuration(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-function assertInitialServicePrices(services: OnboardingFirstServiceData[]) {
+function assertValidInitialServices(services: OnboardingFirstServiceData[]) {
   for (const service of services.filter((item) => item.name?.trim())) {
     const validationError = validateServiceInput({
       name: service.name,
       startingPrice: service.starting_price,
-      durationMinutes: 30,
+      durationMinutes: service.avg_duration_minutes ?? 30,
     });
 
     if (validationError) throw new Error(validationError);
@@ -590,7 +590,7 @@ async function syncInitialArtists(studioId: string, artists: OnboardingFirstArti
 }
 
 async function syncInitialServices(studioId: string, services: OnboardingFirstServiceData[]) {
-  assertInitialServicePrices(services);
+  assertValidInitialServices(services);
   if (!services.length) return;
 
   const { data: existingServices, error: fetchError } = await supabase
@@ -641,7 +641,7 @@ async function syncInitialServices(studioId: string, services: OnboardingFirstSe
 
 export async function createStudioOnboarding(data: OnboardingStudioData) {
   const servicesToCreate = data.firstServices?.length ? data.firstServices : data.firstService ? [data.firstService] : [];
-  assertInitialServicePrices(servicesToCreate);
+  assertValidInitialServices(servicesToCreate);
 
   if (isMockMode) {
     const existingStudio = getMockStudio();
