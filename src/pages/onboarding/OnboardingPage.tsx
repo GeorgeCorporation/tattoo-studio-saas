@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { countVisualCharacters, limitVisualCharacters } from "@/lib/text-limit";
+import { updateWorkingHourField, type WorkingHourField } from "@/lib/working-hours";
 import citiesByState from "@/lib/brazil-cities.json";
 import {
   buildDefaultWorkingHours,
@@ -518,17 +519,10 @@ export function OnboardingPage() {
     );
   }
 
-  function updateHour(day: number, field: keyof OnboardingWorkingHour, value: boolean | string | null) {
+  function updateHour(day: number, field: WorkingHourField, value: boolean | string | null) {
     setWorkingHours((current) =>
       current.map((hour) =>
-        hour.day_of_week === day
-          ? {
-              ...hour,
-              [field]: value,
-              open_time: field === "is_open" && value === false ? null : hour.open_time ?? "09:00",
-              close_time: field === "is_open" && value === false ? null : hour.close_time ?? "18:00",
-            }
-          : hour,
+        hour.day_of_week === day ? updateWorkingHourField(hour, field, value) : hour,
       ),
     );
   }

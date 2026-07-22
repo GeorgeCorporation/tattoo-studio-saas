@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { supabase } from "@/lib/supabase";
+import { updateWorkingHourField, validateWorkingHours, type WorkingHourField } from "@/lib/working-hours";
 import { replaceStudioLogo } from "@/services/studio-brand.service";
 
 type WorkingHour = {
@@ -182,17 +183,10 @@ export function Settings() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  function updateDay(day: number, field: keyof WorkingHour, value: boolean | string | null) {
+  function updateDay(day: number, field: WorkingHourField, value: boolean | string | null) {
     setWorkingHours((current) =>
       current.map((item) =>
-        item.day_of_week === day
-          ? {
-              ...item,
-              [field]: value,
-              open_time: field === "is_open" && value === false ? null : item.open_time ?? "09:00",
-              close_time: field === "is_open" && value === false ? null : item.close_time ?? "18:00",
-            }
-          : item,
+        item.day_of_week === day ? { ...item, ...updateWorkingHourField(item, field, value) } : item,
       ),
     );
   }
@@ -237,6 +231,12 @@ export function Settings() {
 
     if (!/^\d{11}$/.test(whatsapp)) {
       setToast({ type: "error", message: "Informe um WhatsApp válido com 11 números. Ex: 11999999999." });
+      return;
+    }
+
+    const workingHoursError = validateWorkingHours(workingHours);
+    if (workingHoursError) {
+      setToast({ type: "error", message: workingHoursError });
       return;
     }
 

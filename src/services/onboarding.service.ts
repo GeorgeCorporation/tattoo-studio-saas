@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { getMockStudio, isMockMode, saveMockStudio } from "@/lib/mockMode";
 import { assertPublicSlug, isReservedSlug } from "@/lib/slugs";
+import { validateWorkingHours } from "@/lib/working-hours";
 import { replaceStudioLogo } from "@/services/studio-brand.service";
 import { createStoragePath, validateUploadFile } from "@/services/storage.service";
 
@@ -176,11 +177,8 @@ export function validateOnboardingStep(step: number, data: OnboardingValidationD
   }
 
   if (step === 3) {
-    const invalidHour = data.workingHours?.find(
-      (hour) => hour.is_open && (!hour.open_time || !hour.close_time || hour.open_time >= hour.close_time),
-    );
-
-    if (invalidHour) return "Confira os horários: abertura precisa ser antes do fechamento.";
+    const workingHoursError = validateWorkingHours(data.workingHours ?? []);
+    if (workingHoursError) return workingHoursError;
   }
 
   if (step === 4) {

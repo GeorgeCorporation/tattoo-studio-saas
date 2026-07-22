@@ -55,7 +55,67 @@ async function fillContact() {
   fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
 }
 
+function getMondayWorkingHourInputs() {
+  const [openTime, closeTime] = Array.from(document.querySelectorAll<HTMLInputElement>('input[type="time"]'));
+
+  if (!openTime || !closeTime) throw new Error("Monday working-hour inputs were not found.");
+
+  return { openTime, closeTime };
+}
+
 describe("OnboardingPage", () => {
+  it("preserves a customized opening time in state", async () => {
+    renderPage();
+
+    await fillIdentity();
+    await fillContact();
+    await screen.findByRole("heading", { name: "Funcionamento" });
+
+    const { openTime } = getMondayWorkingHourInputs();
+    fireEvent.change(openTime, { target: { value: "10:30" } });
+
+    expect(openTime).toHaveValue("10:30");
+  });
+
+  it("preserves a customized closing time in state and submission payload", async () => {
+    renderPage();
+
+    await fillIdentity();
+    await fillContact();
+    await screen.findByRole("heading", { name: "Funcionamento" });
+
+    const { closeTime } = getMondayWorkingHourInputs();
+    fireEvent.change(closeTime, { target: { value: "20:30" } });
+
+    expect(closeTime).toHaveValue("20:30");
+
+    fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
+    fireEvent.change(await screen.findByLabelText("Nome do tatuador"), { target: { value: "George Tattoo" } });
+    fireEvent.change(screen.getByLabelText(/Nome do servi/i), { target: { value: "Tatuagem pequena" } });
+    fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
+    fireEvent.click(screen.getByRole("button", { name: /ativar meu est/i }));
+
+    await waitFor(() => expect(mocks.createStudioOnboarding).toHaveBeenCalled());
+    expect(mocks.createStudioOnboarding.mock.calls[0][0].workingHours).toEqual(
+      expect.arrayContaining([{ day_of_week: 1, is_open: true, open_time: "09:00", close_time: "20:30" }]),
+    );
+    expect(localStorage.getItem("tattoo:onboarding:draft:v2")).toBeNull();
+  });
+
+  it("prevents continuing when opening is equal to closing", async () => {
+    renderPage();
+
+    await fillIdentity();
+    await fillContact();
+    await screen.findByRole("heading", { name: "Funcionamento" });
+
+    const { openTime } = getMondayWorkingHourInputs();
+    fireEvent.change(openTime, { target: { value: "18:00" } });
+    fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
+
+    expect(screen.getByText(/abertura precisa ser antes do fechamento/i)).toBeInTheDocument();
+  });
+
   beforeEach(() => {
     localStorage.clear();
     mocks.navigate.mockClear();

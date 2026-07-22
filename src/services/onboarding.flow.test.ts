@@ -73,6 +73,7 @@ function createInsertBuilder(table: string, payload: unknown) {
   calls.push({ table, action: "insert", payload });
 
   if (table === "working_hours") {
+    workingHoursRows.push({ id: `hour-${workingHoursRows.length}`, ...(payload as Record<string, unknown>) });
     return Promise.resolve({ error: null });
   }
 
@@ -237,5 +238,41 @@ describe("createStudioOnboarding", () => {
     expect(calls.filter((call) => call.table === "studios" && call.action === "update")).not.toHaveLength(0);
     expect(calls.find((call) => call.table === "tattoo_artists" && call.action === "insert")).toBeTruthy();
     expect(calls.find((call) => call.table === "services" && call.action === "insert")).toBeTruthy();
+  });
+
+  it("persists seven customized working hours and reloads them in the snapshot", async () => {
+    const { buildDefaultWorkingHours, createStudioOnboarding, getOnboardingSnapshot } = await import("@/services/onboarding.service");
+    const customHours = buildDefaultWorkingHours().map((hour) =>
+      hour.day_of_week === 1 ? { ...hour, open_time: "10:30", close_time: "20:30" } : hour,
+    );
+
+    await createStudioOnboarding({
+      userId: "user-1",
+      name: "Inkora",
+      slug: "inkora",
+      whatsapp: "11999999999",
+      city: "Sao Paulo",
+      state: "SP",
+      workingHours: customHours,
+    });
+
+    expect(calls.filter((call) => call.table === "working_hours" && call.action === "insert")).toHaveLength(7);
+
+    studioRow = {
+      id: "studio-1",
+      name: "Inkora",
+      slug: "inkora",
+      logo_url: null,
+      description: null,
+      whatsapp: "11999999999",
+      instagram: null,
+      website: null,
+      address: null,
+      city: "Sao Paulo",
+      state: "SP",
+    };
+
+    const snapshot = await getOnboardingSnapshot("user-1");
+    expect(snapshot.workingHours).toMatchObject(customHours);
   });
 });
