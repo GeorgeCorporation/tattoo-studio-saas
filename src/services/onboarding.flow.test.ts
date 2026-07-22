@@ -7,6 +7,9 @@ type TableCall = {
 };
 
 const calls: TableCall[] = [];
+const mocks = vi.hoisted(() => ({
+  from: vi.fn(),
+}));
 let studioRow: Record<string, unknown> | null = null;
 let workingHoursRows: Array<Record<string, unknown>> = [];
 let artistRows: Array<Record<string, unknown>> = [];
@@ -126,11 +129,7 @@ vi.mock("@/services/studio-brand.service", () => ({
 
 vi.mock("@/lib/supabase", () => ({
   supabase: {
-    from: vi.fn((table: string) => ({
-      select: vi.fn(() => createSelectBuilder(table)),
-      insert: vi.fn((payload: unknown) => createInsertBuilder(table, payload)),
-      update: vi.fn((payload: unknown) => createUpdateBuilder(table, payload)),
-    })),
+    from: mocks.from,
     storage: {
       from: vi.fn(() => ({
         upload: vi.fn(() => Promise.resolve({ error: null })),
@@ -142,6 +141,12 @@ vi.mock("@/lib/supabase", () => ({
 
 describe("createStudioOnboarding", () => {
   beforeEach(() => {
+    mocks.from.mockReset();
+    mocks.from.mockImplementation((table: string) => ({
+      select: vi.fn(() => createSelectBuilder(table)),
+      insert: vi.fn((payload: unknown) => createInsertBuilder(table, payload)),
+      update: vi.fn((payload: unknown) => createUpdateBuilder(table, payload)),
+    }));
     calls.length = 0;
     studioRow = null;
     workingHoursRows = [];
@@ -218,6 +223,7 @@ describe("createStudioOnboarding", () => {
       }),
     ).rejects.toThrow(/preço inicial válido/i);
 
+    expect(mocks.from).not.toHaveBeenCalled();
     expect(calls.filter((call) => call.action === "insert" || call.action === "update")).toHaveLength(0);
   });
 

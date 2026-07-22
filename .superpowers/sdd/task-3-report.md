@@ -62,6 +62,15 @@ A re-revisão identificou que a UI bloqueava preço negativo, mas chamadas diret
 - `npm.cmd run test -- src/lib/service-domain.test.ts src/pages/services/ServiceModal.test.tsx src/pages/services/ServicesPage.test.tsx` — 9/9.
 - `npm.cmd run test -- src/services/onboarding.service.test.ts` — 21/21.
 - `npm.cmd run typecheck` — exit 0.
+
+## Preço zero no onboarding
+
+- Adicionado teste que reidrata um serviço existente com `starting_price: 0`, confirma a prévia `A partir de R$ 0` e confirma `starting_price: 0` no payload de `createStudioOnboarding`.
+- As três conversões agora usam checagens explícitas (`!== null` para o valor do banco e `=== ""`/`!== ""` para o campo controlado), sem depender da truthiness da string `"0"`.
+- O teste de fluxo de serviço inválido foi reforçado para provar que `supabase.from` não é chamado, além de não haver insert/update.
+- `npm.cmd run test -- src/pages/onboarding/OnboardingPage.test.tsx src/services/onboarding.service.test.ts src/services/onboarding.flow.test.ts` — 42/42.
+- `npm.cmd run test -- src/lib/service-domain.test.ts src/services/services.service.test.ts src/pages/services/ServiceModal.test.tsx src/pages/services/ServicesPage.test.tsx` — 11/11.
+- `npm.cmd run typecheck` — exit 0.
 - `npm.cmd run test` — 27 arquivos, 122 testes aprovados na execução fresca final (83,82 s).
 - `rg -n '\\bcategory\\b' src` — somente `src/types/database.types.ts` e `src/lib/database.sql`.
 - `git diff --check` — sem erros de whitespace.

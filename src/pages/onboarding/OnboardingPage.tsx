@@ -376,7 +376,7 @@ export function OnboardingPage() {
               snapshot.services.map((service) => ({
                 name: service.name,
                 description: service.description || "",
-                startingPrice: service.starting_price?.toString() || "",
+                startingPrice: service.starting_price !== null ? service.starting_price.toString() : "",
                 durationMinutes: service.avg_duration_minutes?.toString() || "120",
               })),
             );
@@ -589,7 +589,7 @@ export function OnboardingPage() {
         firstServices: servicesToSave.map((service) => ({
           name: service.name,
           description: service.description,
-          starting_price: service.startingPrice ? Number(service.startingPrice) : null,
+          starting_price: service.startingPrice === "" ? null : Number(service.startingPrice),
           avg_duration_minutes: service.durationMinutes ? Number(service.durationMinutes) : null,
         })),
       });
@@ -974,7 +974,7 @@ export function OnboardingPage() {
                         <div>
                           <p className="font-semibold">{service.name}</p>
                           <p className="text-sm text-zinc-500">
-                            {service.durationMinutes} min{service.startingPrice ? ` • A partir de R$ ${service.startingPrice}` : ""}
+                            {service.durationMinutes} min{service.startingPrice !== "" ? ` • A partir de R$ ${service.startingPrice}` : ""}
                           </p>
                         </div>
                         <button className="rounded-lg border border-white/10 px-3 py-2 text-sm text-zinc-300" onClick={() => removeService(index)} type="button">

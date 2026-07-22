@@ -272,6 +272,42 @@ describe("OnboardingPage", () => {
     expect(mocks.navigate).toHaveBeenCalledWith("/dashboard", { replace: true });
   });
 
+  it("preserva preço zero reidratado na prévia e no payload", async () => {
+    mocks.getOnboardingSnapshot.mockResolvedValueOnce({
+      studio: {
+        id: "studio-1",
+        name: "Inkora",
+        slug: "inkora",
+        whatsapp: "11999999999",
+        city: "São Paulo",
+        state: "SP",
+        logo_url: null,
+      },
+      workingHours: Array.from({ length: 7 }, (_, day) => ({
+        day_of_week: day,
+        open_time: day === 0 ? null : "09:00",
+        close_time: day === 0 ? null : "18:00",
+        is_open: day !== 0,
+      })),
+      artists: [],
+      services: [{ id: "service-1", name: "Tatuagem zero", description: null, starting_price: 0, avg_duration_minutes: 120 }],
+    });
+
+    renderPage();
+
+    await screen.findByText("Tatuagem zero");
+    expect(screen.getByText(/120 min\s*• A partir de R\$ 0/)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Nome do tatuador"), { target: { value: "George Tattoo" } });
+    fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
+    fireEvent.click(screen.getByRole("button", { name: /ativar meu estúdio/i }));
+
+    await waitFor(() => expect(mocks.createStudioOnboarding).toHaveBeenCalled());
+    expect(mocks.createStudioOnboarding.mock.calls[0][0].firstServices).toEqual([
+      expect.objectContaining({ name: "Tatuagem zero", starting_price: 0 }),
+    ]);
+  });
+
   it("mostra somente os campos essenciais do serviço inicial", async () => {
     renderPage();
 
