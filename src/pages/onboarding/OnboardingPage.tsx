@@ -255,6 +255,7 @@ export function OnboardingPage() {
       firstArtists: artistsToSave,
       firstServices: servicesToSave.map((service) => ({
         name: service.name,
+        starting_price: service.startingPrice === "" ? null : Number(service.startingPrice),
         avg_duration_minutes: service.durationMinutes ? Number(service.durationMinutes) : null,
       })),
     }),

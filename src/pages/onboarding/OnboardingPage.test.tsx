@@ -303,6 +303,21 @@ describe("OnboardingPage", () => {
     expect(screen.getByText(/duração média válida/i)).toBeInTheDocument();
   });
 
+  it("rejeita preço inicial negativo na validação do onboarding", async () => {
+    renderPage();
+
+    await fillIdentity();
+    await fillContact();
+    await screen.findByRole("heading", { name: "Funcionamento" });
+    fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
+
+    fireEvent.change(screen.getByLabelText("Nome do serviço"), { target: { value: "Fine Line" } });
+    fireEvent.change(screen.getByLabelText("Preço inicial (opcional)"), { target: { value: "-1" } });
+    fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
+
+    expect(screen.getByText(/preço inicial válido/i)).toBeInTheDocument();
+  });
+
   it("permite deixar tatuadores e serviços para depois quando agenda pública está desligada", async () => {
     renderPage();
 

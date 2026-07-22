@@ -63,3 +63,14 @@ GREEN focado após a implementação:
 ## Observação
 
 Uma execução conjunta de vários arquivos focados encontrou uma falha transitória do sandbox/esbuild ao carregar `vitest.config.ts`. As execuções focadas individuais seguintes, o typecheck e a suíte completa foram concluídos normalmente.
+
+## Correção pós-revisão
+
+A revisão identificou que `validationData.firstServices` encaminhava somente nome e duração, então a validação de onboarding não recebia `starting_price` e permitia avançar com preço negativo.
+
+- RED: adicionado o teste `rejeita preço inicial negativo na validação do onboarding`; ele falhou ao não encontrar a mensagem de preço válido.
+- GREEN: `OnboardingPage.tsx` passou `starting_price: service.startingPrice === "" ? null : Number(service.startingPrice)` exclusivamente para `validationData`. O payload final aprovado de `createStudioOnboarding` não foi alterado.
+- `npm.cmd run test -- src/pages/onboarding/OnboardingPage.test.tsx` — 16/16.
+- `npm.cmd run test -- src/services/onboarding.service.test.ts src/services/onboarding.flow.test.ts` — 24/24.
+- `npm.cmd run test -- src/lib/service-domain.test.ts src/services/services.service.test.ts src/pages/services/ServiceModal.test.tsx src/pages/services/ServicesPage.test.tsx` — 10/10.
+- `npm.cmd run typecheck` — exit 0.
