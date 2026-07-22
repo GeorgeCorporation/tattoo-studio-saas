@@ -239,7 +239,7 @@ describe("OnboardingPage", () => {
         is_open: day !== 0,
       })),
       artists: [{ id: "artist-1", name: "George", slug: "george", specialty: null, instagram: null, whatsapp: null, photo_url: null }],
-      services: [{ id: "service-1", name: "Tatuagem", category: "Outro", description: null, starting_price: null, avg_duration_minutes: 120 }],
+      services: [{ id: "service-1", name: "Tatuagem", description: null, starting_price: null, avg_duration_minutes: 120 }],
     });
 
     renderPage();

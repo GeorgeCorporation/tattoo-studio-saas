@@ -170,7 +170,6 @@ describe("createStudioOnboarding", () => {
       },
       firstService: {
         name: "Tatuagem pequena",
-        category: "Fine Line",
         starting_price: 250,
         avg_duration_minutes: 120,
       },
@@ -195,7 +194,6 @@ describe("createStudioOnboarding", () => {
     expect(calls.find((call) => call.table === "services" && call.action === "insert")?.payload).toMatchObject({
       studio_id: "studio-1",
       name: "Tatuagem pequena",
-      category: "Fine Line",
       starting_price: 250,
       is_active: true,
     });

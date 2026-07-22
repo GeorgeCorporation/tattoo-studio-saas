@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { validateServiceInput } from "@/lib/service-domain";
 import type { ServiceFormData, StudioService } from "@/services/services.service";
 
 type ServiceModalProps = {
@@ -10,21 +11,8 @@ type ServiceModalProps = {
   onSave: (data: ServiceFormData) => Promise<void>;
 };
 
-export const serviceCategories = [
-  "Fine Line",
-  "Black Work",
-  "Realismo",
-  "Old School",
-  "New School",
-  "Colorido",
-  "Fechamento",
-  "Piercing",
-  "Outro",
-];
-
 export function ServiceModal({ open, service, studioId, onClose, onSave }: ServiceModalProps) {
   const [name, setName] = useState("");
-  const [category, setCategory] = useState(serviceCategories[0]);
   const [description, setDescription] = useState("");
   const [startingPrice, setStartingPrice] = useState("");
   const [avgDurationMinutes, setAvgDurationMinutes] = useState("");
@@ -35,7 +23,6 @@ export function ServiceModal({ open, service, studioId, onClose, onSave }: Servi
     if (!open) return;
 
     setName(service?.name ?? "");
-    setCategory(service?.category ?? serviceCategories[0]);
     setDescription(service?.description ?? "");
     setStartingPrice(service?.starting_price?.toString() ?? "");
     setAvgDurationMinutes(service?.avg_duration_minutes?.toString() ?? "");
@@ -46,8 +33,16 @@ export function ServiceModal({ open, service, studioId, onClose, onSave }: Servi
     event.preventDefault();
     setError("");
 
-    if (!name.trim()) {
-      setError("Nome e obrigatorio.");
+    const input = {
+      name,
+      description,
+      startingPrice: startingPrice === "" ? null : Number(startingPrice),
+      durationMinutes: Number(avgDurationMinutes),
+    };
+    const validationError = validateServiceInput(input);
+
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -55,11 +50,7 @@ export function ServiceModal({ open, service, studioId, onClose, onSave }: Servi
       setSaving(true);
       await onSave({
         studioId,
-        name,
-        category,
-        description,
-        startingPrice: startingPrice ? Number(startingPrice) : undefined,
-        avgDurationMinutes: avgDurationMinutes ? Number(avgDurationMinutes) : undefined,
+        ...input,
       });
       onClose();
     } catch {
@@ -96,19 +87,6 @@ export function ServiceModal({ open, service, studioId, onClose, onSave }: Servi
           </label>
 
           <label>
-            <span className="mb-2 block text-sm font-medium">Categoria</span>
-            <select
-              className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-              value={category}
-              onChange={(event) => setCategory(event.target.value)}
-            >
-              {serviceCategories.map((item) => (
-                <option key={item}>{item}</option>
-              ))}
-            </select>
-          </label>
-
-          <label>
             <span className="mb-2 block text-sm font-medium">Descrição</span>
             <textarea
               className="min-h-28 w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
@@ -137,7 +115,8 @@ export function ServiceModal({ open, service, studioId, onClose, onSave }: Servi
               <span className="mb-2 block text-sm font-medium">Duracao media em minutos</span>
               <input
                 className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                min="0"
+                min="30"
+                step="1"
                 type="number"
                 value={avgDurationMinutes}
                 onChange={(event) => setAvgDurationMinutes(event.target.value)}

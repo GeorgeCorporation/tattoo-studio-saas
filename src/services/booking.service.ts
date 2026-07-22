@@ -8,7 +8,6 @@ export type BookingService = {
   description: string | null;
   starting_price: number | null;
   avg_duration_minutes: number | null;
-  category: string | null;
   is_active: boolean;
 };
 
@@ -110,7 +109,7 @@ export async function getServicesByStudio(studioId: string) {
   const { data, error } = await supabase
     .from("services")
     .select(
-      "id, studio_id, name, description, starting_price, avg_duration_minutes, category, is_active",
+      "id, studio_id, name, description, starting_price, avg_duration_minutes, is_active",
     )
     .eq("studio_id", studioId)
     .eq("is_active", true)

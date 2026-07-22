@@ -76,7 +76,6 @@ type ArtistDraft = {
 
 type ServiceDraft = {
   name: string;
-  category: string;
   description: string;
   startingPrice: string;
   durationMinutes: string;
@@ -235,7 +234,6 @@ export function OnboardingPage() {
   };
   const currentService: ServiceDraft = {
     name: serviceName,
-    category: "Outro",
     description: "",
     startingPrice,
     durationMinutes,
@@ -376,7 +374,6 @@ export function OnboardingPage() {
             setServices(
               snapshot.services.map((service) => ({
                 name: service.name,
-                category: service.category || "Outro",
                 description: service.description || "",
                 startingPrice: service.starting_price?.toString() || "",
                 durationMinutes: service.avg_duration_minutes?.toString() || "120",
@@ -488,7 +485,6 @@ export function OnboardingPage() {
       ...current,
       {
         name: serviceName.trim(),
-        category: "Outro",
         description: "",
         startingPrice,
         durationMinutes,
@@ -591,7 +587,6 @@ export function OnboardingPage() {
         })),
         firstServices: servicesToSave.map((service) => ({
           name: service.name,
-          category: service.category,
           description: service.description,
           starting_price: service.startingPrice ? Number(service.startingPrice) : null,
           avg_duration_minutes: service.durationMinutes ? Number(service.durationMinutes) : null,

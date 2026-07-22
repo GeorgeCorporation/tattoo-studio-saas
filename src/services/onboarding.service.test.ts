@@ -24,7 +24,7 @@ describe("onboarding.service", () => {
     },
     workingHours: buildDefaultWorkingHours(),
     artists: [{ id: "artist-1", name: "Ana", slug: "ana", specialty: null, instagram: null, whatsapp: null, photo_url: null }],
-    services: [{ id: "service-1", name: "Fine Line", category: null, description: null, starting_price: null, avg_duration_minutes: duration }],
+    services: [{ id: "service-1", name: "Fine Line", description: null, starting_price: null, avg_duration_minutes: duration }],
   });
 
   it("gera slug limpo sem acentos e espaços", () => {

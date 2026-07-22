@@ -18,18 +18,6 @@ const currency = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
 });
 
-const categoryStyles: Record<string, string> = {
-  "Fine Line": "bg-pink-500/15 text-pink-300",
-  "Black Work": "bg-zinc-500/20 text-zinc-200",
-  Realismo: "bg-blue-500/15 text-blue-300",
-  "Old School": "bg-red-500/15 text-red-300",
-  "New School": "bg-purple-500/15 text-purple-300",
-  Colorido: "bg-green-500/15 text-green-300",
-  Fechamento: "bg-orange-500/15 text-orange-300",
-  Piercing: "bg-cyan-500/15 text-cyan-300",
-  Outro: "bg-white/10 text-zinc-300",
-};
-
 export function ServicesPage() {
   const studioId = useDashboardAccess()?.studioId ?? "";
   const [services, setServices] = useState<StudioService[]>([]);
@@ -125,14 +113,6 @@ export function ServicesPage() {
                     <span
                       className={[
                         "rounded-full px-2.5 py-1 text-xs font-semibold",
-                        categoryStyles[service.category ?? "Outro"] ?? categoryStyles.Outro,
-                      ].join(" ")}
-                    >
-                      {service.category ?? "Outro"}
-                    </span>
-                    <span
-                      className={[
-                        "rounded-full px-2.5 py-1 text-xs font-semibold",
                         service.is_active ? "bg-green-500/15 text-green-300" : "bg-zinc-500/15 text-zinc-300",
                       ].join(" ")}
                     >
@@ -144,7 +124,7 @@ export function ServicesPage() {
                   </p>
                   <div className="mt-3 flex flex-wrap gap-3 text-sm text-zinc-300">
                     <span>
-                      Inicial: {service.starting_price ? currency.format(Number(service.starting_price)) : "-"}
+                      Inicial: {service.starting_price !== null ? currency.format(Number(service.starting_price)) : "-"}
                     </span>
                     <span>Duração: {service.avg_duration_minutes ?? "-"} min</span>
                   </div>

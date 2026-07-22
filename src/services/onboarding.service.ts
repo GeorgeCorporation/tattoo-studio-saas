@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { getMockStudio, isMockMode, saveMockStudio } from "@/lib/mockMode";
 import { assertPublicSlug, isReservedSlug } from "@/lib/slugs";
+import { validateServiceInput } from "@/lib/service-domain";
 import { validateWorkingHours } from "@/lib/working-hours";
 import { replaceStudioLogo } from "@/services/studio-brand.service";
 import { createStoragePath, validateUploadFile } from "@/services/storage.service";
@@ -23,7 +24,6 @@ export type OnboardingFirstArtistData = {
 
 export type OnboardingFirstServiceData = {
   name: string;
-  category?: string;
   description?: string;
   starting_price?: number | null;
   avg_duration_minutes?: number | null;
@@ -83,7 +83,6 @@ export type OnboardingSnapshotArtist = {
 export type OnboardingSnapshotService = {
   id: string;
   name: string;
-  category: string | null;
   description: string | null;
   starting_price: number | null;
   avg_duration_minutes: number | null;
@@ -121,7 +120,6 @@ type ArtistInsertPayload = {
 type ServiceInsertPayload = {
   studio_id: string;
   name: string;
-  category: string;
   description: string | null;
   starting_price: number | null;
   avg_duration_minutes: number | null;
@@ -155,7 +153,12 @@ export function makeDefaultWorkingHours(studioId: string) {
 }
 
 function isValidServiceDuration(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value) && Number.isInteger(value) && value >= 30;
+  return (
+    validateServiceInput({
+      name: "serviço",
+      durationMinutes: typeof value === "number" ? value : Number.NaN,
+    }) === ""
+  );
 }
 
 export function validateOnboardingStep(step: number, data: OnboardingValidationData) {
@@ -186,9 +189,18 @@ export function validateOnboardingStep(step: number, data: OnboardingValidationD
     const services = data.firstServices?.length ? data.firstServices : data.firstService ? [data.firstService] : [];
     const namedArtists = artists.filter((artist) => artist.name?.trim());
     const namedServices = services.filter((service) => service.name?.trim());
-    const invalidDuration = namedServices.some((service) => !isValidServiceDuration(service.avg_duration_minutes));
+    const serviceValidationError = namedServices
+      .map((service) =>
+        validateServiceInput({
+          name: service.name ?? "",
+          description: service.description,
+          startingPrice: service.starting_price,
+          durationMinutes: service.avg_duration_minutes ?? Number.NaN,
+        }),
+      )
+      .find(Boolean);
 
-    if (invalidDuration) return "Informe uma duração média válida de pelo menos 30 minutos para cada serviço.";
+    if (serviceValidationError) return serviceValidationError;
 
     if (data.activateBooking !== false && (!namedArtists.length || !namedServices.length)) {
       return "Para ativar a agenda pública agora, informe pelo menos um tatuador e um serviço. Ou desmarque a opção para fazer depois.";
@@ -274,7 +286,7 @@ export async function getOnboardingSnapshot(userId: string): Promise<OnboardingS
       .returns<OnboardingSnapshotArtist[]>(),
     supabase
       .from("services")
-      .select("id, name, category, description, starting_price, avg_duration_minutes")
+      .select("id, name, description, starting_price, avg_duration_minutes")
       .eq("studio_id", studio.id)
       .order("name", { ascending: true })
       .returns<OnboardingSnapshotService[]>(),
@@ -581,7 +593,6 @@ async function syncInitialServices(studioId: string, services: OnboardingFirstSe
   const currentServices: OnboardingSnapshotService[] = (existingServices ?? []).map((service) => ({
     id: service.id,
     name: service.name,
-    category: null,
     description: null,
     starting_price: null,
     avg_duration_minutes: null,
@@ -592,7 +603,6 @@ async function syncInitialServices(studioId: string, services: OnboardingFirstSe
     const payload: ServiceInsertPayload = {
       studio_id: studioId,
       name: firstService.name.trim(),
-      category: firstService.category || "Outro",
       description: normalizeText(firstService.description),
       starting_price: normalizePrice(firstService.starting_price),
       avg_duration_minutes: normalizeDuration(firstService.avg_duration_minutes),
@@ -608,7 +618,6 @@ async function syncInitialServices(studioId: string, services: OnboardingFirstSe
       currentServices.push({
         id: data.id,
         name: payload.name,
-        category: payload.category,
         description: payload.description,
         starting_price: payload.starting_price,
         avg_duration_minutes: payload.avg_duration_minutes,
