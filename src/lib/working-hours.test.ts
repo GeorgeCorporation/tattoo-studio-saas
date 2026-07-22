@@ -41,4 +41,8 @@ describe("working-hours", () => {
   it("rejeita expediente aberto sem horários válidos", () => {
     expect(validateWorkingHours([{ ...openHour, open_time: "18:00", close_time: "09:00" }])).toContain("abertura");
   });
+
+  it("rejeita abertura igual ao fechamento em formatos de tempo mistos", () => {
+    expect(validateWorkingHours([{ ...openHour, open_time: "09:00", close_time: "09:00:00" }])).toContain("abertura");
+  });
 });

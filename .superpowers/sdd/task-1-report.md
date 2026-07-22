@@ -84,3 +84,31 @@ Exit code: 0
 ## Observação
 
 `task-1-brief.md` já estava não rastreado no worktree e foi preservado fora do commit. O relatório é o único artefato de planejamento adicionado pela tarefa.
+
+## Correção após revisão independente
+
+A revisão independente identificou que a comparação textual de horários poderia aceitar incorretamente formatos mistos, como abertura `09:00` e fechamento `09:00:00`. Foi acrescentado primeiro o teste de regressão abaixo, que falhou no RED com retorno vazio em vez da mensagem de validação:
+
+```text
+npm.cmd run test -- src/lib/working-hours.test.ts
+Test Files  1 failed (1)
+Tests       1 failed | 5 passed (6)
+```
+
+`validateWorkingHours` foi então alterado para comparar os dois horários com `timeToMinutes`, o que normaliza ambos os formatos antes da comparação.
+
+Verificação após a correção:
+
+```text
+npm.cmd run test -- src/lib/working-hours.test.ts src/lib/scheduling-domain.test.ts
+Test Files  2 passed (2)
+Tests       11 passed (11)
+
+npm.cmd run typecheck
+Exit code: 0
+
+npm.cmd run test
+Test Files  22 passed (22)
+Tests       106 passed (106)
+Exit code: 0
+```

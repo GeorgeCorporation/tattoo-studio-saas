@@ -1,4 +1,5 @@
 import type { OnboardingWorkingHour } from "@/services/onboarding.service";
+import { timeToMinutes } from "@/lib/scheduling-domain";
 
 export type WorkingHourField = "is_open" | "open_time" | "close_time";
 
@@ -26,7 +27,9 @@ export function updateWorkingHourField(
 
 export function validateWorkingHours(hours: OnboardingWorkingHour[]): string {
   const invalidHour = hours.find(
-    (hour) => hour.is_open && (!hour.open_time || !hour.close_time || hour.open_time >= hour.close_time),
+    (hour) =>
+      hour.is_open &&
+      (!hour.open_time || !hour.close_time || timeToMinutes(hour.open_time) >= timeToMinutes(hour.close_time)),
   );
 
   return invalidHour ? "Confira os horários: abertura precisa ser antes do fechamento." : "";
