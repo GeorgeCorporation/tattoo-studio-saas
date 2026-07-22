@@ -48,6 +48,19 @@ GREEN focado após a implementação:
 
 ## Verificação final
 
+## Barreira defensiva de persistência
+
+A re-revisão identificou que a UI bloqueava preço negativo, mas chamadas diretas aos limites de persistência ainda podiam enviá-lo ao Supabase.
+
+- RED: `services.service.test.ts` provou que `createService` resolvia para preço negativo; `onboarding.flow.test.ts` provou que `createStudioOnboarding` persistia e resolvia com o mesmo input.
+- GREEN: `createService` e `updateService` executam `validateServiceInput` antes de acessar `supabase.from`.
+- GREEN: `createStudioOnboarding` valida os serviços iniciais antes de mock, snapshot ou upsert; `syncInitialServices` repete a validação antes de buscar e inserir/atualizar serviços. A defesa de onboarding preserva o comportamento legado de duração ausente e usa o domínio para validar o preço.
+- O teste de serviços verifica que create e update rejeitam e que `supabase.from` não é chamado; o teste de fluxo verifica que não ocorre insert/update no onboarding; o teste da UI também afirma que `createStudioOnboarding` não foi chamado.
+- `npm.cmd run test -- src/services/services.service.test.ts` — 2/2.
+- `npm.cmd run test -- src/services/onboarding.flow.test.ts` — 4/4.
+- `npm.cmd run test -- src/pages/onboarding/OnboardingPage.test.tsx` — 16/16.
+- `npm.cmd run test -- src/lib/service-domain.test.ts src/pages/services/ServiceModal.test.tsx src/pages/services/ServicesPage.test.tsx` — 9/9.
+- `npm.cmd run test -- src/services/onboarding.service.test.ts` — 21/21.
 - `npm.cmd run typecheck` — exit 0.
 - `npm.cmd run test` — 27 arquivos, 122 testes aprovados na execução fresca final (83,82 s).
 - `rg -n '\\bcategory\\b' src` — somente `src/types/database.types.ts` e `src/lib/database.sql`.

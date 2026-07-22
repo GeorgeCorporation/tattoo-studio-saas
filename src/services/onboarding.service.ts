@@ -233,6 +233,18 @@ function normalizeDuration(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function assertInitialServicePrices(services: OnboardingFirstServiceData[]) {
+  for (const service of services.filter((item) => item.name?.trim())) {
+    const validationError = validateServiceInput({
+      name: service.name,
+      startingPrice: service.starting_price,
+      durationMinutes: 30,
+    });
+
+    if (validationError) throw new Error(validationError);
+  }
+}
+
 function findArtistMatch(artists: OnboardingSnapshotArtist[], artist: OnboardingFirstArtistData) {
   const candidateSlug = slugify(artist.slug || artist.name);
   const candidateName = artist.name.trim().toLowerCase();
@@ -578,6 +590,7 @@ async function syncInitialArtists(studioId: string, artists: OnboardingFirstArti
 }
 
 async function syncInitialServices(studioId: string, services: OnboardingFirstServiceData[]) {
+  assertInitialServicePrices(services);
   if (!services.length) return;
 
   const { data: existingServices, error: fetchError } = await supabase
@@ -627,6 +640,9 @@ async function syncInitialServices(studioId: string, services: OnboardingFirstSe
 }
 
 export async function createStudioOnboarding(data: OnboardingStudioData) {
+  const servicesToCreate = data.firstServices?.length ? data.firstServices : data.firstService ? [data.firstService] : [];
+  assertInitialServicePrices(servicesToCreate);
+
   if (isMockMode) {
     const existingStudio = getMockStudio();
     const studio = {
@@ -660,7 +676,6 @@ export async function createStudioOnboarding(data: OnboardingStudioData) {
     await syncInitialArtists(studio.id, artistsToCreate);
   }
 
-  const servicesToCreate = data.firstServices?.length ? data.firstServices : data.firstService ? [data.firstService] : [];
   if (servicesToCreate.length) {
     await syncInitialServices(studio.id, servicesToCreate);
   }

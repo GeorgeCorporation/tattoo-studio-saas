@@ -316,6 +316,7 @@ describe("OnboardingPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
 
     expect(screen.getByText(/preço inicial válido/i)).toBeInTheDocument();
+    expect(mocks.createStudioOnboarding).not.toHaveBeenCalled();
   });
 
   it("permite deixar tatuadores e serviços para depois quando agenda pública está desligada", async () => {

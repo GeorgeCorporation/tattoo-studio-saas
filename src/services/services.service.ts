@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import type { ServiceDraftInput } from "@/lib/service-domain";
+import { validateServiceInput, type ServiceDraftInput } from "@/lib/service-domain";
 
 export type StudioService = {
   id: string;
@@ -15,6 +15,11 @@ export type ServiceFormData = ServiceDraftInput & {
   studioId: string;
 };
 
+function assertValidServiceInput(input: ServiceDraftInput) {
+  const validationError = validateServiceInput(input);
+  if (validationError) throw new Error(validationError);
+}
+
 export async function getServices(studioId: string) {
   const { data, error } = await supabase
     .from("services")
@@ -28,6 +33,8 @@ export async function getServices(studioId: string) {
 }
 
 export async function createService(data: ServiceFormData) {
+  assertValidServiceInput(data);
+
   const { error } = await supabase.from("services").insert({
     studio_id: data.studioId,
     name: data.name.trim(),
@@ -41,6 +48,8 @@ export async function createService(data: ServiceFormData) {
 }
 
 export async function updateService(id: string, data: Omit<ServiceFormData, "studioId">) {
+  assertValidServiceInput(data);
+
   const { error } = await supabase
     .from("services")
     .update({

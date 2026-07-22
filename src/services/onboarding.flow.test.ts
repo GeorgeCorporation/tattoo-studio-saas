@@ -199,6 +199,28 @@ describe("createStudioOnboarding", () => {
     });
   });
 
+  it("rejeita preço inicial negativo antes de persistir o onboarding", async () => {
+    const { createStudioOnboarding } = await import("@/services/onboarding.service");
+
+    await expect(
+      createStudioOnboarding({
+        userId: "user-1",
+        name: "Inkora",
+        slug: "inkora",
+        whatsapp: "11999999999",
+        city: "São Paulo",
+        state: "SP",
+        firstService: {
+          name: "Tatuagem pequena",
+          starting_price: -1,
+          avg_duration_minutes: 120,
+        },
+      }),
+    ).rejects.toThrow(/preço inicial válido/i);
+
+    expect(calls.filter((call) => call.action === "insert" || call.action === "update")).toHaveLength(0);
+  });
+
   it("retoma setup parcial sem criar outro estúdio", async () => {
     studioRow = {
       id: "studio-1",

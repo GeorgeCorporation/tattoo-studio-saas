@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   insert: vi.fn(),
+  update: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase", () => ({
@@ -11,12 +12,12 @@ vi.mock("@/lib/supabase", () => ({
   },
 }));
 
-import { createService } from "@/services/services.service";
+import { createService, updateService } from "@/services/services.service";
 
 describe("services.service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.from.mockReturnValue({ insert: mocks.insert });
+    mocks.from.mockReturnValue({ insert: mocks.insert, update: mocks.update });
     mocks.insert.mockResolvedValue({ error: null });
   });
 
@@ -38,5 +39,18 @@ describe("services.service", () => {
       "avg_duration_minutes",
       "is_active",
     ]);
+  });
+
+  it("rejeita preço negativo antes de chamar o Supabase", async () => {
+    const invalidInput = {
+      name: "Fine line",
+      startingPrice: -1,
+      durationMinutes: 30,
+    };
+
+    await expect(createService({ studioId: "studio-1", ...invalidInput })).rejects.toThrow(/preço inicial válido/i);
+    await expect(updateService("service-1", invalidInput)).rejects.toThrow(/preço inicial válido/i);
+
+    expect(mocks.from).not.toHaveBeenCalled();
   });
 });
