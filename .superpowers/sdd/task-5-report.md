@@ -87,6 +87,14 @@ exit 0
 
 A suíte completa não foi repetida após o auto-review, conforme orientação do coordenador; a execução completa anterior permanece registrada abaixo.
 
+Re-review do commit corretivo:
+
+```text
+Critical: nenhum
+Important: nenhum; os quatro achados anteriores foram encerrados
+Verdict: Ready — Yes
+```
+
 ## GREEN e verificação
 
 GREEN focado:
@@ -150,3 +158,4 @@ Modificados:
 
 - A request real que falhava em produção não pôde ser identificada sem uma sessão autenticada disponível; deliberadamente não foi inferida.
 - Os seis erros do lint global permanecem fora do escopo desta tarefa.
+- Limitação minor: a apresentação histórica de `capValue` ainda considera uma regra efetiva para o mês inteiro e exclui regras antigas marcadas inativas. Se regras mudarem no meio do mês ou forem desativadas retroativamente, o teto exibido pode divergir do ledger, embora os totais de comissão permaneçam derivados do ledger correto.
