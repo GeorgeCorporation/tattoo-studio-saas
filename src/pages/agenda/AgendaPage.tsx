@@ -38,7 +38,10 @@ export function AgendaPage() {
   const selectedDateInput = useMemo(() => toDateInput(selectedDate), [selectedDate]);
   const formattedDate = useMemo(() => formatLongDate(selectedDate), [selectedDate]);
   const selectedDateInputRef = useRef(selectedDateInput);
-  selectedDateInputRef.current = selectedDateInput;
+
+  useEffect(() => {
+    selectedDateInputRef.current = selectedDateInput;
+  }, [selectedDateInput]);
 
   const loadAppointments = useCallback(async () => {
     if (!studioId) return;

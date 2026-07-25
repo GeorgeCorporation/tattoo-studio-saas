@@ -65,7 +65,7 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
         try {
           const photoUrl = await uploadArtistPhoto(photo, studioId, artist.id);
           await updateArtist(artist.id, { photoUrl });
-        } catch (caughtError) {
+        } catch {
           logger.warn("Foto do tatuador nao enviada", { studioId, artistId: artist.id });
           setNotice(
             artist.accessWarning

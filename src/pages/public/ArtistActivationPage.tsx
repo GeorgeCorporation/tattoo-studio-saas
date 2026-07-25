@@ -19,11 +19,12 @@ export function ArtistActivationPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [openedAt] = useState(() => Date.now());
 
   const inviteExpired = useMemo(() => {
     if (!invite) return false;
-    return invite.status === "expired" || new Date(invite.expires_at).getTime() < Date.now();
-  }, [invite]);
+    return invite.status === "expired" || new Date(invite.expires_at).getTime() < openedAt;
+  }, [invite, openedAt]);
 
   const inviteAccepted = invite?.status === "accepted";
   const inviteRevoked = invite?.status === "revoked";

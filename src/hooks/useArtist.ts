@@ -66,8 +66,15 @@ export function useArtist(artistId?: string) {
     accessEmail?: string;
   }) {
     if (!artist) return;
-    const { accessEmail, ...profileData } = data;
-    await updateArtist(artist.id, { ...profileData, studioId: artist.studio_id });
+    await updateArtist(artist.id, {
+      studioId: artist.studio_id,
+      name: data.name,
+      slug: data.slug,
+      specialty: data.specialty,
+      bio: data.bio,
+      instagram: data.instagram,
+      whatsapp: data.whatsapp,
+    });
     if (data.accessEmail !== undefined) {
       const email = data.accessEmail?.trim();
       if (email) {

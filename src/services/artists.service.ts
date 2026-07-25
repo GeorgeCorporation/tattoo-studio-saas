@@ -99,19 +99,6 @@ function normalizeAccessEmail(email?: string) {
   return normalizedEmail || null;
 }
 
-function isAccessEmailConflict(error: unknown) {
-  if (!error || typeof error !== "object") return false;
-  const maybeError = error as { code?: string; message?: string; details?: string; hint?: string };
-  const text = `${maybeError.message ?? ""} ${maybeError.details ?? ""} ${maybeError.hint ?? ""}`.toLowerCase();
-  return (
-    maybeError.code === "23505" &&
-    (text.includes("access_email") ||
-      text.includes("artist_access_invites") ||
-      text.includes("email") ||
-      text.includes("duplicate"))
-  );
-}
-
 async function ensureUniqueSlug(studioId: string, slug: string, ignoreArtistId?: string) {
   const base = slugify(slug) || "tatuador";
   assertPublicSlug(base);
@@ -213,21 +200,11 @@ async function insertArtist(data: ArtistFormData, slug: string, accessEmail: str
 export async function createArtist(data: ArtistFormData): Promise<ArtistCreateResult> {
   const slug = await ensureUniqueSlug(data.studioId, data.slug || data.name);
   const requestedAccessEmail = normalizeAccessEmail(data.accessEmail);
-  let accessEmail: string | null = null;
   let accessWarning = requestedAccessEmail
     ? "Tatuador salvo. Link de ativacao criado no perfil."
     : undefined;
 
-  let { data: artist, error } = await insertArtist(data, slug, accessEmail);
-
-  if (error && accessEmail && isAccessEmailConflict(error)) {
-    logger.warn("E-mail de acesso duplicado. Criando tatuador sem e-mail.", { studioId: data.studioId });
-    accessEmail = null;
-    accessWarning = "Tatuador salvo sem e-mail de ativacao. Ajuste o acesso depois.";
-    const retry = await insertArtist(data, slug, null);
-    artist = retry.data;
-    error = retry.error;
-  }
+  const { data: artist, error } = await insertArtist(data, slug, null);
 
   if (error) throw error;
   if (!artist?.id) throw new Error("Nao foi possivel criar tatuador.");
@@ -239,7 +216,7 @@ export async function createArtist(data: ArtistFormData): Promise<ArtistCreateRe
         studioId: data.studioId,
         email: requestedAccessEmail,
       });
-    } catch (error) {
+    } catch {
       logger.warn("Convite do tatuador nao criado", { studioId: data.studioId, artistId: artist.id });
       accessWarning = "Tatuador salvo. Link de ativacao pode ser gerado depois.";
     }
