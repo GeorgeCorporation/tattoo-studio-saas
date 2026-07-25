@@ -217,6 +217,31 @@ describe("useFinancialDashboard", () => {
     expect(screen.getByTestId("summary")).toHaveTextContent("800");
   });
 
+  it("limpa os dados do escopo anterior quando a carga adiada do novo mês falha", async () => {
+    let rejectAugustPayments!: (reason?: unknown) => void;
+    const augustPayments = new Promise<(typeof payment)[]>((_, reject) => {
+      rejectAugustPayments = reject;
+    });
+    mocks.getPaymentsByMonth.mockImplementation((_studioId, _year, requestedMonth) =>
+      requestedMonth === 7 ? Promise.resolve([payment]) : augustPayments,
+    );
+
+    const { rerender } = render(<FinancialHarness month={7} />);
+    await waitFor(() => expect(screen.getByTestId("payments")).toHaveTextContent("payment-1"));
+
+    rerender(<FinancialHarness month={8} />);
+    expect(screen.getByTestId("payments")).toHaveTextContent(/^$/);
+    expect(screen.getByTestId("summary")).toHaveTextContent("0");
+    expect(screen.getByTestId("commissions")).toHaveTextContent(/^$/);
+
+    await act(async () => rejectAugustPayments({ code: "PAYMENTS_DOWN", status: 503 }));
+
+    await waitFor(() => expect(screen.getByTestId("payments-error")).not.toHaveTextContent(/^$/));
+    expect(screen.getByTestId("payments")).toHaveTextContent(/^$/);
+    expect(screen.getByTestId("summary")).toHaveTextContent("0");
+    expect(screen.getByTestId("commissions")).toHaveTextContent(/^$/);
+  });
+
   it("carrega comissões no modo artista sem buscar a lista gerencial de artistas", async () => {
     render(<FinancialHarness isManager={false} />);
 

@@ -7,6 +7,11 @@ import { acceptArtistInvite, getArtistInviteByToken } from "@/services/artist-in
 
 type InviteState = Awaited<ReturnType<typeof getArtistInviteByToken>>;
 
+function isInviteExpired(invite: InviteState, currentTime: number) {
+  if (!invite) return false;
+  return invite.status === "expired" || new Date(invite.expires_at).getTime() <= currentTime;
+}
+
 export function ArtistActivationPage() {
   const { token = "" } = useParams();
   const navigate = useNavigate();
@@ -19,12 +24,11 @@ export function ArtistActivationPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [openedAt] = useState(() => Date.now());
+  const [currentTime, setCurrentTime] = useState(() => new Date().getTime());
 
   const inviteExpired = useMemo(() => {
-    if (!invite) return false;
-    return invite.status === "expired" || new Date(invite.expires_at).getTime() < openedAt;
-  }, [invite, openedAt]);
+    return isInviteExpired(invite, currentTime);
+  }, [currentTime, invite]);
 
   const inviteAccepted = invite?.status === "accepted";
   const inviteRevoked = invite?.status === "revoked";
@@ -54,6 +58,20 @@ export function ArtistActivationPage() {
   }, [token]);
 
   useEffect(() => {
+    if (!invite) return;
+
+    const expiresAt = new Date(invite.expires_at).getTime();
+    const now = new Date().getTime();
+    if (!Number.isFinite(expiresAt) || expiresAt <= now) {
+      setCurrentTime(now);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => setCurrentTime(new Date().getTime()), expiresAt - now);
+    return () => window.clearTimeout(timeoutId);
+  }, [invite]);
+
+  useEffect(() => {
     if (!invite || inviteExpired || error) return;
 
     let isMounted = true;
@@ -61,6 +79,13 @@ export function ArtistActivationPage() {
     supabase.auth.getSession().then(async ({ data }) => {
       const sessionUser = data.session?.user;
       if (!isMounted || !sessionUser) return;
+
+      const now = new Date().getTime();
+      if (isInviteExpired(invite, now)) {
+        setCurrentTime(now);
+        setError("Seu convite expirou. Peça um novo link ao gestor.");
+        return;
+      }
 
       const inviteEmail = invite.email.toLowerCase();
       const sessionEmail = (sessionUser.email ?? "").toLowerCase();
@@ -92,7 +117,9 @@ export function ArtistActivationPage() {
     setMessage("");
 
     if (!invite) return;
-    if (inviteExpired) {
+    const now = new Date().getTime();
+    if (isInviteExpired(invite, now)) {
+      setCurrentTime(now);
       setError("Seu convite expirou. Peça um novo link ao gestor.");
       return;
     }
@@ -131,6 +158,12 @@ export function ArtistActivationPage() {
         if (signUpError) throw signUpError;
 
         if (data.session?.user) {
+          const currentTime = new Date().getTime();
+          if (isInviteExpired(invite, currentTime)) {
+            setCurrentTime(currentTime);
+            setError("Seu convite expirou. Peça um novo link ao gestor.");
+            return;
+          }
           await acceptArtistInvite(token, data.session.user.email ?? normalizedEmail);
           navigate("/painel", { replace: true });
           return;
@@ -152,6 +185,12 @@ export function ArtistActivationPage() {
         return;
       }
 
+      const currentTime = new Date().getTime();
+      if (isInviteExpired(invite, currentTime)) {
+        setCurrentTime(currentTime);
+        setError("Seu convite expirou. Peça um novo link ao gestor.");
+        return;
+      }
       await acceptArtistInvite(token, data.session.user.email ?? normalizedEmail);
       navigate("/painel", { replace: true });
     } catch (caughtError) {

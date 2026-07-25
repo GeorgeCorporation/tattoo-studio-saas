@@ -42,6 +42,10 @@ const emptySummary: MonthSummary = {
   studioNetRevenue: 0,
 };
 
+function emptyManagerData(): FinancialManagerData {
+  return { rules: [], artists: [] };
+}
+
 function technicalErrorContext(error: unknown) {
   if (!error || typeof error !== "object") return {};
   const record = error as Record<string, unknown>;
@@ -69,7 +73,7 @@ export function useFinancialDashboard({ studioId, year, month, isManager }: UseF
     error: "",
   });
   const [manager, setManager] = useState<FinancialSectionState<FinancialManagerData>>({
-    data: { rules: [], artists: [] },
+    data: emptyManagerData(),
     loading: isManager,
     error: "",
   });
@@ -87,25 +91,30 @@ export function useFinancialDashboard({ studioId, year, month, isManager }: UseF
   });
 
   useLayoutEffect(() => {
+    const requests = sectionRequests.current;
     activeScope.current = scopeKey;
     refreshRequest.current += 1;
-    sectionRequests.current.payments += 1;
-    sectionRequests.current.summary += 1;
-    sectionRequests.current.commissions += 1;
-    sectionRequests.current.manager += 1;
+    requests.payments += 1;
+    requests.summary += 1;
+    requests.commissions += 1;
+    requests.manager += 1;
     paymentsSnapshot.current = undefined;
     rulesSnapshot.current = undefined;
     cancelledCountSnapshot.current = undefined;
+    setPayments({ data: [], loading: true, error: "" });
+    setSummary({ data: emptySummary, loading: true, error: "" });
+    setCommissions({ data: [], loading: true, error: "" });
+    setManager({ data: emptyManagerData(), loading: isManager, error: "" });
 
     return () => {
       if (activeScope.current === scopeKey) activeScope.current = "";
       refreshRequest.current += 1;
-      sectionRequests.current.payments += 1;
-      sectionRequests.current.summary += 1;
-      sectionRequests.current.commissions += 1;
-      sectionRequests.current.manager += 1;
+      requests.payments += 1;
+      requests.summary += 1;
+      requests.commissions += 1;
+      requests.manager += 1;
     };
-  }, [scopeKey]);
+  }, [isManager, scopeKey]);
 
   const beginSectionRequest = useCallback(
     (section: FinancialSection) => {
