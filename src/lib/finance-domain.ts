@@ -41,7 +41,9 @@ export type FinancePaymentSnapshot = {
 export type FinanceCommissionRuleSnapshot = {
   artist_id: string;
   is_active: boolean;
+  cap_enabled: boolean;
   monthly_cap: number | null;
+  starts_at: string;
 };
 
 export type MonthSummary = {
@@ -70,10 +72,22 @@ function roundCurrency(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
+export function getFinanceMonthRange(year: number, month: number) {
+  const startDate = new Date(Date.UTC(year, month - 1, 1));
+  const endDate = new Date(Date.UTC(year, month, 1));
+  return {
+    start: startDate.toISOString(),
+    end: endDate.toISOString(),
+    startDate: startDate.toISOString().slice(0, 10),
+    endDate: endDate.toISOString().slice(0, 10),
+  };
+}
+
 function isPaidInMonth(payment: FinancePaymentSnapshot, year: number, month: number) {
   if (!payment.paid_at) return false;
-  const paidAt = new Date(payment.paid_at);
-  return paidAt.getUTCFullYear() === year && paidAt.getUTCMonth() + 1 === month;
+  const paidAt = Date.parse(payment.paid_at);
+  const { start, end } = getFinanceMonthRange(year, month);
+  return paidAt >= Date.parse(start) && paidAt < Date.parse(end);
 }
 
 export function isClientSource(value: string): value is ClientSource {
@@ -162,8 +176,14 @@ export function buildArtistCommissionSummaries(
   month: number,
 ): ArtistCommissionSummary[] {
   const activeRuleByArtist = new Map<string, FinanceCommissionRuleSnapshot>();
+  const { end } = getFinanceMonthRange(year, month);
+  const periodEnd = Date.parse(end);
   for (const rule of rules) {
-    if (rule.is_active && !activeRuleByArtist.has(rule.artist_id)) {
+    const startsAt = Date.parse(rule.starts_at);
+    if (!rule.is_active || !Number.isFinite(startsAt) || startsAt >= periodEnd) continue;
+
+    const current = activeRuleByArtist.get(rule.artist_id);
+    if (!current || startsAt > Date.parse(current.starts_at)) {
       activeRuleByArtist.set(rule.artist_id, rule);
     }
   }
@@ -181,7 +201,9 @@ export function buildArtistCommissionSummaries(
       ownClientCommission: 0,
       studioReferralCommission: 0,
       totalCommission: 0,
-      capValue: activeRuleByArtist.get(artist.id)?.monthly_cap ?? null,
+      capValue: activeRuleByArtist.get(artist.id)?.cap_enabled
+        ? (activeRuleByArtist.get(artist.id)?.monthly_cap ?? null)
+        : null,
       capConsumed: 0,
       capReached: false,
     };

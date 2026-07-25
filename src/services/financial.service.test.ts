@@ -48,6 +48,7 @@ vi.mock("@/lib/supabase", () => ({
 }));
 
 import { getArtistCommissionSummaries, getMonthSummary } from "@/services/financial.service";
+import { getFinanceMonthRange } from "@/lib/finance-domain";
 
 const payment = {
   id: "payment-1",
@@ -119,5 +120,21 @@ describe("financial.service", () => {
 
     expect(rangeColumns).toContain("paid_at");
     expect(rangeColumns).not.toContain("created_at");
+  });
+
+  it("consulta pagamentos com a mesma janela UTC usada pelo domínio", async () => {
+    await getMonthSummary("studio-1", 2026, 7);
+
+    const { start, end } = getFinanceMonthRange(2026, 7);
+    expect(mocks.calls).toContainEqual({
+      table: "payments",
+      method: "gte",
+      args: ["paid_at", start],
+    });
+    expect(mocks.calls).toContainEqual({
+      table: "payments",
+      method: "lt",
+      args: ["paid_at", end],
+    });
   });
 });

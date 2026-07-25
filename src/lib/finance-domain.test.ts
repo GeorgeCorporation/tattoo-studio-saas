@@ -4,6 +4,7 @@ import {
   buildMonthSummary,
   calculateCommissionBreakdown,
   clientSourceLabels,
+  getFinanceMonthRange,
   type FinancePaymentSnapshot,
 } from "@/lib/finance-domain";
 import { getSidebarItemsForRole } from "@/lib/access-control";
@@ -139,7 +140,9 @@ describe("finance-domain", () => {
         {
           artist_id: "artist-1",
           is_active: true,
+          cap_enabled: true,
           monthly_cap: 1000,
+          starts_at: "2026-01-01",
         },
       ],
       2026,
@@ -159,6 +162,56 @@ describe("finance-domain", () => {
         capReached: false,
       },
     ]);
+  });
+
+  it("usa a mesma janela UTC nas bordas do mês financeiro", () => {
+    const { start, end } = getFinanceMonthRange(2026, 7);
+    const at = (timestamp: number, amount: number): FinancePaymentSnapshot => ({
+      ...julyPayment,
+      amount,
+      paid_at: new Date(timestamp).toISOString(),
+      payment_commissions: [],
+    });
+
+    const summary = buildMonthSummary(
+      [
+        at(Date.parse(start) - 1, 100),
+        at(Date.parse(start), 200),
+        at(Date.parse(end) - 1, 300),
+        at(Date.parse(end), 400),
+      ],
+      0,
+      2026,
+      7,
+    );
+
+    expect(summary.monthRevenue).toBe(500);
+  });
+
+  it("ignora regra futura ao resumir um mês histórico", () => {
+    const summaries = buildArtistCommissionSummaries(
+      [julyPayment],
+      [
+        {
+          artist_id: "artist-1",
+          is_active: true,
+          cap_enabled: true,
+          monthly_cap: 5000,
+          starts_at: "2026-10-01",
+        },
+        {
+          artist_id: "artist-1",
+          is_active: true,
+          cap_enabled: true,
+          monthly_cap: 1000,
+          starts_at: "2026-01-01",
+        },
+      ],
+      2026,
+      7,
+    );
+
+    expect(summaries[0]?.capValue).toBe(1000);
   });
 
   it("mostra menu reduzido para tatuador", () => {

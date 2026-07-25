@@ -27,6 +27,14 @@ const monthNames = [
   "Dezembro",
 ];
 
+export async function runFinancialRetry(onRetry: () => Promise<unknown>) {
+  try {
+    await onRetry();
+  } catch {
+    // O hook já registra a falha e mantém o erro no estado da seção.
+  }
+}
+
 function SectionStatus({
   error,
   loading,
@@ -44,7 +52,8 @@ function SectionStatus({
         <p>{error}</p>
         <button
           className="rounded-lg border border-red-300/20 px-3 py-2 font-semibold"
-          onClick={() => void onRetry()}
+          disabled={loading}
+          onClick={() => void runFinancialRetry(onRetry)}
           type="button"
         >
           Tentar novamente

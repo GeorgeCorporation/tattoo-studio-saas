@@ -4,6 +4,7 @@ import {
   buildMonthSummary,
   calculateCommissionBreakdown,
   clientSourceLabels,
+  getFinanceMonthRange,
   normalizeClientSource,
   type ArtistCommissionSummary,
   type ClientSource,
@@ -84,17 +85,6 @@ export type UpsertCommissionRuleData = {
   notes?: string;
 };
 
-function monthRange(year: number, month: number) {
-  const start = new Date(year, month - 1, 1);
-  const end = new Date(year, month, 1);
-  return {
-    start: start.toISOString(),
-    end: end.toISOString(),
-    startDate: start.toISOString().split("T")[0],
-    endDate: end.toISOString().split("T")[0],
-  };
-}
-
 async function getActiveCommissionRule(studioId: string, artistId: string, paidAtDate: string) {
   const { data, error } = await supabase
     .from("artist_commission_rules")
@@ -113,7 +103,7 @@ async function getActiveCommissionRule(studioId: string, artistId: string, paidA
 
 async function getConsumedCapAmount(studioId: string, artistId: string, paidAtIso: string) {
   const paidAt = new Date(paidAtIso);
-  const { start, end } = monthRange(paidAt.getUTCFullYear(), paidAt.getUTCMonth() + 1);
+  const { start, end } = getFinanceMonthRange(paidAt.getUTCFullYear(), paidAt.getUTCMonth() + 1);
 
   const { data, error } = await supabase
     .from("payment_commissions")
@@ -169,7 +159,7 @@ async function createPaymentCommissionLedger(data: {
 }
 
 export async function getPaymentsByMonth(studioId: string, year: number, month: number) {
-  const { start, end } = monthRange(year, month);
+  const { start, end } = getFinanceMonthRange(year, month);
 
   const { data, error } = await supabase
     .from("payments")
@@ -195,7 +185,7 @@ export async function getMonthSummary(studioId: string, year: number, month: num
 }
 
 export async function getCancelledAppointmentsCount(studioId: string, year: number, month: number) {
-  const { startDate, endDate } = monthRange(year, month);
+  const { startDate, endDate } = getFinanceMonthRange(year, month);
   const { data, error } = await supabase
     .from("appointments")
     .select("id")

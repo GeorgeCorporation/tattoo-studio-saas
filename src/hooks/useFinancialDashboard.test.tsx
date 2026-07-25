@@ -79,12 +79,12 @@ const rule = {
   tattoo_artists: { name: "Ana" },
 };
 
-function FinancialHarness() {
+function FinancialHarness({ month = 7, isManager = true }: { month?: number; isManager?: boolean }) {
   const dashboard = useFinancialDashboard({
     studioId: "studio-1",
     year: 2026,
-    month: 7,
-    isManager: true,
+    month,
+    isManager,
   });
 
   return (
@@ -94,6 +94,7 @@ function FinancialHarness() {
       <p data-testid="summary">{dashboard.summary.data.monthRevenue}</p>
       <p data-testid="summary-error">{dashboard.summary.error}</p>
       <p data-testid="rules">{dashboard.manager.data.rules.map((item) => item.id).join(",")}</p>
+      <p data-testid="commissions">{dashboard.commissions.data.map((item) => item.artist_id).join(",")}</p>
       <p data-testid="manager-error">{dashboard.manager.error}</p>
       <button onClick={() => void dashboard.retrySummary()} type="button">
         retry summary
@@ -188,6 +189,41 @@ describe("useFinancialDashboard", () => {
     expect(mocks.getPaymentsByMonth).toHaveBeenCalledTimes(1);
     expect(mocks.getCommissionRules).toHaveBeenCalledTimes(1);
   });
+
+  it("ignora respostas atrasadas do mês anterior", async () => {
+    let resolveJuly!: (value: (typeof payment)[]) => void;
+    const julyPayments = new Promise<(typeof payment)[]>((resolve) => {
+      resolveJuly = resolve;
+    });
+    const augustPayment = {
+      ...payment,
+      id: "payment-august",
+      amount: 800,
+      paid_at: "2026-08-10T12:00:00.000Z",
+    };
+    mocks.getPaymentsByMonth.mockImplementation((_studioId, _year, requestedMonth) =>
+      requestedMonth === 7 ? julyPayments : Promise.resolve([augustPayment]),
+    );
+
+    const { rerender } = render(<FinancialHarness month={7} />);
+    rerender(<FinancialHarness month={8} />);
+
+    await waitFor(() => expect(screen.getByTestId("payments")).toHaveTextContent("payment-august"));
+    expect(screen.getByTestId("summary")).toHaveTextContent("800");
+
+    await act(async () => resolveJuly([payment]));
+
+    await waitFor(() => expect(screen.getByTestId("payments")).toHaveTextContent("payment-august"));
+    expect(screen.getByTestId("summary")).toHaveTextContent("800");
+  });
+
+  it("carrega comissões no modo artista sem buscar a lista gerencial de artistas", async () => {
+    render(<FinancialHarness isManager={false} />);
+
+    await waitFor(() => expect(screen.getByTestId("commissions")).toHaveTextContent("artist-1"));
+    expect(mocks.getArtists).not.toHaveBeenCalled();
+    expect(mocks.getCommissionRules).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("refresh dos modais financeiros", () => {
@@ -273,5 +309,26 @@ describe("refresh dos modais financeiros", () => {
 
     await act(async () => finishRefresh());
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("mantém a regra salva e mostra aviso específico quando o refresh falha", async () => {
+    const onClose = vi.fn();
+    const onSaved = vi.fn().mockRejectedValue(new Error("refresh down"));
+
+    render(
+      <CommissionRuleModal
+        artists={[{ id: "artist-1", name: "Ana" } as never]}
+        onClose={onClose}
+        onSaved={onSaved}
+        open
+        studioId="studio-1"
+      />,
+    );
+    fireEvent.submit(screen.getByRole("button", { name: "Salvar regra" }).closest("form")!);
+
+    expect(await screen.findByText(/regra foi salva, mas não foi possível atualizar/i)).toBeInTheDocument();
+    expect(mocks.upsertCommissionRule).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.queryByText("Não foi possível salvar regra de comissão.")).not.toBeInTheDocument();
   });
 });

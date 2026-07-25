@@ -51,6 +51,42 @@ Evidência inicial:
 - `FinancialPage` preserva dados carregados e apresenta loading/erro/retry por seção.
 - Modais aguardam o refresh antes de fechar. Se a gravação concluir e o refresh falhar, o modal mantém o sucesso da gravação, desabilita novo submit e mostra aviso específico.
 
+## Correções após auto-review
+
+O auto-review do range `99fbd0a..849d30c` não encontrou issues críticas e apontou quatro issues importantes, todas reproduzidas/cobertas antes da correção:
+
+1. resposta atrasada de um mês anterior podia sobrescrever o estado atual;
+2. nova falha de retry podia produzir rejeição não absorvida no handler da página;
+3. query e domínio usavam políticas diferentes nas bordas mensais;
+4. regra futura podia fornecer teto para um mês histórico.
+
+RED corretivo:
+
+```text
+4 falhas esperadas: race de mês, janela UTC ausente no domínio/serviço e regra futura
+1 falha esperada adicional: helper de retry ainda ausente
+```
+
+Correções:
+
+- scope monotônico por `studioId`/ano/mês/role, token por seção e token de refresh; respostas antigas e operações após unmount não atualizam estado ou snapshots;
+- retries da página são aguardados por um helper que absorve a rejeição já registrada no estado/logger; botão fica desabilitado durante loading;
+- `getFinanceMonthRange` define uma janela UTC única com `Date.UTC`, usada tanto pelas queries quanto pela agregação pura;
+- regras carregam `starts_at`/`cap_enabled` no snapshot e o domínio escolhe a regra ativa mais recente cujo início precede o fim do período;
+- cobertura adicional para modo artista e falha de refresh após salvar regra.
+
+GREEN corretivo:
+
+```text
+npm.cmd run test -- src/lib/finance-domain.test.ts src/services/financial.service.test.ts src/hooks/useFinancialDashboard.test.tsx src/pages/financial/FinancialPage.test.tsx src/components/layout/DashboardLayout.test.tsx
+5 arquivos, 29 testes, todos passaram
+
+npm.cmd run typecheck
+exit 0
+```
+
+A suíte completa não foi repetida após o auto-review, conforme orientação do coordenador; a execução completa anterior permanece registrada abaixo.
+
 ## GREEN e verificação
 
 GREEN focado:
@@ -97,6 +133,7 @@ Criados:
 - `src/hooks/useFinancialDashboard.ts`
 - `src/hooks/useFinancialDashboard.test.tsx`
 - `src/services/financial.service.test.ts`
+- `src/pages/financial/FinancialPage.test.tsx`
 - `.superpowers/sdd/task-5-report.md`
 
 Modificados:
