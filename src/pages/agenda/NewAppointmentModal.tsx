@@ -45,11 +45,33 @@ export function NewAppointmentModal({
   const [clientSource, setClientSource] = useState<"artist_client" | "studio_referral">("artist_client");
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
+  const [optionsLoading, setOptionsLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!open) return;
+    function resetLoadedOptions() {
+      setClients([]);
+      setArtists([]);
+      setServices([]);
+      setWorkingHours([]);
+      setClientId("");
+      setArtistId("");
+      setServiceId("");
+      setDate(defaultDate);
+      setTime("09:00");
+      setClientSource("artist_client");
+      setError("");
+    }
+
+    resetLoadedOptions();
+
+    if (!open) {
+      setOptionsLoading(false);
+      return;
+    }
+
     let active = true;
+    setOptionsLoading(true);
 
     async function loadOptions() {
       try {
@@ -82,6 +104,8 @@ export function NewAppointmentModal({
       } catch (caughtError) {
         if (!active) return;
         setError(caughtError instanceof Error ? caughtError.message : "Não foi possível carregar opções.");
+      } finally {
+        if (active) setOptionsLoading(false);
       }
     }
 
@@ -92,11 +116,16 @@ export function NewAppointmentModal({
     };
   }, [defaultDate, open, studioId]);
 
+  const optionsReady =
+    !optionsLoading &&
+    Boolean(clientId && artistId && serviceId) &&
+    workingHours.length > 0;
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
 
-    if (!clientId || !artistId || !serviceId || !date || !time || !description) {
+    if (!optionsReady || !date || !time || !description) {
       setError("Preencha todos os campos.");
       return;
     }
@@ -257,7 +286,7 @@ export function NewAppointmentModal({
 
           <button
             className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold disabled:opacity-60"
-            disabled={saving}
+            disabled={saving || !optionsReady}
             type="submit"
           >
             {saving ? "Salvando..." : "Criar agendamento"}

@@ -69,4 +69,43 @@ describe("AgendaPage", () => {
     await waitFor(() => expect(screen.queryByText("Cliente antigo")).not.toBeInTheDocument());
     expect(screen.getByText("Cliente atual")).toBeInTheDocument();
   });
+
+  it("nao recarrega a data antiga quando update de status termina apos troca de data", async () => {
+    let resolveStatus!: () => void;
+    mocks.updateAppointmentStatus.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveStatus = resolve;
+        }),
+    );
+    mocks.getAppointmentsByDate.mockImplementation((_studioId: string, date: string) => {
+      if (date === "2099-07-06") {
+        return Promise.resolve([appointment("old", date, "Cliente da data A")]);
+      }
+      if (date === "2099-07-07") {
+        return Promise.resolve([appointment("new", date, "Cliente da data B")]);
+      }
+      return Promise.resolve([]);
+    });
+    render(<AgendaPage />);
+    const dateInput = screen.getByDisplayValue(/\d{4}-\d{2}-\d{2}/);
+
+    fireEvent.change(dateInput, { target: { value: "2099-07-06" } });
+    expect(await screen.findByText("Cliente da data A")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
+    await waitFor(() => expect(mocks.updateAppointmentStatus).toHaveBeenCalledTimes(1));
+
+    fireEvent.change(dateInput, { target: { value: "2099-07-07" } });
+    expect(await screen.findByText("Cliente da data B")).toBeInTheDocument();
+
+    await act(async () => resolveStatus());
+
+    await waitFor(() => {
+      const dateACalls = mocks.getAppointmentsByDate.mock.calls.filter(
+        ([, date]) => date === "2099-07-06",
+      );
+      expect(dateACalls).toHaveLength(1);
+    });
+    expect(screen.getByText("Cliente da data B")).toBeInTheDocument();
+  });
 });

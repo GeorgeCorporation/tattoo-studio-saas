@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -133,5 +133,70 @@ describe("NewAppointmentModal", () => {
     renderModal();
 
     expect(await screen.findByText(message)).toBeInTheDocument();
+  });
+
+  it("limpa opcoes antigas e desabilita submit durante recarga ao reabrir", async () => {
+    const view = renderModal();
+    await screen.findByRole("option", { name: "Cliente" });
+    view.rerender(
+      <NewAppointmentModal
+        defaultDate="2099-07-06"
+        onClose={vi.fn()}
+        onCreated={vi.fn()}
+        open={false}
+        role="manager"
+        studioId="studio-1"
+      />,
+    );
+    mocks.getAgendaClients.mockImplementationOnce(() => new Promise(() => undefined));
+
+    view.rerender(
+      <NewAppointmentModal
+        defaultDate="2099-07-06"
+        onClose={vi.fn()}
+        onCreated={vi.fn()}
+        open
+        role="manager"
+        studioId="studio-1"
+      />,
+    );
+
+    expect(screen.queryByRole("option", { name: "Cliente" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /criar agendamento/i })).toBeDisabled();
+  });
+
+  it("nao reutiliza dados antigos quando recarga ao reabrir falha", async () => {
+    const view = renderModal();
+    await screen.findByRole("option", { name: "Cliente" });
+    fireEvent.change(screen.getByLabelText(/descri/i), { target: { value: "Estado antigo" } });
+    view.rerender(
+      <NewAppointmentModal
+        defaultDate="2099-07-06"
+        onClose={vi.fn()}
+        onCreated={vi.fn()}
+        open={false}
+        role="manager"
+        studioId="studio-1"
+      />,
+    );
+    mocks.getAgendaClients.mockRejectedValueOnce(new Error("network"));
+
+    view.rerender(
+      <NewAppointmentModal
+        defaultDate="2099-07-06"
+        onClose={vi.fn()}
+        onCreated={vi.fn()}
+        open
+        role="manager"
+        studioId="studio-1"
+      />,
+    );
+
+    expect(await screen.findByText(/carregar clientes/i)).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Cliente" })).not.toBeInTheDocument();
+    const submit = screen.getByRole("button", { name: /criar agendamento/i });
+    expect(submit).toBeDisabled();
+    await act(async () => fireEvent.click(submit));
+    expect(mocks.createAppointment).not.toHaveBeenCalled();
   });
 });

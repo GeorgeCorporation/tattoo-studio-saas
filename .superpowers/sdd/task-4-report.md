@@ -107,3 +107,23 @@ Implementação conservadora dentro do contrato atual: cada início retornado pe
 ## Limitação de corrida simultânea
 
 A validação client/service reduz conflitos e é repetida antes do insert, mas duas solicitações simultâneas ainda podem validar o mesmo intervalo antes de qualquer insert. A proteção transacional/constraint de intervalo fica para Sprint futura, conforme limitação aprovada no brief.
+
+## Correção pós-revisão — respostas e estado obsoletos
+
+Dois achados Important foram reproduzidos e corrigidos com TDD:
+
+1. Um `updateAppointmentStatus` iniciado na data A mantinha o callback de recarga de A. Se o usuário navegasse para B durante o `await`, a conclusão do update iniciava outra consulta de A e podia substituir B. `AgendaPage` agora captura a data primitiva do update e compara com uma ref atualizada a cada render antes de recarregar ou exibir erro.
+2. `NewAppointmentModal` permanecia montado fechado e conservava listas, IDs e expediente. Ao reabrir, dados antigos continuavam habilitados durante uma nova carga e também após falha. Todo ciclo agora limpa listas, IDs, data/horário dependentes e `workingHours`; o submit usa o booleano derivado `optionsReady` e permanece desabilitado durante carga ou após falha.
+
+RED observado:
+
+- `npm.cmd run test -- src/pages/agenda/AgendaPage.test.tsx src/pages/agenda/NewAppointmentModal.test.tsx` — **3 falhas, 8 aprovações**.
+- A data A foi consultada duas vezes após o update tardio.
+- A opção antiga `Cliente` permaneceu no DOM durante recarga pendente e após falha específica.
+
+GREEN isolado:
+
+- `AgendaPage.test.tsx` — **2/2**.
+- `NewAppointmentModal.test.tsx` — **9/9**.
+
+A limitação do RPC público e a corrida simultânea documentadas acima permanecem inalteradas.

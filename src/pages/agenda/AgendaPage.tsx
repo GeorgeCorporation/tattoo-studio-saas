@@ -37,6 +37,8 @@ export function AgendaPage() {
 
   const selectedDateInput = useMemo(() => toDateInput(selectedDate), [selectedDate]);
   const formattedDate = useMemo(() => formatLongDate(selectedDate), [selectedDate]);
+  const selectedDateInputRef = useRef(selectedDateInput);
+  selectedDateInputRef.current = selectedDateInput;
 
   const loadAppointments = useCallback(async () => {
     if (!studioId) return;
@@ -72,10 +74,14 @@ export function AgendaPage() {
   }
 
   async function handleStatusChange(id: string, status: AgendaAppointmentStatus) {
+    const statusDate = selectedDateInputRef.current;
+
     try {
       await updateAppointmentStatus(id, status);
+      if (selectedDateInputRef.current !== statusDate) return;
       await loadAppointments();
     } catch (caughtError) {
+      if (selectedDateInputRef.current !== statusDate) return;
       logger.error("Falha ao atualizar status da agenda", caughtError, { appointmentId: id, status });
       setError(getFriendlyErrorMessage(caughtError, "Não foi possível atualizar o agendamento."));
     }
