@@ -65,6 +65,7 @@ vi.mock("@/services/clients.service", () => ({
 
 vi.mock("@/services/financial.service", () => ({
   getArtistCommissionSummaries: vi.fn().mockResolvedValue([]),
+  getCancelledAppointmentsCount: vi.fn().mockResolvedValue(0),
   getClientSourceLabel: vi.fn(),
   getCommissionRules: vi.fn().mockResolvedValue([]),
   getMonthSummary: vi.fn().mockResolvedValue({

@@ -1,21 +1,11 @@
 import { Edit, Plus } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useDashboardAccess } from "@/hooks/useDashboardAccess";
+import { useFinancialDashboard } from "@/hooks/useFinancialDashboard";
 import { paymentMethodLabels, paymentTypeLabels } from "@/lib/appointment-domain";
-import { getFriendlyErrorMessage } from "@/lib/errors";
-import { logger } from "@/lib/logger";
 import { CommissionRuleModal } from "@/pages/financial/CommissionRuleModal";
 import { PaymentModal } from "@/pages/financial/PaymentModal";
-import { getArtists, type Artist } from "@/services/artists.service";
-import {
-  getArtistCommissionSummaries,
-  getClientSourceLabel,
-  getCommissionRules,
-  getMonthSummary,
-  getPaymentsByMonth,
-  type CommissionRule,
-  type FinancialPayment,
-} from "@/services/financial.service";
+import { getClientSourceLabel, type CommissionRule } from "@/services/financial.service";
 
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -37,63 +27,50 @@ const monthNames = [
   "Dezembro",
 ];
 
+function SectionStatus({
+  error,
+  loading,
+  label,
+  onRetry,
+}: {
+  error: string;
+  loading: boolean;
+  label: string;
+  onRetry: () => Promise<unknown>;
+}) {
+  if (error) {
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-red-500/10 p-4 text-sm text-red-300">
+        <p>{error}</p>
+        <button
+          className="rounded-lg border border-red-300/20 px-3 py-2 font-semibold"
+          onClick={() => void onRetry()}
+          type="button"
+        >
+          Tentar novamente
+        </button>
+      </div>
+    );
+  }
+
+  return loading ? <p className="text-sm text-zinc-400">Carregando {label}...</p> : null;
+}
+
 export function FinancialPage() {
   const access = useDashboardAccess();
   const studioId = access?.studioId ?? "";
   const isManager = access?.role === "manager";
   const now = new Date();
-  const [artists, setArtists] = useState<Artist[]>([]);
-  const [rules, setRules] = useState<CommissionRule[]>([]);
   const [year] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
-  const [payments, setPayments] = useState<FinancialPayment[]>([]);
-  const [artistSummaries, setArtistSummaries] = useState<Awaited<ReturnType<typeof getArtistCommissionSummaries>>>([]);
-  const [summary, setSummary] = useState({
-    monthRevenue: 0,
-    signalTotal: 0,
-    finalTotal: 0,
-    cancelledCount: 0,
-    totalCommission: 0,
-    cappedCommissionCount: 0,
-    studioNetRevenue: 0,
-  });
-  const [loading, setLoading] = useState(true);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [ruleModalOpen, setRuleModalOpen] = useState(false);
   const [selectedRule, setSelectedRule] = useState<CommissionRule | null>(null);
-  const [error, setError] = useState("");
-
-  const loadFinancial = useCallback(async () => {
-    if (!studioId) return;
-
-    try {
-      setLoading(true);
-      setError("");
-
-      const [foundPayments, foundSummary, foundArtistSummaries, foundRules, foundArtists] = await Promise.all([
-        getPaymentsByMonth(studioId, year, month),
-        getMonthSummary(studioId, year, month),
-        getArtistCommissionSummaries(studioId, year, month),
-        isManager ? getCommissionRules(studioId) : Promise.resolve([]),
-        isManager ? getArtists(studioId) : Promise.resolve([]),
-      ]);
-
-      setPayments(foundPayments);
-      setSummary(foundSummary);
-      setArtistSummaries(foundArtistSummaries);
-      setRules(foundRules);
-      setArtists(foundArtists);
-    } catch (caughtError) {
-      logger.error("Falha ao carregar financeiro", caughtError, { year, month });
-      setError(getFriendlyErrorMessage(caughtError, "Não foi possível carregar o financeiro."));
-    } finally {
-      setLoading(false);
-    }
-  }, [isManager, month, studioId, year]);
-
-  useEffect(() => {
-    loadFinancial();
-  }, [loadFinancial]);
+  const financial = useFinancialDashboard({ studioId, year, month, isManager });
+  const payments = financial.payments.data;
+  const summary = financial.summary.data;
+  const artistSummaries = financial.commissions.data;
+  const { rules, artists } = financial.manager.data;
 
   const periodTotal = useMemo(
     () => payments.reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0),
@@ -172,6 +149,12 @@ export function FinancialPage() {
           </article>
         ))}
       </div>
+      <SectionStatus
+        error={financial.summary.error}
+        label="resumo financeiro"
+        loading={financial.summary.loading}
+        onRetry={financial.retrySummary}
+      />
 
       <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-[#1a1a1a] p-4 sm:flex-row sm:items-center sm:justify-between">
         <label className="text-sm font-medium">
@@ -208,6 +191,12 @@ export function FinancialPage() {
           ) : null}
         </section>
       ) : null}
+      <SectionStatus
+        error={financial.commissions.error}
+        label="comissões"
+        loading={financial.commissions.loading}
+        onRetry={financial.retryCommissions}
+      />
 
       {isManager ? (
         <section className="rounded-xl border border-white/10 bg-[#1a1a1a] p-5">
@@ -218,7 +207,11 @@ export function FinancialPage() {
                 Percentual, teto e repasse calculado com base nos pagamentos recebidos.
               </p>
             </div>
-            <button className="rounded-xl bg-[#E8650A] px-4 py-3 text-sm font-semibold" onClick={openCreateRule} type="button">
+            <button
+              className="rounded-xl bg-[#E8650A] px-4 py-3 text-sm font-semibold"
+              onClick={openCreateRule}
+              type="button"
+            >
               Nova regra
             </button>
           </div>
@@ -260,6 +253,15 @@ export function FinancialPage() {
         </section>
       ) : null}
 
+      {isManager ? (
+        <SectionStatus
+          error={financial.manager.error}
+          label="regras e artistas"
+          loading={financial.manager.loading}
+          onRetry={financial.retryManager}
+        />
+      ) : null}
+
       {isManager && rules.length ? (
         <section className="rounded-xl border border-white/10 bg-[#1a1a1a] p-5">
           <h2 className="text-xl font-semibold">Regras cadastradas</h2>
@@ -271,7 +273,11 @@ export function FinancialPage() {
                     <p className="font-semibold">{rule.tattoo_artists?.name ?? "Tatuador"}</p>
                     <p className="mt-1 text-sm text-zinc-500">Início: {rule.starts_at.slice(0, 10)}</p>
                   </div>
-                  <button className="rounded-xl border border-white/10 px-3 py-2 text-sm font-semibold" onClick={() => openEditRule(rule)} type="button">
+                  <button
+                    className="rounded-xl border border-white/10 px-3 py-2 text-sm font-semibold"
+                    onClick={() => openEditRule(rule)}
+                    type="button"
+                  >
                     Editar
                   </button>
                 </div>
@@ -285,8 +291,12 @@ export function FinancialPage() {
         </section>
       ) : null}
 
-      {error ? <p className="rounded-xl bg-red-500/10 p-4 text-sm text-red-300">{error}</p> : null}
-      {loading ? <p className="text-sm text-zinc-400">Carregando financeiro...</p> : null}
+      <SectionStatus
+        error={financial.payments.error}
+        label="histórico de pagamentos"
+        loading={financial.payments.loading}
+        onRetry={financial.retryPayments}
+      />
 
       <section className="rounded-xl border border-white/10 bg-[#1a1a1a]">
         <div className="overflow-x-auto">
@@ -334,7 +344,7 @@ export function FinancialPage() {
                 );
               })}
 
-              {!loading && !payments.length ? (
+              {!financial.payments.loading && !payments.length ? (
                 <tr>
                   <td className="px-5 py-8 text-center text-zinc-500" colSpan={9}>
                     Nenhum pagamento registrado neste período.
@@ -356,12 +366,17 @@ export function FinancialPage() {
         </div>
       </section>
 
-      <PaymentModal onClose={() => setPaymentModalOpen(false)} onCreated={loadFinancial} open={paymentModalOpen} studioId={studioId} />
+      <PaymentModal
+        onClose={() => setPaymentModalOpen(false)}
+        onCreated={financial.refresh}
+        open={paymentModalOpen}
+        studioId={studioId}
+      />
 
       <CommissionRuleModal
         artists={artists}
         onClose={() => setRuleModalOpen(false)}
-        onSaved={loadFinancial}
+        onSaved={financial.refresh}
         open={ruleModalOpen}
         rule={selectedRule}
         studioId={studioId}

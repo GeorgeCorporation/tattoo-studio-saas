@@ -9,17 +9,10 @@ type CommissionRuleModalProps = {
   artists: Artist[];
   rule?: CommissionRule | null;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: () => Promise<void>;
 };
 
-export function CommissionRuleModal({
-  open,
-  studioId,
-  artists,
-  rule,
-  onClose,
-  onSaved,
-}: CommissionRuleModalProps) {
+export function CommissionRuleModal({ open, studioId, artists, rule, onClose, onSaved }: CommissionRuleModalProps) {
   const [artistId, setArtistId] = useState("");
   const [percentage, setPercentage] = useState("30");
   const [capEnabled, setCapEnabled] = useState(true);
@@ -28,6 +21,7 @@ export function CommissionRuleModal({
   const [notes, setNotes] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -40,6 +34,7 @@ export function CommissionRuleModal({
     setStartsAt(rule?.starts_at?.slice(0, 10) ?? new Date().toISOString().split("T")[0]);
     setNotes(rule?.notes ?? "");
     setIsActive(rule?.is_active ?? true);
+    setSaved(false);
     setError("");
   }, [artists, open, rule]);
 
@@ -65,8 +60,14 @@ export function CommissionRuleModal({
         startsAt,
         notes,
       });
-      onSaved();
-      onClose();
+      setSaved(true);
+
+      try {
+        await onSaved();
+        onClose();
+      } catch {
+        setError("A regra foi salva, mas não foi possível atualizar o financeiro. Feche e tente atualizar novamente.");
+      }
     } catch {
       setError("Não foi possível salvar regra de comissão.");
     } finally {
@@ -166,8 +167,12 @@ export function CommissionRuleModal({
 
           {error ? <p className="text-sm text-red-400">{error}</p> : null}
 
-          <button className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold disabled:opacity-60" disabled={saving} type="submit">
-            {saving ? "Salvando..." : "Salvar regra"}
+          <button
+            className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold disabled:opacity-60"
+            disabled={saving || saved}
+            type="submit"
+          >
+            {saving ? "Salvando..." : saved ? "Regra salva" : "Salvar regra"}
           </button>
         </form>
       </section>

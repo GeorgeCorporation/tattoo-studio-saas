@@ -12,7 +12,7 @@ type PaymentModalProps = {
   open: boolean;
   studioId: string;
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: () => Promise<void>;
 };
 
 export function PaymentModal({ open, studioId, onClose, onCreated }: PaymentModalProps) {
@@ -23,16 +23,22 @@ export function PaymentModal({ open, studioId, onClose, onCreated }: PaymentModa
   const [method, setMethod] = useState<PaymentMethod>("pix");
   const [paidAt, setPaidAt] = useState(new Date().toISOString().split("T")[0]);
   const [saving, setSaving] = useState(false);
+  const [created, setCreated] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!open || !studioId) return;
 
     async function loadAppointments() {
-      const data = await getAppointmentsForPayment(studioId);
-      setAppointments(data);
-      setAppointmentId(data[0]?.id ?? "");
-      setError("");
+      try {
+        const data = await getAppointmentsForPayment(studioId);
+        setAppointments(data);
+        setAppointmentId(data[0]?.id ?? "");
+        setCreated(false);
+        setError("");
+      } catch {
+        setError("Não foi possível carregar os agendamentos.");
+      }
     }
 
     loadAppointments();
@@ -57,8 +63,16 @@ export function PaymentModal({ open, studioId, onClose, onCreated }: PaymentModa
         method,
         paidAt: new Date(`${paidAt}T12:00:00`).toISOString(),
       });
-      onCreated();
-      onClose();
+      setCreated(true);
+
+      try {
+        await onCreated();
+        onClose();
+      } catch {
+        setError(
+          "O pagamento foi registrado, mas não foi possível atualizar o financeiro. Feche e tente atualizar novamente.",
+        );
+      }
     } catch {
       setError("Não foi possível registrar pagamento.");
     } finally {
@@ -155,10 +169,10 @@ export function PaymentModal({ open, studioId, onClose, onCreated }: PaymentModa
 
           <button
             className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold disabled:opacity-60"
-            disabled={saving}
+            disabled={saving || created}
             type="submit"
           >
-            {saving ? "Registrando..." : "Registrar pagamento"}
+            {saving ? "Registrando..." : created ? "Pagamento registrado" : "Registrar pagamento"}
           </button>
         </form>
       </section>

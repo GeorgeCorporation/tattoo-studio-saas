@@ -1,5 +1,13 @@
 import type { PaymentMethod, PaymentType } from "@/lib/appointment-domain";
-import { calculateCommissionBreakdown, clientSourceLabels, normalizeClientSource, type ClientSource } from "@/lib/finance-domain";
+import {
+  buildArtistCommissionSummaries,
+  buildMonthSummary,
+  calculateCommissionBreakdown,
+  clientSourceLabels,
+  normalizeClientSource,
+  type ArtistCommissionSummary,
+  type ClientSource,
+} from "@/lib/finance-domain";
 import { supabase } from "@/lib/supabase";
 
 export type { PaymentMethod, PaymentType, ClientSource };
@@ -53,17 +61,7 @@ export type CommissionRule = {
   tattoo_artists?: { name: string } | null;
 };
 
-export type ArtistCommissionSummary = {
-  artist_id: string;
-  artist_name: string;
-  monthlyRevenue: number;
-  ownClientCommission: number;
-  studioReferralCommission: number;
-  totalCommission: number;
-  capValue: number | null;
-  capConsumed: number;
-  capReached: boolean;
-};
+export type { ArtistCommissionSummary };
 
 export type CreatePaymentData = {
   studioId: string;
@@ -189,51 +187,25 @@ export async function getPaymentsByMonth(studioId: string, year: number, month: 
 }
 
 export async function getMonthSummary(studioId: string, year: number, month: number) {
-  const { start, end, startDate, endDate } = monthRange(year, month);
-
-  const [
-    { data: payments, error: paymentsError },
-    { data: cancelled, error: cancelledError },
-    { data: commissions, error: commissionsError },
-  ] = await Promise.all([
-    supabase.from("payments").select("amount, type").eq("studio_id", studioId).gte("paid_at", start).lt("paid_at", end),
-    supabase
-      .from("appointments")
-      .select("id")
-      .eq("studio_id", studioId)
-      .eq("status", "cancelled")
-      .gte("date", startDate)
-      .lt("date", endDate),
-    supabase
-      .from("payment_commissions")
-      .select("commission_amount, cap_applied")
-      .eq("studio_id", studioId)
-      .gte("created_at", start)
-      .lt("created_at", end),
+  const [payments, cancelledCount] = await Promise.all([
+    getPaymentsByMonth(studioId, year, month),
+    getCancelledAppointmentsCount(studioId, year, month),
   ]);
+  return buildMonthSummary(payments, cancelledCount, year, month);
+}
 
-  if (paymentsError) throw paymentsError;
-  if (cancelledError) throw cancelledError;
-  if (commissionsError) throw commissionsError;
+export async function getCancelledAppointmentsCount(studioId: string, year: number, month: number) {
+  const { startDate, endDate } = monthRange(year, month);
+  const { data, error } = await supabase
+    .from("appointments")
+    .select("id")
+    .eq("studio_id", studioId)
+    .eq("status", "cancelled")
+    .gte("date", startDate)
+    .lt("date", endDate);
 
-  const monthRevenue = payments?.reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0) ?? 0;
-  const signalTotal =
-    payments?.filter((payment) => payment.type === "signal").reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0) ?? 0;
-  const finalTotal =
-    payments?.filter((payment) => payment.type === "final").reduce((sum, payment) => sum + Number(payment.amount ?? 0), 0) ?? 0;
-  const totalCommission =
-    commissions?.reduce((sum, item) => sum + Number(item.commission_amount ?? 0), 0) ?? 0;
-  const cappedCommissionCount = commissions?.filter((item) => item.cap_applied).length ?? 0;
-
-  return {
-    monthRevenue,
-    signalTotal,
-    finalTotal,
-    cancelledCount: cancelled?.length ?? 0,
-    totalCommission,
-    cappedCommissionCount,
-    studioNetRevenue: monthRevenue - totalCommission,
-  };
+  if (error) throw error;
+  return data?.length ?? 0;
 }
 
 export async function getAppointmentsForPayment(studioId: string) {
@@ -253,7 +225,9 @@ export async function getAppointmentsForPayment(studioId: string) {
 export async function getCommissionRules(studioId: string) {
   const { data, error } = await supabase
     .from("artist_commission_rules")
-    .select("id, studio_id, artist_id, is_active, percentage, cap_enabled, monthly_cap, starts_at, notes, tattoo_artists(name)")
+    .select(
+      "id, studio_id, artist_id, is_active, percentage, cap_enabled, monthly_cap, starts_at, notes, tattoo_artists(name)",
+    )
     .eq("studio_id", studioId)
     .order("starts_at", { ascending: false })
     .returns<CommissionRule[]>();
@@ -291,52 +265,11 @@ export async function upsertCommissionRule(data: UpsertCommissionRuleData) {
 }
 
 export async function getArtistCommissionSummaries(studioId: string, year: number, month: number) {
-  const payments = await getPaymentsByMonth(studioId, year, month);
-  const rules = await getCommissionRules(studioId);
-  const activeRuleByArtist = new Map<string, CommissionRule>();
-
-  for (const rule of rules) {
-    if (rule.is_active && !activeRuleByArtist.has(rule.artist_id)) {
-      activeRuleByArtist.set(rule.artist_id, rule);
-    }
-  }
-
-  const byArtist = new Map<string, ArtistCommissionSummary>();
-
-  for (const payment of payments) {
-    const artist = payment.appointments?.tattoo_artists;
-    if (!artist) continue;
-
-    const existing = byArtist.get(artist.id) ?? {
-      artist_id: artist.id,
-      artist_name: artist.name,
-      monthlyRevenue: 0,
-      ownClientCommission: 0,
-      studioReferralCommission: 0,
-      totalCommission: 0,
-      capValue: activeRuleByArtist.get(artist.id)?.monthly_cap ?? null,
-      capConsumed: 0,
-      capReached: false,
-    };
-
-    existing.monthlyRevenue += Number(payment.amount ?? 0);
-
-    for (const commission of payment.payment_commissions ?? []) {
-      if (normalizeClientSource(commission.client_source) === "studio_referral") {
-        existing.studioReferralCommission += Number(commission.commission_amount ?? 0);
-      } else {
-        existing.ownClientCommission += Number(commission.commission_amount ?? 0);
-        existing.capConsumed += Number(commission.cap_consumed_amount ?? 0);
-      }
-
-      existing.totalCommission += Number(commission.commission_amount ?? 0);
-      existing.capReached ||= Boolean(commission.cap_applied) || Boolean(existing.capValue && existing.capConsumed >= existing.capValue);
-    }
-
-    byArtist.set(artist.id, existing);
-  }
-
-  return Array.from(byArtist.values()).sort((left, right) => right.totalCommission - left.totalCommission);
+  const [payments, rules] = await Promise.all([
+    getPaymentsByMonth(studioId, year, month),
+    getCommissionRules(studioId),
+  ]);
+  return buildArtistCommissionSummaries(payments, rules, year, month);
 }
 
 export async function createPayment(data: CreatePaymentData) {
