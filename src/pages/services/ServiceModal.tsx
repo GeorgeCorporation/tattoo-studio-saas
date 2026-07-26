@@ -1,6 +1,8 @@
 import { FormEvent, useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { ServiceTemplatePicker } from "@/components/services/ServiceTemplatePicker";
 import { validateServiceInput } from "@/lib/service-domain";
+import type { ServiceTemplate } from "@/lib/service-templates";
 import type { ServiceFormData, StudioService } from "@/services/services.service";
 
 type ServiceModalProps = {
@@ -16,6 +18,8 @@ export function ServiceModal({ open, service, studioId, onClose, onSave }: Servi
   const [description, setDescription] = useState("");
   const [startingPrice, setStartingPrice] = useState("");
   const [avgDurationMinutes, setAvgDurationMinutes] = useState("");
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [templateFieldsCustomized, setTemplateFieldsCustomized] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -26,8 +30,18 @@ export function ServiceModal({ open, service, studioId, onClose, onSave }: Servi
     setDescription(service?.description ?? "");
     setStartingPrice(service?.starting_price?.toString() ?? "");
     setAvgDurationMinutes(service?.avg_duration_minutes?.toString() ?? "");
+    setSelectedTemplateId(null);
+    setTemplateFieldsCustomized(false);
     setError("");
   }, [open, service]);
+
+  function handleTemplateSelect(template: ServiceTemplate | null) {
+    setSelectedTemplateId(template?.id ?? null);
+    setName(template?.name ?? "");
+    setDescription(template?.description ?? "");
+    setAvgDurationMinutes(template ? String(template.durationMinutes) : "");
+    setTemplateFieldsCustomized(false);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -64,7 +78,7 @@ export function ServiceModal({ open, service, studioId, onClose, onSave }: Servi
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center">
-      <section className="w-full max-w-xl rounded-xl border border-white/10 bg-[#1a1a1a] text-white shadow-2xl">
+      <section className="max-h-[calc(100vh-2rem)] w-full max-w-xl overflow-y-auto rounded-xl border border-white/10 bg-[#1a1a1a] text-white shadow-2xl">
         <header className="flex items-center justify-between border-b border-white/10 p-5">
           <div>
             <h2 className="text-xl font-semibold">{service ? "Editar serviço" : "Adicionar serviço"}</h2>
@@ -76,12 +90,23 @@ export function ServiceModal({ open, service, studioId, onClose, onSave }: Servi
         </header>
 
         <form className="grid gap-4 p-5" onSubmit={handleSubmit}>
+          {!service ? (
+            <ServiceTemplatePicker
+              hasCustomizedFields={templateFieldsCustomized}
+              onSelect={handleTemplateSelect}
+              selectedTemplateId={selectedTemplateId}
+            />
+          ) : null}
+
           <label>
             <span className="mb-2 block text-sm font-medium">Nome</span>
             <input
               className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
               value={name}
-              onChange={(event) => setName(event.target.value)}
+              onChange={(event) => {
+                setName(event.target.value);
+                setTemplateFieldsCustomized(true);
+              }}
               required
             />
           </label>
@@ -91,7 +116,10 @@ export function ServiceModal({ open, service, studioId, onClose, onSave }: Servi
             <textarea
               className="min-h-28 w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
               value={description}
-              onChange={(event) => setDescription(event.target.value)}
+              onChange={(event) => {
+                setDescription(event.target.value);
+                setTemplateFieldsCustomized(true);
+              }}
             />
           </label>
 
@@ -119,7 +147,10 @@ export function ServiceModal({ open, service, studioId, onClose, onSave }: Servi
                 step="1"
                 type="number"
                 value={avgDurationMinutes}
-                onChange={(event) => setAvgDurationMinutes(event.target.value)}
+                onChange={(event) => {
+                  setAvgDurationMinutes(event.target.value);
+                  setTemplateFieldsCustomized(true);
+                }}
               />
             </label>
           </div>

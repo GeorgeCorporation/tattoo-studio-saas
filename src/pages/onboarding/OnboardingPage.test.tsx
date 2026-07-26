@@ -1,7 +1,10 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getOnboardingDraftStorageKey } from "@/hooks/useOnboardingDraft";
 import { OnboardingPage } from "@/pages/onboarding/OnboardingPage";
+
+const onboardingDraftKey = getOnboardingDraftStorageKey("user-1");
 
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
@@ -99,7 +102,7 @@ describe("OnboardingPage", () => {
     expect(mocks.createStudioOnboarding.mock.calls[0][0].workingHours).toEqual(
       expect.arrayContaining([{ day_of_week: 1, is_open: true, open_time: "09:00", close_time: "20:30" }]),
     );
-    expect(localStorage.getItem("tattoo:onboarding:draft:v2")).toBeNull();
+    expect(localStorage.getItem(onboardingDraftKey)).toBeNull();
   });
 
   it("prevents continuing when opening is equal to closing", async () => {
@@ -164,7 +167,7 @@ describe("OnboardingPage", () => {
 
   it("normaliza uma descrição acima do limite restaurada do localStorage", async () => {
     const exactLimit = "🎨".repeat(200);
-    localStorage.setItem("tattoo:onboarding:draft:v2", JSON.stringify({ description: `${exactLimit}🎨` }));
+    localStorage.setItem(onboardingDraftKey, JSON.stringify({ description: `${exactLimit}🎨` }));
 
     renderPage();
 
@@ -319,9 +322,70 @@ describe("OnboardingPage", () => {
     expect(screen.getByLabelText("Nome do serviço")).toBeInTheDocument();
     expect(screen.getByLabelText("Duração média em minutos")).toHaveAttribute("step", "1");
     expect(screen.getByLabelText("Preço inicial (opcional)")).toBeInTheDocument();
+    expect(screen.getByLabelText("Descrição do serviço (opcional)")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /fine line.*90 min/i })).toBeInTheDocument();
     expect(screen.queryByLabelText("Categoria")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Descrição")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Orçamento" })).not.toBeInTheDocument();
+  });
+
+  it("aplica um modelo editável ao serviço inicial e envia os valores personalizados", async () => {
+    renderPage();
+
+    await fillIdentity();
+    await fillContact();
+    await screen.findByRole("heading", { name: "Funcionamento" });
+    fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
+
+    fireEvent.change(screen.getByLabelText("Preço inicial (opcional)"), { target: { value: "250" } });
+    fireEvent.click(screen.getByRole("button", { name: /fine line.*90 min/i }));
+
+    expect(screen.getByLabelText("Nome do serviço")).toHaveValue("Fine Line");
+    expect(screen.getByLabelText("Duração média em minutos")).toHaveValue(90);
+    expect(screen.getByLabelText("Descrição do serviço (opcional)")).toHaveValue(
+      "Tatuagem com linhas finas, delicadas e detalhes precisos.",
+    );
+    expect(screen.getByLabelText("Preço inicial (opcional)")).toHaveValue(250);
+
+    fireEvent.change(screen.getByLabelText("Nome do serviço"), { target: { value: "Fine Line personalizada" } });
+    fireEvent.change(screen.getByLabelText("Duração média em minutos"), { target: { value: "120" } });
+    fireEvent.change(screen.getByLabelText("Descrição do serviço (opcional)"), {
+      target: { value: "Descrição definida pelo estúdio." },
+    });
+    await waitFor(() =>
+      expect(JSON.parse(localStorage.getItem(onboardingDraftKey) ?? "{}")).toMatchObject({
+        serviceDescription: "Descrição definida pelo estúdio.",
+      }),
+    );
+    fireEvent.change(screen.getByLabelText("Nome do tatuador"), { target: { value: "George Tattoo" } });
+    fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
+    fireEvent.click(screen.getByRole("button", { name: /ativar meu estúdio/i }));
+
+    await waitFor(() => expect(mocks.createStudioOnboarding).toHaveBeenCalled());
+    expect(mocks.createStudioOnboarding.mock.calls[0][0].firstServices).toEqual([
+      expect.objectContaining({
+        name: "Fine Line personalizada",
+        description: "Descrição definida pelo estúdio.",
+        avg_duration_minutes: 120,
+        starting_price: 250,
+      }),
+    ]);
+  });
+
+  it("protege uma duração personalizada restaurada antes de aplicar outro modelo", async () => {
+    localStorage.setItem(onboardingDraftKey, JSON.stringify({ durationMinutes: "75" }));
+    const confirmReplace = vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    renderPage();
+
+    await fillIdentity();
+    await fillContact();
+    await screen.findByRole("heading", { name: "Funcionamento" });
+    fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
+    fireEvent.click(screen.getByRole("button", { name: /fine line.*90 min/i }));
+
+    expect(confirmReplace).toHaveBeenCalledOnce();
+    expect(screen.getByLabelText("Duração média em minutos")).toHaveValue(75);
+    confirmReplace.mockRestore();
   });
 
   it("rejeita duração fracionária ao adicionar um serviço", async () => {

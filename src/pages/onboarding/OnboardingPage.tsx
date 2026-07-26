@@ -11,12 +11,15 @@
   Store,
   Upload,
 } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { inkoraLogo, inkoraMark } from "@/assets";
+import { ServiceTemplatePicker } from "@/components/services/ServiceTemplatePicker";
 import { useAuth } from "@/hooks/useAuth";
+import { useOnboardingDraft } from "@/hooks/useOnboardingDraft";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import type { ServiceTemplate } from "@/lib/service-templates";
 import { countVisualCharacters, limitVisualCharacters } from "@/lib/text-limit";
 import { updateWorkingHourField, type WorkingHourField } from "@/lib/working-hours";
 import citiesByState from "@/lib/brazil-cities.json";
@@ -30,7 +33,6 @@ import {
   type OnboardingWorkingHour,
 } from "@/services/onboarding.service";
 
-const DRAFT_KEY = "tattoo:onboarding:draft:v2";
 const DESCRIPTION_LIMIT = 200;
 
 const brStates = [
@@ -104,8 +106,11 @@ type DraftData = {
   artistInstagram: string;
   artistWhatsapp: string;
   serviceName: string;
+  serviceDescription: string;
   startingPrice: string;
   durationMinutes: string;
+  selectedServiceTemplateId: string | null;
+  serviceTemplateFieldsCustomized: boolean;
 };
 
 const inputClass =
@@ -154,15 +159,6 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string) {
   ]);
 }
 
-function restoreDraft(): Partial<DraftData> {
-  try {
-    const raw = localStorage.getItem(DRAFT_KEY);
-    return raw ? (JSON.parse(raw) as Partial<DraftData>) : {};
-  } catch {
-    return {};
-  }
-}
-
 function normalizeInstagram(value: string) {
   return value.replace("@", "").trim();
 }
@@ -172,43 +168,52 @@ function onlyDigits(value: string) {
 }
 
 export function OnboardingPage() {
-  const draft = useMemo(() => restoreDraft(), []);
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const userId = user?.id;
+  const {
+    clear: clearOnboardingDraft,
+    isReady: isDraftStorageReady,
+    restore: restoreOnboardingDraft,
+    save: saveOnboardingDraft,
+  } = useOnboardingDraft<DraftData>(userId);
+  const [draftHydratedForUserId, setDraftHydratedForUserId] = useState<string | null>(null);
+  const restoredDraftRef = useRef<Partial<DraftData>>({});
+  const isDraftHydrated = !authLoading && draftHydratedForUserId === (userId ?? null);
 
   const [step, setStep] = useState(1);
-  const [name, setName] = useState(draft.name ?? "");
-  const [slug, setSlug] = useState(draft.slug ?? "");
-  const [slugEdited, setSlugEdited] = useState(draft.slugEdited ?? false);
-  const [description, setDescription] = useState(() => limitVisualCharacters(draft.description ?? "", DESCRIPTION_LIMIT));
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [slugEdited, setSlugEdited] = useState(false);
+  const [description, setDescription] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [savedLogoUrl, setSavedLogoUrl] = useState("");
-  const [whatsapp, setWhatsapp] = useState(draft.whatsapp ?? "");
-  const [instagram, setInstagram] = useState(draft.instagram ?? "");
-  const [website, setWebsite] = useState(draft.website ?? "");
-  const [address, setAddress] = useState(draft.address ?? "");
-  const [city, setCity] = useState(draft.city ?? "");
-  const [stateUf, setStateUf] = useState(draft.stateUf ?? "");
-  const [manualCity, setManualCity] = useState(draft.manualCity ?? false);
-  const [workingHours, setWorkingHours] = useState<OnboardingWorkingHour[]>(draft.workingHours ?? buildDefaultWorkingHours());
-  const [activateBooking, setActivateBooking] = useState(draft.activateBooking ?? true);
-  const [artists, setArtists] = useState<ArtistDraft[]>((draft.artists ?? []).map((artist) => ({ ...artist, photoFile: null })));
-  const [artistName, setArtistName] = useState(draft.artistName ?? "");
-  const [artistSlug, setArtistSlug] = useState(draft.artistSlug ?? "");
-  const [artistSlugEdited, setArtistSlugEdited] = useState(draft.artistSlugEdited ?? false);
-  const [artistSpecialty, setArtistSpecialty] = useState(draft.artistSpecialty ?? "");
-  const [artistInstagram, setArtistInstagram] = useState(draft.artistInstagram ?? "");
-  const [artistWhatsapp, setArtistWhatsapp] = useState(draft.artistWhatsapp ?? "");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [instagram, setInstagram] = useState("");
+  const [website, setWebsite] = useState("");
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [stateUf, setStateUf] = useState("");
+  const [manualCity, setManualCity] = useState(false);
+  const [workingHours, setWorkingHours] = useState<OnboardingWorkingHour[]>(buildDefaultWorkingHours);
+  const [activateBooking, setActivateBooking] = useState(true);
+  const [artists, setArtists] = useState<ArtistDraft[]>([]);
+  const [artistName, setArtistName] = useState("");
+  const [artistSlug, setArtistSlug] = useState("");
+  const [artistSlugEdited, setArtistSlugEdited] = useState(false);
+  const [artistSpecialty, setArtistSpecialty] = useState("");
+  const [artistInstagram, setArtistInstagram] = useState("");
+  const [artistWhatsapp, setArtistWhatsapp] = useState("");
   const [artistPhotoFile, setArtistPhotoFile] = useState<File | null>(null);
   const [services, setServices] = useState<ServiceDraft[]>(
-    (draft.services ?? []).map((service) => ({
-      ...service,
-      durationMinutes: service.durationMinutes || "120",
-    })),
+    [],
   );
-  const [serviceName, setServiceName] = useState(draft.serviceName ?? "");
-  const [startingPrice, setStartingPrice] = useState(draft.startingPrice ?? "");
-  const [durationMinutes, setDurationMinutes] = useState(draft.durationMinutes ?? "120");
+  const [serviceName, setServiceName] = useState("");
+  const [serviceDescription, setServiceDescription] = useState("");
+  const [startingPrice, setStartingPrice] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState("120");
+  const [selectedServiceTemplateId, setSelectedServiceTemplateId] = useState<string | null>(null);
+  const [serviceTemplateFieldsCustomized, setServiceTemplateFieldsCustomized] = useState(false);
   const [checkingStudio, setCheckingStudio] = useState(true);
   const [startupWaitExpired, setStartupWaitExpired] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -234,7 +239,7 @@ export function OnboardingPage() {
   };
   const currentService: ServiceDraft = {
     name: serviceName,
-    description: "",
+    description: serviceDescription,
     startingPrice,
     durationMinutes,
   };
@@ -263,6 +268,50 @@ export function OnboardingPage() {
   );
 
   useEffect(() => {
+    if (authLoading) return;
+
+    const draft = restoreOnboardingDraft();
+    restoredDraftRef.current = draft;
+    setName(draft.name ?? "");
+    setSlug(draft.slug ?? "");
+    setSlugEdited(draft.slugEdited ?? false);
+    setDescription(limitVisualCharacters(draft.description ?? "", DESCRIPTION_LIMIT));
+    setWhatsapp(draft.whatsapp ?? "");
+    setInstagram(draft.instagram ?? "");
+    setWebsite(draft.website ?? "");
+    setAddress(draft.address ?? "");
+    setCity(draft.city ?? "");
+    setStateUf(draft.stateUf ?? "");
+    setManualCity(draft.manualCity ?? false);
+    setWorkingHours(draft.workingHours ?? buildDefaultWorkingHours());
+    setActivateBooking(draft.activateBooking ?? true);
+    setArtists((draft.artists ?? []).map((artist) => ({ ...artist, photoFile: null })));
+    setArtistName(draft.artistName ?? "");
+    setArtistSlug(draft.artistSlug ?? "");
+    setArtistSlugEdited(draft.artistSlugEdited ?? false);
+    setArtistSpecialty(draft.artistSpecialty ?? "");
+    setArtistInstagram(draft.artistInstagram ?? "");
+    setArtistWhatsapp(draft.artistWhatsapp ?? "");
+    setServices((draft.services ?? []).map((service) => ({ ...service, durationMinutes: service.durationMinutes || "120" })));
+    setServiceName(draft.serviceName ?? "");
+    setServiceDescription(draft.serviceDescription ?? "");
+    setStartingPrice(draft.startingPrice ?? "");
+    setDurationMinutes(draft.durationMinutes ?? "120");
+    setSelectedServiceTemplateId(draft.selectedServiceTemplateId ?? null);
+    setServiceTemplateFieldsCustomized(
+      draft.serviceTemplateFieldsCustomized ??
+        Boolean(
+          draft.serviceName?.trim() ||
+            draft.serviceDescription?.trim() ||
+            (draft.durationMinutes && draft.durationMinutes !== "120"),
+        ),
+    );
+    setDraftHydratedForUserId(userId ?? null);
+  }, [authLoading, restoreOnboardingDraft, userId]);
+
+  useEffect(() => {
+    if (!isDraftHydrated || !isDraftStorageReady) return;
+
     const draftToSave: DraftData = {
       name,
       slug,
@@ -292,11 +341,14 @@ export function OnboardingPage() {
       artistInstagram,
       artistWhatsapp,
       serviceName,
+      serviceDescription,
       startingPrice,
       durationMinutes,
+      selectedServiceTemplateId,
+      serviceTemplateFieldsCustomized,
     };
 
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(draftToSave));
+    saveOnboardingDraft(draftToSave);
   }, [
     activateBooking,
     address,
@@ -313,28 +365,36 @@ export function OnboardingPage() {
     instagram,
     manualCity,
     name,
+    serviceDescription,
     serviceName,
+    selectedServiceTemplateId,
     services,
     slug,
     slugEdited,
     startingPrice,
     stateUf,
+    serviceTemplateFieldsCustomized,
     website,
     whatsapp,
     workingHours,
+    isDraftHydrated,
+    isDraftStorageReady,
+    saveOnboardingDraft,
   ]);
 
   useEffect(() => {
+    if (!isDraftHydrated) return;
+
     let isMounted = true;
 
     async function checkExistingStudio() {
-      if (!user) {
+      if (!userId) {
         if (!authLoading && isMounted) setCheckingStudio(false);
         return;
       }
 
       try {
-        const snapshot = await withTimeout(getOnboardingSnapshot(user.id), 8000, "Tempo limite ao verificar estúdio.");
+        const snapshot = await withTimeout(getOnboardingSnapshot(userId), 8000, "Tempo limite ao verificar estúdio.");
         if (!isMounted) return;
 
         if (snapshot.studio) {
@@ -351,14 +411,14 @@ export function OnboardingPage() {
           setStateUf((current) => current || snapshot.studio?.state || "");
           setSavedLogoUrl(snapshot.studio.logo_url || "");
 
-          if (!draft.workingHours?.length && snapshot.workingHours.length) {
+          if (!restoredDraftRef.current.workingHours?.length && snapshot.workingHours.length) {
             const merged = buildDefaultWorkingHours().map(
               (item) => snapshot.workingHours.find((hour) => hour.day_of_week === item.day_of_week) ?? item,
             );
             setWorkingHours(merged);
           }
 
-          if (!draft.artists?.length && !artistName.trim() && snapshot.artists.length) {
+          if (!restoredDraftRef.current.artists?.length && !artistName.trim() && snapshot.artists.length) {
             setArtists(
               snapshot.artists.map((artist) => ({
                 name: artist.name,
@@ -371,7 +431,7 @@ export function OnboardingPage() {
             );
           }
 
-          if (!draft.services?.length && !serviceName.trim() && snapshot.services.length) {
+          if (!restoredDraftRef.current.services?.length && !serviceName.trim() && snapshot.services.length) {
             setServices(
               snapshot.services.map((service) => ({
                 name: service.name,
@@ -391,7 +451,7 @@ export function OnboardingPage() {
           setStep(progressState.nextStep);
         }
       } catch (caughtError) {
-        logger.error("Falha ao verificar estúdio no onboarding", caughtError, { userId: user.id });
+        logger.error("Falha ao verificar estúdio no onboarding", caughtError, { userId });
         if (isMounted) {
           setError(getFriendlyErrorMessage(caughtError, "Não foi possível verificar seu estúdio. Tente novamente em alguns minutos."));
           setSubmitFailed(false);
@@ -406,7 +466,7 @@ export function OnboardingPage() {
     return () => {
       isMounted = false;
     };
-  }, [activateBooking, artistName, authLoading, draft.artists, draft.services, draft.workingHours, navigate, serviceName, user]);
+  }, [activateBooking, artistName, authLoading, isDraftHydrated, navigate, serviceName, userId]);
 
   useEffect(() => {
     if (!authLoading && !checkingStudio) {
@@ -486,15 +546,26 @@ export function OnboardingPage() {
       ...current,
       {
         name: serviceName.trim(),
-        description: "",
+        description: serviceDescription.trim(),
         startingPrice,
         durationMinutes,
       },
     ]);
     setServiceName("");
+    setServiceDescription("");
     setStartingPrice("");
     setDurationMinutes("120");
+    setSelectedServiceTemplateId(null);
+    setServiceTemplateFieldsCustomized(false);
     setError("");
+  }
+
+  function applyServiceTemplate(template: ServiceTemplate | null) {
+    setSelectedServiceTemplateId(template?.id ?? null);
+    setServiceName(template?.name ?? "");
+    setServiceDescription(template?.description ?? "");
+    setDurationMinutes(template ? String(template.durationMinutes) : "120");
+    setServiceTemplateFieldsCustomized(false);
   }
 
   function removeService(index: number) {
@@ -594,7 +665,7 @@ export function OnboardingPage() {
         })),
       });
 
-      localStorage.removeItem(DRAFT_KEY);
+      clearOnboardingDraft();
       setSavingLabel("Abrindo painel...");
       navigate("/dashboard", { replace: true });
     } catch (caughtError) {
@@ -610,7 +681,7 @@ export function OnboardingPage() {
     }
   }
 
-  if ((authLoading || checkingStudio) && !startupWaitExpired) {
+  if ((authLoading || !isDraftHydrated || checkingStudio) && !startupWaitExpired) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#0f0f0f] px-4 text-sm text-zinc-300">
         <span className="rounded-xl border border-white/10 bg-[#1a1a1a] px-5 py-4">Verificando sessão e estúdio...</span>
@@ -967,6 +1038,12 @@ export function OnboardingPage() {
                   Serviço é o tipo de atendimento que o cliente escolhe ao agendar. Preço inicial é o valor mínimo exibido. Duração média ajuda a organizar horários.
                 </p>
 
+                <ServiceTemplatePicker
+                  hasCustomizedFields={serviceTemplateFieldsCustomized}
+                  onSelect={applyServiceTemplate}
+                  selectedTemplateId={selectedServiceTemplateId}
+                />
+
                 {services.length ? (
                   <div className="grid gap-3 md:grid-cols-2">
                     {services.map((service, index) => (
@@ -988,15 +1065,45 @@ export function OnboardingPage() {
                 <div className="grid gap-5 md:grid-cols-3">
                   <label className="block">
                     <span className="text-sm font-medium">Nome do serviço</span>
-                    <input className={inputClass} onChange={(event) => setServiceName(event.target.value)} placeholder="Tatuagem pequena" value={serviceName} />
+                    <input
+                      className={inputClass}
+                      onChange={(event) => {
+                        setServiceName(event.target.value);
+                        setServiceTemplateFieldsCustomized(true);
+                      }}
+                      placeholder="Tatuagem pequena"
+                      value={serviceName}
+                    />
                   </label>
                   <label className="block">
                     <span className="text-sm font-medium">Duração média em minutos</span>
-                    <input className={inputClass} min="30" onChange={(event) => setDurationMinutes(event.target.value)} step="1" type="number" value={durationMinutes} />
+                    <input
+                      className={inputClass}
+                      min="30"
+                      onChange={(event) => {
+                        setDurationMinutes(event.target.value);
+                        setServiceTemplateFieldsCustomized(true);
+                      }}
+                      step="1"
+                      type="number"
+                      value={durationMinutes}
+                    />
                   </label>
                   <label className="block">
                     <span className="text-sm font-medium">Preço inicial (opcional)</span>
                     <input className={inputClass} min="0" onChange={(event) => setStartingPrice(event.target.value)} placeholder="250" type="number" value={startingPrice} />
+                  </label>
+                  <label className="block md:col-span-3">
+                    <span className="text-sm font-medium">Descrição do serviço (opcional)</span>
+                    <textarea
+                      className={`${inputClass} min-h-24 resize-y`}
+                      onChange={(event) => {
+                        setServiceDescription(event.target.value);
+                        setServiceTemplateFieldsCustomized(true);
+                      }}
+                      placeholder="Detalhes que ajudam o cliente a entender o serviço"
+                      value={serviceDescription}
+                    />
                   </label>
                 </div>
               </section>
