@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { clearMockStudio, isMockMode, mockUser } from "@/lib/mockMode";
+import { logger } from "@/lib/logger";
 import { logSeguranca } from "@/lib/security-logger";
 import { supabase } from "@/lib/supabase";
 
@@ -27,8 +28,10 @@ export function useAuth() {
     }
 
     let isMounted = true;
+    logger.info("ONBOARDING_TRACE auth.getSession.start");
     const timeout = window.setTimeout(() => {
       if (!isMounted) return;
+      logger.warn("ONBOARDING_TRACE auth.getSession.timeout");
       setSession(null);
       setUser(null);
       setLoading(false);
@@ -39,14 +42,19 @@ export function useAuth() {
       .then(({ data }) => {
         if (!isMounted) return;
 
+        logger.info("ONBOARDING_TRACE auth.getSession.resolved", {
+          hasSession: Boolean(data.session),
+          hasUser: Boolean(data.session?.user),
+        });
         window.clearTimeout(timeout);
         setSession(data.session);
         setUser(data.session?.user ?? null);
         setLoading(false);
       })
-      .catch(() => {
+      .catch((error) => {
         if (!isMounted) return;
 
+        logger.error("ONBOARDING_TRACE auth.getSession.failed", error);
         window.clearTimeout(timeout);
         setSession(null);
         setUser(null);
@@ -56,6 +64,11 @@ export function useAuth() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      logger.info("ONBOARDING_TRACE auth.event", {
+        event,
+        hasSession: Boolean(nextSession),
+        hasUser: Boolean(nextSession?.user),
+      });
       if (event === "SIGNED_OUT") {
         logSeguranca("LOGOUT");
       }

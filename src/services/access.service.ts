@@ -1,4 +1,5 @@
-import { isMockMode, mockUser } from "@/lib/mockMode";
+import { getMockStudio, isMockMode, mockUser } from "@/lib/mockMode";
+import { logger } from "@/lib/logger";
 import { supabase } from "@/lib/supabase";
 import type { UserRole } from "@/lib/access-control";
 
@@ -45,17 +46,21 @@ export async function getCurrentUserAccess(
   userId: string,
 ): Promise<AccessContext | null> {
   if (isMockMode && userId === mockUser.id) {
+    const studio = getMockStudio();
+    if (!studio) return null;
+
     return {
-      studioId: "mock-studio-1",
-      studioName: "Inkora Demo",
-      studioSlug: "inkora-demo",
-      studioLogoUrl: null,
+      studioId: studio.id,
+      studioName: studio.name,
+      studioSlug: studio.slug,
+      studioLogoUrl: studio.logo_url ?? null,
       role: "manager",
       artistId: null,
       isOwner: true,
     };
   }
 
+  logger.info("ONBOARDING_TRACE access.owner-query.start", { userId });
   const { data: ownerStudio, error: ownerError } = await supabase
     .from("studios")
     .select("id, name, slug, logo_url")
@@ -63,6 +68,11 @@ export async function getCurrentUserAccess(
     .limit(1)
     .maybeSingle<{ id: string; name: string; slug: string; logo_url: string | null }>();
 
+  logger.info("ONBOARDING_TRACE access.owner-query.resolved", {
+    userId,
+    hasStudio: Boolean(ownerStudio),
+    hasError: Boolean(ownerError),
+  });
   if (ownerError) throw ownerError;
   if (ownerStudio) {
     return {
@@ -76,6 +86,7 @@ export async function getCurrentUserAccess(
     };
   }
 
+  logger.info("ONBOARDING_TRACE access.member-query.start", { userId });
   const { data: memberByAuth, error: memberByAuthError } = await supabase
     .from("tattoo_artists")
     .select("id, studio_id, studios(id, name, slug, logo_url)")
@@ -101,6 +112,11 @@ export async function getCurrentUserAccess(
         | null;
     }>();
 
+  logger.info("ONBOARDING_TRACE access.member-query.resolved", {
+    userId,
+    hasMember: Boolean(memberByAuth),
+    hasError: Boolean(memberByAuthError),
+  });
   if (memberByAuthError) throw memberByAuthError;
 
   if (!memberByAuth?.studios) return null;

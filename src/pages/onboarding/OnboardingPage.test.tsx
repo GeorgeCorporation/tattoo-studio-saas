@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getOnboardingDraftStorageKey } from "@/hooks/useOnboardingDraft";
@@ -10,13 +10,20 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   createStudioOnboarding: vi.fn(),
   getOnboardingSnapshot: vi.fn(),
+  saveOnboardingDraftLogo: vi.fn(),
+  restoreOnboardingDraftLogo: vi.fn(),
+  clearOnboardingDraftLogo: vi.fn(),
+  refreshAccess: vi.fn(),
 }));
+
+let storedDraftLogo: File | null = null;
 
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
   return {
     ...actual,
     useNavigate: () => mocks.navigate,
+    useOutletContext: () => ({ access: null, refreshAccess: mocks.refreshAccess }),
   };
 });
 
@@ -35,6 +42,12 @@ vi.mock("@/services/onboarding.service", async () => {
     createStudioOnboarding: mocks.createStudioOnboarding,
   };
 });
+
+vi.mock("@/lib/onboarding-draft-files", () => ({
+  saveOnboardingDraftLogo: mocks.saveOnboardingDraftLogo,
+  restoreOnboardingDraftLogo: mocks.restoreOnboardingDraftLogo,
+  clearOnboardingDraftLogo: mocks.clearOnboardingDraftLogo,
+}));
 
 function renderPage() {
   return render(
@@ -121,20 +134,58 @@ describe("OnboardingPage", () => {
 
   beforeEach(() => {
     localStorage.clear();
+    storedDraftLogo = null;
     mocks.navigate.mockClear();
     mocks.createStudioOnboarding.mockReset();
     mocks.getOnboardingSnapshot.mockReset();
-    mocks.createStudioOnboarding.mockResolvedValue({ id: "studio-1", name: "Inkora", slug: "inkora" });
-    mocks.getOnboardingSnapshot.mockResolvedValue({
-      studio: null,
-      workingHours: [],
-      artists: [],
-      services: [],
+    mocks.saveOnboardingDraftLogo.mockReset();
+    mocks.restoreOnboardingDraftLogo.mockReset();
+    mocks.clearOnboardingDraftLogo.mockReset();
+    mocks.refreshAccess.mockReset();
+    mocks.saveOnboardingDraftLogo.mockImplementation(async (_userId: string, file: File | null) => {
+      storedDraftLogo = file;
     });
+    mocks.restoreOnboardingDraftLogo.mockImplementation(async () => storedDraftLogo);
+    mocks.clearOnboardingDraftLogo.mockImplementation(async () => {
+      storedDraftLogo = null;
+    });
+    mocks.refreshAccess.mockResolvedValue({ studioId: "studio-1" });
+    mocks.createStudioOnboarding.mockResolvedValue({ id: "studio-1", name: "Inkora", slug: "inkora" });
+    mocks.getOnboardingSnapshot.mockImplementation(() =>
+      Promise.resolve(
+        mocks.createStudioOnboarding.mock.calls.length
+          ? {
+              studio: {
+                id: "studio-1",
+                name: "Inkora",
+                slug: "inkora",
+                whatsapp: "11999999999",
+                city: "São Paulo",
+                state: "SP",
+                logo_url: null,
+              },
+              workingHours: Array.from({ length: 7 }, (_, day) => ({
+                day_of_week: day,
+                open_time: day === 0 ? null : "09:00",
+                close_time: day === 0 ? null : "18:00",
+                is_open: day !== 0,
+              })),
+              artists: [{ id: "artist-1", name: "George", slug: "george", specialty: null, instagram: null, whatsapp: null, photo_url: null }],
+              services: [{ id: "service-1", name: "Tatuagem", description: null, starting_price: null, avg_duration_minutes: 120 }],
+            }
+          : {
+              studio: null,
+              workingHours: [],
+              artists: [],
+              services: [],
+            },
+      ),
+    );
     window.scrollTo = vi.fn();
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -174,6 +225,75 @@ describe("OnboardingPage", () => {
     const description = await screen.findByLabelText(/Descrição/);
     expect(description).toHaveValue(exactLimit);
     expect(screen.getByText("200/200")).toBeInTheDocument();
+  });
+
+  it("restaura a etapa atual depois que o onboarding é desmontado", async () => {
+    const firstRender = renderPage();
+
+    await fillIdentity();
+    await fillContact();
+    await screen.findByRole("heading", { name: "Funcionamento" });
+    fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
+    await screen.findByRole("heading", { name: "Equipe e serviços" });
+    await waitFor(() =>
+      expect(JSON.parse(localStorage.getItem(onboardingDraftKey) ?? "{}")).toMatchObject({ step: 4 }),
+    );
+
+    firstRender.unmount();
+    renderPage();
+
+    expect(await screen.findByRole("heading", { name: "Equipe e serviços" })).toBeInTheDocument();
+  });
+
+  it("sincroniza o estado mais recente antes de a página ser suspensa", async () => {
+    renderPage();
+
+    await screen.findByText("Identidade do estúdio");
+    fireEvent.change(screen.getByLabelText("Nome do estúdio"), { target: { value: "Estado preservado" } });
+    await waitFor(() =>
+      expect(JSON.parse(localStorage.getItem(onboardingDraftKey) ?? "{}")).toMatchObject({
+        name: "Estado preservado",
+      }),
+    );
+    localStorage.setItem(onboardingDraftKey, JSON.stringify({ name: "Estado antigo" }));
+
+    window.dispatchEvent(new Event("pagehide"));
+
+    expect(JSON.parse(localStorage.getItem(onboardingDraftKey) ?? "{}")).toMatchObject({
+      name: "Estado preservado",
+    });
+  });
+
+  it("não deixa um snapshot parcial sobrescrever a etapa restaurada do rascunho", async () => {
+    let resolveSnapshot!: (snapshot: Awaited<ReturnType<typeof mocks.getOnboardingSnapshot>>) => void;
+    mocks.getOnboardingSnapshot.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSnapshot = resolve;
+      }),
+    );
+    localStorage.setItem(onboardingDraftKey, JSON.stringify({ step: 4 }));
+
+    renderPage();
+    await waitFor(() => expect(mocks.getOnboardingSnapshot).toHaveBeenCalledOnce());
+
+    await act(async () => {
+      resolveSnapshot({
+        studio: {
+          id: "studio-1",
+          name: "Inkora",
+          slug: "inkora",
+          whatsapp: "",
+          city: "",
+          state: "",
+          logo_url: null,
+        },
+        workingHours: [],
+        artists: [],
+        services: [],
+      });
+    });
+
+    expect(screen.getByRole("heading", { name: "Equipe e serviços" })).toBeInTheDocument();
   });
 
   it("normaliza uma descrição acima do limite restaurada de snapshot parcial", async () => {
@@ -224,7 +344,13 @@ describe("OnboardingPage", () => {
     expect(screen.getByDisplayValue("Cidade Teste")).toBeInTheDocument();
   });
 
-  it("redireciona para o dashboard quando o setup já está concluído", async () => {
+  it("atualiza acesso antes de redirecionar setup concluído para dashboard", async () => {
+    let resolveAccess!: (access: { studioId: string }) => void;
+    mocks.refreshAccess.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveAccess = resolve;
+      }),
+    );
     mocks.getOnboardingSnapshot.mockResolvedValueOnce({
       studio: {
         id: "studio-1",
@@ -247,10 +373,17 @@ describe("OnboardingPage", () => {
 
     renderPage();
 
+    await waitFor(() => expect(mocks.refreshAccess).toHaveBeenCalledOnce());
+    expect(mocks.navigate).not.toHaveBeenCalledWith("/dashboard", { replace: true });
+
+    await act(async () => {
+      resolveAccess({ studioId: "studio-1" });
+    });
+
     await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith("/dashboard", { replace: true }));
   });
 
-  it("envia dados completos e redireciona para dashboard", async () => {
+  it("atualiza acesso criado antes de redirecionar para dashboard", async () => {
     renderPage();
 
     await fillIdentity();
@@ -272,7 +405,60 @@ describe("OnboardingPage", () => {
       firstArtists: [{ name: "George Tattoo" }],
       firstServices: [{ name: "Tatuagem pequena" }],
     });
+    await waitFor(() => expect(mocks.refreshAccess).toHaveBeenCalledOnce());
     expect(mocks.navigate).toHaveBeenCalledWith("/dashboard", { replace: true });
+  });
+
+  it("aguarda confirmar o estúdio criado antes de redirecionar ao dashboard", async () => {
+    let resolveVerification!: (snapshot: Awaited<ReturnType<typeof mocks.getOnboardingSnapshot>>) => void;
+    mocks.getOnboardingSnapshot
+      .mockResolvedValueOnce({
+        studio: null,
+        workingHours: [],
+        artists: [],
+        services: [],
+      })
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveVerification = resolve;
+        }),
+      );
+    renderPage();
+
+    await fillIdentity();
+    await fillContact();
+    await screen.findByRole("heading", { name: "Funcionamento" });
+    fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
+    fireEvent.click(screen.getByLabelText(/ativar agenda pública agora/i));
+    fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
+    fireEvent.click(screen.getByRole("button", { name: /ativar meu estúdio/i }));
+
+    await waitFor(() => expect(mocks.createStudioOnboarding).toHaveBeenCalledOnce());
+    expect(mocks.navigate).not.toHaveBeenCalledWith("/dashboard", { replace: true });
+
+    await act(async () => {
+      resolveVerification({
+        studio: {
+          id: "studio-1",
+          name: "Estúdio São Jorge",
+          slug: "estudio-sao-jorge",
+          whatsapp: "11999999999",
+          city: "São Paulo",
+          state: "SP",
+          logo_url: null,
+        },
+        workingHours: Array.from({ length: 7 }, (_, day) => ({
+          day_of_week: day,
+          open_time: day === 0 ? null : "09:00",
+          close_time: day === 0 ? null : "18:00",
+          is_open: day !== 0,
+        })),
+        artists: [],
+        services: [],
+      });
+    });
+
+    await waitFor(() => expect(mocks.navigate).toHaveBeenCalledWith("/dashboard", { replace: true }));
   });
 
   it("preserva preço zero reidratado na prévia e no payload", async () => {
@@ -453,5 +639,50 @@ describe("OnboardingPage", () => {
 
     expect(await screen.findByRole("button", { name: /tentar novamente/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /ir para login/i })).toBeInTheDocument();
+  });
+
+  it("restaura a logo selecionada quando o onboarding é desmontado", async () => {
+    vi.stubGlobal("URL", {
+      createObjectURL: vi.fn(() => "blob:logo-restaurada"),
+      revokeObjectURL: vi.fn(),
+    });
+    const logo = new File(["logo"], "logo.png", { type: "image/png" });
+    const firstRender = renderPage();
+
+    await screen.findByText("Identidade do estúdio");
+    const logoInput = document.querySelector<HTMLInputElement>('input[type="file"]');
+    expect(logoInput).not.toBeNull();
+    fireEvent.change(logoInput!, { target: { files: [logo] } });
+    expect(await screen.findByAltText("Preview da logo")).toHaveAttribute("src", "blob:logo-restaurada");
+
+    firstRender.unmount();
+    renderPage();
+
+    expect(await screen.findByAltText("Preview da logo")).toHaveAttribute("src", "blob:logo-restaurada");
+  });
+
+  it("libera o onboarding enquanto restaura a logo persistida em segundo plano", async () => {
+    let resolveLogo!: (file: File | null) => void;
+    mocks.restoreOnboardingDraftLogo.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveLogo = resolve;
+      }),
+    );
+    const logo = new File(["logo"], "logo.png", { type: "image/png" });
+    localStorage.setItem(onboardingDraftKey, JSON.stringify({ step: 1 }));
+    vi.stubGlobal("URL", {
+      createObjectURL: vi.fn(() => "blob:logo-hidratada"),
+      revokeObjectURL: vi.fn(),
+    });
+
+    renderPage();
+
+    expect(await screen.findByText("Identidade do estúdio")).toBeInTheDocument();
+    expect(screen.queryByText("Verificando sessão e estúdio...")).not.toBeInTheDocument();
+    await act(async () => {
+      resolveLogo(logo);
+    });
+
+    expect(await screen.findByAltText("Preview da logo")).toHaveAttribute("src", "blob:logo-hidratada");
   });
 });

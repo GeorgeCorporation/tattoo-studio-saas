@@ -41,11 +41,11 @@ describe("studio-brand.service", () => {
 
   it("salva nova logo e remove antiga depois", async () => {
     mocks.upload.mockResolvedValue({ error: null });
-    mocks.update.mockResolvedValue({ error: null });
+    mocks.update.mockResolvedValue({ data: { logo_url: "https://cdn/logo-nova.png" }, error: null });
     mocks.getPublicUrl.mockReturnValue({ data: { publicUrl: "https://cdn/logo-nova.png" } });
     mocks.from.mockReturnValue({
       update: (...args: unknown[]) => ({
-        eq: vi.fn().mockResolvedValue(mocks.update(...args)),
+        eq: vi.fn(() => ({ select: vi.fn(() => ({ maybeSingle: vi.fn(() => mocks.update(...args)) })) })),
       }),
     });
 
@@ -67,7 +67,7 @@ describe("studio-brand.service", () => {
     mocks.getPublicUrl.mockReturnValue({ data: { publicUrl: "https://cdn/logo-nova.png" } });
     mocks.from.mockReturnValue({
       update: (...args: unknown[]) => ({
-        eq: vi.fn().mockResolvedValue(mocks.update(...args)),
+        eq: vi.fn(() => ({ select: vi.fn(() => ({ maybeSingle: vi.fn(() => mocks.update(...args)) })) })),
       }),
     });
 

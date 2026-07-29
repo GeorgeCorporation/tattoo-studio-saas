@@ -1,9 +1,20 @@
 import type { User } from "@supabase/supabase-js";
 import type { DashboardSetupStatus, DashboardStudio } from "@/services/dashboard.service";
-import type { UserStudio } from "@/services/onboarding.service";
+import type {
+  OnboardingSnapshotArtist,
+  OnboardingSnapshotService,
+  OnboardingWorkingHour,
+  UserStudio,
+} from "@/services/onboarding.service";
 
 const mockModeKey = "inkora:mock-mode";
 const studioKey = "inkora:mock-studio";
+
+export type MockStudio = UserStudio & {
+  workingHours?: OnboardingWorkingHour[];
+  artists?: OnboardingSnapshotArtist[];
+  services?: OnboardingSnapshotService[];
+};
 
 function readMockMode() {
   if (import.meta.env.VITE_USE_MOCK === "true") return true;
@@ -39,13 +50,13 @@ export const mockUser = {
   },
 } as User;
 
-export function getMockStudio(): UserStudio | null {
+export function getMockStudio(): MockStudio | null {
   const saved = window.localStorage.getItem(studioKey);
   if (!saved) return null;
-  return JSON.parse(saved) as UserStudio;
+  return JSON.parse(saved) as MockStudio;
 }
 
-export function saveMockStudio(studio: UserStudio) {
+export function saveMockStudio(studio: MockStudio) {
   window.localStorage.setItem(studioKey, JSON.stringify(studio));
 }
 
@@ -59,15 +70,16 @@ export function getMockDashboardStudio(): DashboardStudio | null {
 
   return {
     ...studio,
-    logo_url: null,
+    logo_url: studio.logo_url ?? null,
   };
 }
 
 export function getMockSetupStatus(): DashboardSetupStatus {
+  const studio = getMockStudio();
   return {
-    hasLogo: false,
-    artistsCount: 1,
-    servicesCount: 1,
+    hasLogo: Boolean(studio?.logo_url),
+    artistsCount: studio?.artists?.length ?? 0,
+    servicesCount: studio?.services?.length ?? 0,
     galleryCount: 0,
     appointmentsCount: 0,
   };

@@ -56,9 +56,14 @@ export async function replaceStudioLogo({
 }) {
   const nextLogo = await uploadStudioLogoFile(studioId, file);
 
-  const { error: updateError } = await supabase.from("studios").update({ logo_url: nextLogo.publicUrl }).eq("id", studioId);
+  const { data: updatedStudio, error: updateError } = await supabase
+    .from("studios")
+    .update({ logo_url: nextLogo.publicUrl })
+    .eq("id", studioId)
+    .select("logo_url")
+    .maybeSingle<{ logo_url: string | null }>();
 
-  if (updateError) {
+  if (updateError || updatedStudio?.logo_url !== nextLogo.publicUrl) {
     await supabase.storage.from("logos").remove([nextLogo.path]);
     throw new Error("A nova logo foi enviada, mas não conseguimos salvar no estúdio.");
   }

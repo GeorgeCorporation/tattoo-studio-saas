@@ -47,6 +47,20 @@ function renderOnboardingRoute() {
   );
 }
 
+function renderDashboardRoute() {
+  return render(
+    <MemoryRouter initialEntries={["/dashboard"]}>
+      <Routes>
+        <Route element={<PrivateRoute requiredRole="manager" />}>
+          <Route element={<p>Dashboard permitido</p>} path="/dashboard" />
+        </Route>
+        <Route element={<p>Onboarding</p>} path="/onboarding" />
+        <Route element={<p>Login</p>} path="/login" />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
 describe("PrivateRoute", () => {
   beforeEach(() => {
     mocks.useAuth.mockReturnValue({ user: { id: "user-1" }, loading: false });
@@ -74,5 +88,19 @@ describe("PrivateRoute", () => {
     renderOnboardingRoute();
 
     expect(screen.getByText("Login")).toBeInTheDocument();
+  });
+
+  it("usa a mesma sessão autenticada para resolver acesso do Dashboard", () => {
+    const user = { id: "user-1" };
+    mocks.useAuth.mockReturnValue({ user, loading: false });
+
+    renderDashboardRoute();
+
+    expect(mocks.useAccess).toHaveBeenCalledWith({
+      requiredRole: "manager",
+      user,
+      authLoading: false,
+    });
+    expect(screen.getByText("Dashboard permitido")).toBeInTheDocument();
   });
 });

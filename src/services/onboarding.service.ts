@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { logger } from "@/lib/logger";
 import { getMockStudio, isMockMode, saveMockStudio } from "@/lib/mockMode";
 import { assertPublicSlug, isReservedSlug } from "@/lib/slugs";
 import { validateServiceInput } from "@/lib/service-domain";
@@ -233,6 +234,15 @@ function normalizeDuration(value: number | null | undefined) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error ?? new Error("Não foi possível preparar a logo de teste."));
+    reader.readAsDataURL(file);
+  });
+}
+
 function assertValidInitialServices(services: OnboardingFirstServiceData[]) {
   for (const service of services.filter((item) => item.name?.trim())) {
     const validationError = validateServiceInput({
@@ -272,9 +282,21 @@ export async function getUserStudio(userId: string) {
 }
 
 export async function getOnboardingSnapshot(userId: string): Promise<OnboardingSnapshot> {
-  const studio = await getUserStudio(userId);
+  if (isMockMode) {
+    const studio = getMockStudio();
+    return {
+      studio,
+      workingHours: studio?.workingHours ?? [],
+      artists: studio?.artists ?? [],
+      services: studio?.services ?? [],
+    };
+  }
 
-  if (!studio || isMockMode) {
+  logger.info("ONBOARDING_TRACE snapshot.studio-query.start", { userId });
+  const studio = await getUserStudio(userId);
+  logger.info("ONBOARDING_TRACE snapshot.studio-query.resolved", { userId, studioId: studio?.id ?? null });
+
+  if (!studio) {
     return {
       studio,
       workingHours: [],
@@ -283,6 +305,7 @@ export async function getOnboardingSnapshot(userId: string): Promise<OnboardingS
     };
   }
 
+  logger.info("ONBOARDING_TRACE snapshot.related-queries.start", { userId, studioId: studio.id });
   const [hoursResult, artistsResult, servicesResult] = await Promise.all([
     supabase
       .from("working_hours")
@@ -304,6 +327,13 @@ export async function getOnboardingSnapshot(userId: string): Promise<OnboardingS
       .returns<OnboardingSnapshotService[]>(),
   ]);
 
+  logger.info("ONBOARDING_TRACE snapshot.related-queries.resolved", {
+    userId,
+    studioId: studio.id,
+    hoursError: Boolean(hoursResult.error),
+    artistsError: Boolean(artistsResult.error),
+    servicesError: Boolean(servicesResult.error),
+  });
   if (hoursResult.error) throw hoursResult.error;
   if (artistsResult.error) throw artistsResult.error;
   if (servicesResult.error) throw servicesResult.error;
@@ -645,27 +675,67 @@ export async function createStudioOnboarding(data: OnboardingStudioData) {
 
   if (isMockMode) {
     const existingStudio = getMockStudio();
+    const artistsToCreate = data.firstArtists?.length ? data.firstArtists : data.firstArtist ? [data.firstArtist] : [];
+    const logoUrl = data.logoFile ? await readFileAsDataUrl(data.logoFile) : existingStudio?.logo_url ?? null;
     const studio = {
       id: existingStudio?.id ?? "mock-studio-1",
       name: data.name.trim(),
       slug: slugify(data.slug || data.name) || "estudio-teste",
+      description: normalizeText(data.description),
+      whatsapp: normalizeDigits(data.whatsapp),
+      instagram: normalizeInstagram(data.instagram),
+      website: normalizeText(data.website),
+      address: normalizeText(data.address),
+      city: data.city.trim(),
+      state: data.state.trim(),
+      logo_url: logoUrl,
+      workingHours: data.workingHours?.length ? data.workingHours : buildDefaultWorkingHours(),
+      artists: artistsToCreate
+        .filter((artist) => artist.name.trim())
+        .map((artist, index) => ({
+          id: existingStudio?.artists?.[index]?.id ?? `mock-artist-${index + 1}`,
+          name: artist.name.trim(),
+          slug: slugify(artist.slug || artist.name) || `tatuador-${index + 1}`,
+          specialty: normalizeText(artist.specialty),
+          instagram: normalizeInstagram(artist.instagram),
+          whatsapp: normalizeDigits(artist.whatsapp),
+          photo_url: null,
+        })),
+      services: servicesToCreate
+        .filter((service) => service.name.trim())
+        .map((service, index) => ({
+          id: existingStudio?.services?.[index]?.id ?? `mock-service-${index + 1}`,
+          name: service.name.trim(),
+          description: normalizeText(service.description),
+          starting_price: normalizePrice(service.starting_price),
+          avg_duration_minutes: normalizeDuration(service.avg_duration_minutes),
+        })),
     };
     saveMockStudio(studio);
     return studio;
   }
 
+  logger.info("ONBOARDING_TRACE create.start", { userId: data.userId, hasLogo: Boolean(data.logoFile) });
+  logger.info("ONBOARDING_TRACE create.initial-snapshot.start", { userId: data.userId });
   const snapshot = await getOnboardingSnapshot(data.userId);
+  logger.info("ONBOARDING_TRACE create.initial-snapshot.resolved", { userId: data.userId, studioId: snapshot.studio?.id ?? null });
+  logger.info("ONBOARDING_TRACE create.studio-upsert.start", { userId: data.userId, existingStudioId: snapshot.studio?.id ?? null });
   const studio = await upsertStudio(data, snapshot.studio);
+  logger.info("ONBOARDING_TRACE create.studio-upsert.resolved", { userId: data.userId, studioId: studio.id });
 
+  logger.info("ONBOARDING_TRACE create.working-hours.start", { studioId: studio.id });
   await syncWorkingHours(studio.id, data.workingHours);
+  logger.info("ONBOARDING_TRACE create.working-hours.resolved", { studioId: studio.id });
 
   if (data.logoFile) {
     try {
+      logger.info("ONBOARDING_TRACE create.logo.start", { studioId: studio.id });
       await replaceStudioLogo({
         studioId: studio.id,
         file: data.logoFile,
         previousLogoUrl: snapshot.studio?.logo_url ?? null,
       });
+      logger.info("ONBOARDING_TRACE create.logo.resolved", { studioId: studio.id });
     } catch {
       throw new Error("O estúdio foi salvo, mas a logo não pôde ser enviada agora.");
     }
@@ -673,12 +743,18 @@ export async function createStudioOnboarding(data: OnboardingStudioData) {
 
   const artistsToCreate = data.firstArtists?.length ? data.firstArtists : data.firstArtist ? [data.firstArtist] : [];
   if (artistsToCreate.length) {
+    logger.info("ONBOARDING_TRACE create.artists.start", { studioId: studio.id, count: artistsToCreate.length });
     await syncInitialArtists(studio.id, artistsToCreate);
+    logger.info("ONBOARDING_TRACE create.artists.resolved", { studioId: studio.id });
   }
 
   if (servicesToCreate.length) {
+    logger.info("ONBOARDING_TRACE create.services.start", { studioId: studio.id, count: servicesToCreate.length });
     await syncInitialServices(studio.id, servicesToCreate);
+    logger.info("ONBOARDING_TRACE create.services.resolved", { studioId: studio.id });
   }
+
+  logger.info("ONBOARDING_TRACE create.resolved", { userId: data.userId, studioId: studio.id });
 
   return {
     id: studio.id,

@@ -12,13 +12,19 @@
   Upload,
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { inkoraLogo, inkoraMark } from "@/assets";
+import type { PrivateRouteOutletContext } from "@/components/layout/PrivateRoute";
 import { ServiceTemplatePicker } from "@/components/services/ServiceTemplatePicker";
 import { useAuth } from "@/hooks/useAuth";
 import { useOnboardingDraft } from "@/hooks/useOnboardingDraft";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import {
+  clearOnboardingDraftLogo,
+  restoreOnboardingDraftLogo,
+  saveOnboardingDraftLogo,
+} from "@/lib/onboarding-draft-files";
 import type { ServiceTemplate } from "@/lib/service-templates";
 import { countVisualCharacters, limitVisualCharacters } from "@/lib/text-limit";
 import { updateWorkingHourField, type WorkingHourField } from "@/lib/working-hours";
@@ -84,6 +90,7 @@ type ServiceDraft = {
 };
 
 type DraftData = {
+  step: number;
   name: string;
   slug: string;
   slugEdited: boolean;
@@ -150,15 +157,6 @@ function useFilePreview(file: File | null) {
   return preview;
 }
 
-function withTimeout<T>(promise: Promise<T>, ms: number, message: string) {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) => {
-      window.setTimeout(() => reject(new Error(message)), ms);
-    }),
-  ]);
-}
-
 function normalizeInstagram(value: string) {
   return value.replace("@", "").trim();
 }
@@ -169,6 +167,7 @@ function onlyDigits(value: string) {
 
 export function OnboardingPage() {
   const navigate = useNavigate();
+  const { refreshAccess } = useOutletContext<PrivateRouteOutletContext>();
   const { user, loading: authLoading } = useAuth();
   const userId = user?.id;
   const {
@@ -179,6 +178,8 @@ export function OnboardingPage() {
   } = useOnboardingDraft<DraftData>(userId);
   const [draftHydratedForUserId, setDraftHydratedForUserId] = useState<string | null>(null);
   const restoredDraftRef = useRef<Partial<DraftData>>({});
+  const latestDraftRef = useRef<DraftData | null>(null);
+  const logoRestoreGenerationRef = useRef(0);
   const isDraftHydrated = !authLoading && draftHydratedForUserId === (userId ?? null);
 
   const [step, setStep] = useState(1);
@@ -215,7 +216,6 @@ export function OnboardingPage() {
   const [selectedServiceTemplateId, setSelectedServiceTemplateId] = useState<string | null>(null);
   const [serviceTemplateFieldsCustomized, setServiceTemplateFieldsCustomized] = useState(false);
   const [checkingStudio, setCheckingStudio] = useState(true);
-  const [startupWaitExpired, setStartupWaitExpired] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingLabel, setSavingLabel] = useState("Finalizando configuração...");
   const [error, setError] = useState("");
@@ -270,49 +270,72 @@ export function OnboardingPage() {
   useEffect(() => {
     if (authLoading) return;
 
-    const draft = restoreOnboardingDraft();
-    restoredDraftRef.current = draft;
-    setName(draft.name ?? "");
-    setSlug(draft.slug ?? "");
-    setSlugEdited(draft.slugEdited ?? false);
-    setDescription(limitVisualCharacters(draft.description ?? "", DESCRIPTION_LIMIT));
-    setWhatsapp(draft.whatsapp ?? "");
-    setInstagram(draft.instagram ?? "");
-    setWebsite(draft.website ?? "");
-    setAddress(draft.address ?? "");
-    setCity(draft.city ?? "");
-    setStateUf(draft.stateUf ?? "");
-    setManualCity(draft.manualCity ?? false);
-    setWorkingHours(draft.workingHours ?? buildDefaultWorkingHours());
-    setActivateBooking(draft.activateBooking ?? true);
-    setArtists((draft.artists ?? []).map((artist) => ({ ...artist, photoFile: null })));
-    setArtistName(draft.artistName ?? "");
-    setArtistSlug(draft.artistSlug ?? "");
-    setArtistSlugEdited(draft.artistSlugEdited ?? false);
-    setArtistSpecialty(draft.artistSpecialty ?? "");
-    setArtistInstagram(draft.artistInstagram ?? "");
-    setArtistWhatsapp(draft.artistWhatsapp ?? "");
-    setServices((draft.services ?? []).map((service) => ({ ...service, durationMinutes: service.durationMinutes || "120" })));
-    setServiceName(draft.serviceName ?? "");
-    setServiceDescription(draft.serviceDescription ?? "");
-    setStartingPrice(draft.startingPrice ?? "");
-    setDurationMinutes(draft.durationMinutes ?? "120");
-    setSelectedServiceTemplateId(draft.selectedServiceTemplateId ?? null);
-    setServiceTemplateFieldsCustomized(
-      draft.serviceTemplateFieldsCustomized ??
-        Boolean(
-          draft.serviceName?.trim() ||
-            draft.serviceDescription?.trim() ||
-            (draft.durationMinutes && draft.durationMinutes !== "120"),
-        ),
-    );
-    setDraftHydratedForUserId(userId ?? null);
+    let isActive = true;
+
+    async function hydrateDraft() {
+      const draft = restoreOnboardingDraft();
+      restoredDraftRef.current = draft;
+      const restoredStep = Number.isInteger(draft.step) ? (draft.step as number) : 1;
+      setStep(Math.min(steps.length, Math.max(1, restoredStep)));
+      setName(draft.name ?? "");
+      setSlug(draft.slug ?? "");
+      setSlugEdited(draft.slugEdited ?? false);
+      setDescription(limitVisualCharacters(draft.description ?? "", DESCRIPTION_LIMIT));
+      setWhatsapp(draft.whatsapp ?? "");
+      setInstagram(draft.instagram ?? "");
+      setWebsite(draft.website ?? "");
+      setAddress(draft.address ?? "");
+      setCity(draft.city ?? "");
+      setStateUf(draft.stateUf ?? "");
+      setManualCity(draft.manualCity ?? false);
+      setWorkingHours(draft.workingHours ?? buildDefaultWorkingHours());
+      setActivateBooking(draft.activateBooking ?? true);
+      setArtists((draft.artists ?? []).map((artist) => ({ ...artist, photoFile: null })));
+      setArtistName(draft.artistName ?? "");
+      setArtistSlug(draft.artistSlug ?? "");
+      setArtistSlugEdited(draft.artistSlugEdited ?? false);
+      setArtistSpecialty(draft.artistSpecialty ?? "");
+      setArtistInstagram(draft.artistInstagram ?? "");
+      setArtistWhatsapp(draft.artistWhatsapp ?? "");
+      setServices((draft.services ?? []).map((service) => ({ ...service, durationMinutes: service.durationMinutes || "120" })));
+      setServiceName(draft.serviceName ?? "");
+      setServiceDescription(draft.serviceDescription ?? "");
+      setStartingPrice(draft.startingPrice ?? "");
+      setDurationMinutes(draft.durationMinutes ?? "120");
+      setSelectedServiceTemplateId(draft.selectedServiceTemplateId ?? null);
+      setServiceTemplateFieldsCustomized(
+        draft.serviceTemplateFieldsCustomized ??
+          Boolean(
+            draft.serviceName?.trim() ||
+              draft.serviceDescription?.trim() ||
+              (draft.durationMinutes && draft.durationMinutes !== "120"),
+          ),
+      );
+
+      if (!isActive) return;
+      setDraftHydratedForUserId(userId ?? null);
+
+      if (!userId) return;
+
+      const restoreGeneration = ++logoRestoreGenerationRef.current;
+      const restoredLogo = await restoreOnboardingDraftLogo(userId);
+      if (!isActive || restoreGeneration !== logoRestoreGenerationRef.current) return;
+
+      setLogoFile((current) => current ?? restoredLogo);
+    }
+
+    void hydrateDraft();
+
+    return () => {
+      isActive = false;
+    };
   }, [authLoading, restoreOnboardingDraft, userId]);
 
   useEffect(() => {
     if (!isDraftHydrated || !isDraftStorageReady) return;
 
     const draftToSave: DraftData = {
+      step,
       name,
       slug,
       slugEdited,
@@ -348,6 +371,7 @@ export function OnboardingPage() {
       serviceTemplateFieldsCustomized,
     };
 
+    latestDraftRef.current = draftToSave;
     saveOnboardingDraft(draftToSave);
   }, [
     activateBooking,
@@ -374,6 +398,7 @@ export function OnboardingPage() {
     startingPrice,
     stateUf,
     serviceTemplateFieldsCustomized,
+    step,
     website,
     whatsapp,
     workingHours,
@@ -381,6 +406,25 @@ export function OnboardingPage() {
     isDraftStorageReady,
     saveOnboardingDraft,
   ]);
+
+  useEffect(() => {
+    if (!isDraftHydrated || !isDraftStorageReady) return;
+
+    function flushDraft() {
+      if (latestDraftRef.current) saveOnboardingDraft(latestDraftRef.current);
+    }
+
+    function flushHiddenDraft() {
+      if (document.visibilityState === "hidden") flushDraft();
+    }
+
+    window.addEventListener("pagehide", flushDraft);
+    document.addEventListener("visibilitychange", flushHiddenDraft);
+    return () => {
+      window.removeEventListener("pagehide", flushDraft);
+      document.removeEventListener("visibilitychange", flushHiddenDraft);
+    };
+  }, [isDraftHydrated, isDraftStorageReady, saveOnboardingDraft]);
 
   useEffect(() => {
     if (!isDraftHydrated) return;
@@ -394,7 +438,9 @@ export function OnboardingPage() {
       }
 
       try {
-        const snapshot = await withTimeout(getOnboardingSnapshot(userId), 8000, "Tempo limite ao verificar estúdio.");
+        logger.info("ONBOARDING_TRACE page.initial-snapshot.start", { userId });
+        const snapshot = await getOnboardingSnapshot(userId);
+        logger.info("ONBOARDING_TRACE page.initial-snapshot.resolved", { userId, studioId: snapshot.studio?.id ?? null });
         if (!isMounted) return;
 
         if (snapshot.studio) {
@@ -418,7 +464,7 @@ export function OnboardingPage() {
             setWorkingHours(merged);
           }
 
-          if (!restoredDraftRef.current.artists?.length && !artistName.trim() && snapshot.artists.length) {
+          if (!restoredDraftRef.current.artists?.length && !restoredDraftRef.current.artistName?.trim() && snapshot.artists.length) {
             setArtists(
               snapshot.artists.map((artist) => ({
                 name: artist.name,
@@ -431,7 +477,7 @@ export function OnboardingPage() {
             );
           }
 
-          if (!restoredDraftRef.current.services?.length && !serviceName.trim() && snapshot.services.length) {
+          if (!restoredDraftRef.current.services?.length && !restoredDraftRef.current.serviceName?.trim() && snapshot.services.length) {
             setServices(
               snapshot.services.map((service) => ({
                 name: service.name,
@@ -442,13 +488,29 @@ export function OnboardingPage() {
             );
           }
 
-          const progressState = getOnboardingProgress(snapshot, activateBooking);
+          const progressState = getOnboardingProgress(
+            snapshot,
+            restoredDraftRef.current.activateBooking ?? true,
+          );
           if (progressState.canFinish) {
+            logger.info("ONBOARDING_TRACE page.initial-snapshot.navigate-dashboard", { userId, studioId: snapshot.studio.id });
+            logger.info("ONBOARDING_TRACE page.initial-snapshot.refresh-access.start", { userId });
+            const refreshedAccess = await refreshAccess();
+            if (!isMounted) return;
+            logger.info("ONBOARDING_TRACE page.initial-snapshot.refresh-access.resolved", {
+              userId,
+              studioId: refreshedAccess?.studioId ?? null,
+            });
+            if (!refreshedAccess?.studioId) {
+              throw new Error("O estúdio existe, mas o acesso ao painel ainda não foi confirmado.");
+            }
             navigate("/dashboard", { replace: true });
             return;
           }
 
-          setStep(progressState.nextStep);
+          if (!Number.isInteger(restoredDraftRef.current.step)) {
+            setStep(progressState.nextStep);
+          }
         }
       } catch (caughtError) {
         logger.error("Falha ao verificar estúdio no onboarding", caughtError, { userId });
@@ -466,24 +528,7 @@ export function OnboardingPage() {
     return () => {
       isMounted = false;
     };
-  }, [activateBooking, artistName, authLoading, isDraftHydrated, navigate, serviceName, userId]);
-
-  useEffect(() => {
-    if (!authLoading && !checkingStudio) {
-      setStartupWaitExpired(false);
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setStartupWaitExpired(true);
-      if (checkingStudio) {
-        setCheckingStudio(false);
-        setError("Supabase demorou para responder. Você pode continuar configurando, mas se algo falhar, tente novamente em alguns minutos.");
-      }
-    }, 9000);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [authLoading, checkingStudio]);
+  }, [authLoading, isDraftHydrated, navigate, refreshAccess, userId]);
 
   function handleNameChange(value: string) {
     setName(value);
@@ -492,6 +537,12 @@ export function OnboardingPage() {
 
   function handleDescriptionChange(value: string) {
     setDescription(limitVisualCharacters(value, DESCRIPTION_LIMIT));
+  }
+
+  function handleLogoFileChange(file: File | null) {
+    logoRestoreGenerationRef.current += 1;
+    setLogoFile(file);
+    if (userId) void saveOnboardingDraftLogo(userId, file);
   }
 
   function handleArtistNameChange(value: string) {
@@ -631,42 +682,66 @@ export function OnboardingPage() {
     }
 
     try {
+      logger.info("ONBOARDING_TRACE page.submit.start", { userId: user.id, hasLogo: Boolean(logoFile) });
       setSaving(true);
       setError("");
       setSubmitFailed(false);
       setSavingLabel("Salvando estúdio e link público...");
 
       await createStudioOnboarding({
+          userId: user.id,
+          name,
+          slug,
+          description,
+          logoFile,
+          whatsapp: onlyDigits(whatsapp),
+          instagram: normalizeInstagram(instagram),
+          website: website && !/^https?:\/\//i.test(website) ? `https://${website}` : website,
+          address,
+          city,
+          state: stateUf,
+          workingHours,
+          firstArtists: artistsToSave.map((artist) => ({
+            name: artist.name,
+            slug: artist.slug,
+            specialty: artist.specialty,
+            instagram: normalizeInstagram(artist.instagram),
+            whatsapp: onlyDigits(artist.whatsapp),
+            photoFile: artist.photoFile,
+          })),
+          firstServices: servicesToSave.map((service) => ({
+            name: service.name,
+            description: service.description,
+            starting_price: service.startingPrice === "" ? null : Number(service.startingPrice),
+            avg_duration_minutes: service.durationMinutes ? Number(service.durationMinutes) : null,
+          })),
+        });
+
+      logger.info("ONBOARDING_TRACE page.submit.create.resolved", { userId: user.id });
+
+      setSavingLabel("Validando criação do estúdio...");
+      logger.info("ONBOARDING_TRACE page.submit.final-snapshot.start", { userId: user.id });
+      const completedSnapshot = await getOnboardingSnapshot(user.id);
+      logger.info("ONBOARDING_TRACE page.submit.final-snapshot.resolved", { userId: user.id, studioId: completedSnapshot.studio?.id ?? null });
+      if (!getOnboardingProgress(completedSnapshot, activateBooking).canFinish) {
+        throw new Error("O estúdio foi salvo, mas a conclusão do onboarding ainda não pôde ser confirmada.");
+      }
+
+      setSavingLabel("Atualizando acesso do estúdio...");
+      logger.info("ONBOARDING_TRACE page.submit.refresh-access.start", { userId: user.id });
+      const refreshedAccess = await refreshAccess();
+      logger.info("ONBOARDING_TRACE page.submit.refresh-access.resolved", {
         userId: user.id,
-        name,
-        slug,
-        description,
-        logoFile,
-        whatsapp: onlyDigits(whatsapp),
-        instagram: normalizeInstagram(instagram),
-        website: website && !/^https?:\/\//i.test(website) ? `https://${website}` : website,
-        address,
-        city,
-        state: stateUf,
-        workingHours,
-        firstArtists: artistsToSave.map((artist) => ({
-          name: artist.name,
-          slug: artist.slug,
-          specialty: artist.specialty,
-          instagram: normalizeInstagram(artist.instagram),
-          whatsapp: onlyDigits(artist.whatsapp),
-          photoFile: artist.photoFile,
-        })),
-        firstServices: servicesToSave.map((service) => ({
-          name: service.name,
-          description: service.description,
-          starting_price: service.startingPrice === "" ? null : Number(service.startingPrice),
-          avg_duration_minutes: service.durationMinutes ? Number(service.durationMinutes) : null,
-        })),
+        studioId: refreshedAccess?.studioId ?? null,
       });
+      if (!refreshedAccess?.studioId) {
+        throw new Error("O estúdio foi salvo, mas o acesso ao painel ainda não foi confirmado.");
+      }
 
       clearOnboardingDraft();
+      await clearOnboardingDraftLogo(user.id);
       setSavingLabel("Abrindo painel...");
+      logger.info("ONBOARDING_TRACE page.submit.navigate-dashboard", { userId: user.id });
       navigate("/dashboard", { replace: true });
     } catch (caughtError) {
       logger.error("Falha ao criar estúdio no onboarding", caughtError, { userId: user.id });
@@ -681,29 +756,10 @@ export function OnboardingPage() {
     }
   }
 
-  if ((authLoading || !isDraftHydrated || checkingStudio) && !startupWaitExpired) {
+  if (authLoading || !isDraftHydrated || checkingStudio) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#0f0f0f] px-4 text-sm text-zinc-300">
         <span className="rounded-xl border border-white/10 bg-[#1a1a1a] px-5 py-4">Verificando sessão e estúdio...</span>
-      </main>
-    );
-  }
-
-  if (authLoading && startupWaitExpired) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#0f0f0f] px-4 text-white">
-        <section className="w-full max-w-md rounded-2xl border border-white/10 bg-[#1a1a1a] p-6 text-center shadow-2xl shadow-black/30">
-          <h1 className="text-2xl font-semibold">Supabase demorou para responder</h1>
-          <p className="mt-3 text-sm text-zinc-400">Pode ser instabilidade temporária. Recarregue a página ou entre novamente para continuar.</p>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <button className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold" onClick={() => window.location.reload()} type="button">
-              Recarregar
-            </button>
-            <button className="rounded-xl border border-white/10 px-4 py-3 font-semibold" onClick={() => navigate("/login", { replace: true })} type="button">
-              Ir para login
-            </button>
-          </div>
-        </section>
       </main>
     );
   }
@@ -781,7 +837,7 @@ export function OnboardingPage() {
                   <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm font-medium hover:border-[#E8650A]">
                     <Upload size={16} />
                     Enviar logo
-                    <input accept="image/*" className="hidden" onChange={(event) => setLogoFile(event.target.files?.[0] ?? null)} type="file" />
+                    <input accept="image/*" className="hidden" onChange={(event) => handleLogoFileChange(event.target.files?.[0] ?? null)} type="file" />
                   </label>
                 </div>
 
