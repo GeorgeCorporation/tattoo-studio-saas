@@ -13,10 +13,14 @@ const mocks = vi.hoisted(() => ({
   saveOnboardingDraftLogo: vi.fn(),
   restoreOnboardingDraftLogo: vi.fn(),
   clearOnboardingDraftLogo: vi.fn(),
+  saveOnboardingDraftArtistPhotos: vi.fn(),
+  restoreOnboardingDraftArtistPhotos: vi.fn(),
+  clearOnboardingDraftArtistPhotos: vi.fn(),
   refreshAccess: vi.fn(),
 }));
 
 let storedDraftLogo: File | null = null;
+let storedArtistPhotos: { current: File | null; artists: Array<File | null> } = { current: null, artists: [] };
 
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
@@ -47,6 +51,9 @@ vi.mock("@/lib/onboarding-draft-files", () => ({
   saveOnboardingDraftLogo: mocks.saveOnboardingDraftLogo,
   restoreOnboardingDraftLogo: mocks.restoreOnboardingDraftLogo,
   clearOnboardingDraftLogo: mocks.clearOnboardingDraftLogo,
+  saveOnboardingDraftArtistPhotos: mocks.saveOnboardingDraftArtistPhotos,
+  restoreOnboardingDraftArtistPhotos: mocks.restoreOnboardingDraftArtistPhotos,
+  clearOnboardingDraftArtistPhotos: mocks.clearOnboardingDraftArtistPhotos,
 }));
 
 function renderPage() {
@@ -135,12 +142,16 @@ describe("OnboardingPage", () => {
   beforeEach(() => {
     localStorage.clear();
     storedDraftLogo = null;
+    storedArtistPhotos = { current: null, artists: [] };
     mocks.navigate.mockClear();
     mocks.createStudioOnboarding.mockReset();
     mocks.getOnboardingSnapshot.mockReset();
     mocks.saveOnboardingDraftLogo.mockReset();
     mocks.restoreOnboardingDraftLogo.mockReset();
     mocks.clearOnboardingDraftLogo.mockReset();
+    mocks.saveOnboardingDraftArtistPhotos.mockReset();
+    mocks.restoreOnboardingDraftArtistPhotos.mockReset();
+    mocks.clearOnboardingDraftArtistPhotos.mockReset();
     mocks.refreshAccess.mockReset();
     mocks.saveOnboardingDraftLogo.mockImplementation(async (_userId: string, file: File | null) => {
       storedDraftLogo = file;
@@ -148,6 +159,15 @@ describe("OnboardingPage", () => {
     mocks.restoreOnboardingDraftLogo.mockImplementation(async () => storedDraftLogo);
     mocks.clearOnboardingDraftLogo.mockImplementation(async () => {
       storedDraftLogo = null;
+    });
+    mocks.saveOnboardingDraftArtistPhotos.mockImplementation(
+      async (_userId: string, photos: { current: File | null; artists: Array<File | null> }) => {
+        storedArtistPhotos = { current: photos.current, artists: [...photos.artists] };
+      },
+    );
+    mocks.restoreOnboardingDraftArtistPhotos.mockImplementation(async () => storedArtistPhotos);
+    mocks.clearOnboardingDraftArtistPhotos.mockImplementation(async () => {
+      storedArtistPhotos = { current: null, artists: [] };
     });
     mocks.refreshAccess.mockResolvedValue({ studioId: "studio-1" });
     mocks.createStudioOnboarding.mockResolvedValue({ id: "studio-1", name: "Inkora", slug: "inkora" });
@@ -684,5 +704,33 @@ describe("OnboardingPage", () => {
     });
 
     expect(await screen.findByAltText("Preview da logo")).toHaveAttribute("src", "blob:logo-hidratada");
+  });
+
+  it("restaura foto do tatuador ao retomar o onboarding", async () => {
+    vi.stubGlobal("URL", {
+      createObjectURL: vi.fn(() => "blob:foto-tatuador-restaurada"),
+      revokeObjectURL: vi.fn(),
+    });
+    const photo = new File(["foto"], "tatuador.png", { type: "image/png" });
+    const firstRender = renderPage();
+
+    await fillIdentity();
+    await fillContact();
+    await screen.findByRole("heading", { name: "Funcionamento" });
+    fireEvent.click(screen.getByRole("button", { name: /salvar e continuar/i }));
+    await screen.findByRole("heading", { name: "Equipe e serviços" });
+
+    const photoInput = document.querySelector<HTMLInputElement>('input[type="file"]');
+    expect(photoInput).not.toBeNull();
+    fireEvent.change(photoInput!, { target: { files: [photo] } });
+
+    await waitFor(() => expect(mocks.saveOnboardingDraftArtistPhotos).toHaveBeenCalled());
+    expect(await screen.findByAltText("Preview do tatuador")).toHaveAttribute("src", "blob:foto-tatuador-restaurada");
+
+    firstRender.unmount();
+    renderPage();
+
+    await screen.findByRole("heading", { name: "Equipe e serviços" });
+    expect(await screen.findByAltText("Preview do tatuador")).toHaveAttribute("src", "blob:foto-tatuador-restaurada");
   });
 });

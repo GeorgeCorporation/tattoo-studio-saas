@@ -21,8 +21,11 @@ import { useOnboardingDraft } from "@/hooks/useOnboardingDraft";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import {
+  clearOnboardingDraftArtistPhotos,
   clearOnboardingDraftLogo,
+  restoreOnboardingDraftArtistPhotos,
   restoreOnboardingDraftLogo,
+  saveOnboardingDraftArtistPhotos,
   saveOnboardingDraftLogo,
 } from "@/lib/onboarding-draft-files";
 import type { ServiceTemplate } from "@/lib/service-templates";
@@ -180,7 +183,10 @@ export function OnboardingPage() {
   const restoredDraftRef = useRef<Partial<DraftData>>({});
   const latestDraftRef = useRef<DraftData | null>(null);
   const logoRestoreGenerationRef = useRef(0);
+  const artistPhotosRestoreGenerationRef = useRef(0);
+  const [artistPhotosHydratedForUserId, setArtistPhotosHydratedForUserId] = useState<string | null>(null);
   const isDraftHydrated = !authLoading && draftHydratedForUserId === (userId ?? null);
+  const areArtistPhotosHydrated = !authLoading && artistPhotosHydratedForUserId === (userId ?? null);
 
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
@@ -315,13 +321,34 @@ export function OnboardingPage() {
       if (!isActive) return;
       setDraftHydratedForUserId(userId ?? null);
 
-      if (!userId) return;
+      if (!userId) {
+        setArtistPhotosHydratedForUserId(null);
+        return;
+      }
 
-      const restoreGeneration = ++logoRestoreGenerationRef.current;
-      const restoredLogo = await restoreOnboardingDraftLogo(userId);
-      if (!isActive || restoreGeneration !== logoRestoreGenerationRef.current) return;
+      const logoRestoreGeneration = ++logoRestoreGenerationRef.current;
+      const artistPhotosRestoreGeneration = ++artistPhotosRestoreGenerationRef.current;
+      const [restoredLogo, restoredArtistPhotos] = await Promise.all([
+        restoreOnboardingDraftLogo(userId),
+        restoreOnboardingDraftArtistPhotos(userId),
+      ]);
+      if (
+        !isActive ||
+        logoRestoreGeneration !== logoRestoreGenerationRef.current ||
+        artistPhotosRestoreGeneration !== artistPhotosRestoreGenerationRef.current
+      ) {
+        return;
+      }
 
       setLogoFile((current) => current ?? restoredLogo);
+      setArtistPhotoFile((current) => current ?? restoredArtistPhotos.current);
+      setArtists((current) =>
+        current.map((artist, index) => ({
+          ...artist,
+          photoFile: artist.photoFile ?? restoredArtistPhotos.artists[index] ?? null,
+        })),
+      );
+      setArtistPhotosHydratedForUserId(userId);
     }
 
     void hydrateDraft();
@@ -406,6 +433,15 @@ export function OnboardingPage() {
     isDraftStorageReady,
     saveOnboardingDraft,
   ]);
+
+  useEffect(() => {
+    if (!isDraftHydrated || !areArtistPhotosHydrated || !userId) return;
+
+    void saveOnboardingDraftArtistPhotos(userId, {
+      current: artistPhotoFile,
+      artists: artists.map((artist) => artist.photoFile),
+    });
+  }, [areArtistPhotosHydrated, artistPhotoFile, artists, isDraftHydrated, userId]);
 
   useEffect(() => {
     if (!isDraftHydrated || !isDraftStorageReady) return;
@@ -740,6 +776,7 @@ export function OnboardingPage() {
 
       clearOnboardingDraft();
       await clearOnboardingDraftLogo(user.id);
+      await clearOnboardingDraftArtistPhotos(user.id);
       setSavingLabel("Abrindo painel...");
       logger.info("ONBOARDING_TRACE page.submit.navigate-dashboard", { userId: user.id });
       navigate("/dashboard", { replace: true });
