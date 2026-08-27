@@ -16,25 +16,47 @@ export type MockStudio = UserStudio & {
   services?: OnboardingSnapshotService[];
 };
 
+function limparEstadoMock() {
+  try {
+    window.localStorage.removeItem(mockModeKey);
+    window.localStorage.removeItem(studioKey);
+  } catch {
+    // Navegador com storage bloqueado. Sem estado para limpar.
+  }
+}
+
 function readMockMode() {
+  // Build de demonstração: única forma de ligar o mock fora de desenvolvimento.
   if (import.meta.env.VITE_USE_MOCK === "true") return true;
   if (typeof window === "undefined") return false;
+
+  // `?mock=1` e o estado persistido valem só em desenvolvimento. Em produção
+  // um link com o parâmetro deixaria a pessoa presa num app fantasma até
+  // limpar o storage na mão, então o estado é descartado no carregamento.
+  if (!import.meta.env.DEV) {
+    limparEstadoMock();
+    return false;
+  }
 
   const params = new URLSearchParams(window.location.search);
   const mockParam = params.get("mock");
 
-  if (mockParam === "1" || mockParam === "true") {
-    window.localStorage.setItem(mockModeKey, "true");
-    return true;
-  }
+  try {
+    if (mockParam === "1" || mockParam === "true") {
+      window.localStorage.setItem(mockModeKey, "true");
+      return true;
+    }
 
-  if (mockParam === "0" || mockParam === "false") {
-    window.localStorage.removeItem(mockModeKey);
-    window.localStorage.removeItem(studioKey);
-    return false;
-  }
+    if (mockParam === "0" || mockParam === "false") {
+      limparEstadoMock();
+      return false;
+    }
 
-  return window.localStorage.getItem(mockModeKey) === "true";
+    return window.localStorage.getItem(mockModeKey) === "true";
+  } catch {
+    // Storage bloqueado: o parâmetro ainda liga o mock nesta navegação.
+    return mockParam === "1" || mockParam === "true";
+  }
 }
 
 export const isMockMode = readMockMode();
