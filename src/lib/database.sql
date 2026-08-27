@@ -680,6 +680,7 @@ drop policy if exists "Users can delete own studios" on public.studios;
 
 create policy "Public can read studios"
 on public.studios for select
+to anon, authenticated
 using (true);
 
 create policy "Users can insert own studios"
@@ -733,6 +734,7 @@ drop policy if exists "Artists can update own tattoo artist profile" on public.t
 
 create policy "Public can read tattoo artists"
 on public.tattoo_artists for select
+to anon, authenticated
 using (true);
 
 create policy "Users can manage own tattoo artists"
@@ -818,6 +820,7 @@ drop policy if exists "Users can manage own services" on public.services;
 
 create policy "Public can read services"
 on public.services for select
+to anon, authenticated
 using (true);
 
 create policy "Users can manage own services"
@@ -1005,6 +1008,7 @@ drop policy if exists "Users can manage own gallery" on public.gallery;
 
 create policy "Public can read gallery"
 on public.gallery for select
+to anon, authenticated
 using (true);
 
 create policy "Users can manage own gallery"
@@ -1031,6 +1035,7 @@ drop policy if exists "Users can manage own reviews" on public.reviews;
 
 create policy "Public can read reviews"
 on public.reviews for select
+to anon, authenticated
 using (true);
 
 create policy "Users can manage own reviews"

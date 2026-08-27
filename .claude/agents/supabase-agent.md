@@ -55,6 +55,5 @@ Configuração do Supabase: cliente JS, storage buckets, auth, RLS policies, fun
 
 - `src/lib/supabase.ts`
 - `src/lib/database.sql`
-- `src/lib/rls-policies.sql`
 - `src/types/database.types.ts`
 - `supabase/migrations/*.sql`

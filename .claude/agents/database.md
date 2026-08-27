@@ -57,4 +57,3 @@ Schema PostgreSQL, migrations versionadas, RLS policies, funções RPC, índices
 - `supabase/migrations/*.sql`
 - `src/types/database.types.ts`
 - `src/lib/database.sql` (apenas se migration não existir)
-- `src/lib/rls-policies.sql`
