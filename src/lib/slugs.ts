@@ -22,6 +22,9 @@ export const SLUGS_RESERVADOS = [
   "favicon",
   "entrega",
   "entregas",
+  "painel",
+  "privacidade",
+  "ativar-tatuador",
 ];
 
 export function isValidPublicSlug(slug: string) {
