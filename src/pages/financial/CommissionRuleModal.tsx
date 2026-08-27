@@ -83,7 +83,10 @@ export function CommissionRuleModal({ open, studioId, artists, rule, onClose, on
         <header className="flex items-center justify-between border-b border-white/10 p-5">
           <div>
             <h2 className="text-xl font-semibold">{rule ? "Editar regra de comissão" : "Nova regra de comissão"}</h2>
-            <p className="mt-1 text-sm text-zinc-400">Defina percentual, teto mensal e início da regra.</p>
+            <p className="mt-1 text-sm text-zinc-400">
+              Defina percentual, teto mensal e início da regra. O teto limita quanto o tatuador paga de comissão no
+              mês; indicações do estúdio continuam pagando mesmo após o teto.
+            </p>
           </div>
           <button className="rounded-lg p-2 hover:bg-white/5" onClick={onClose} type="button">
             <X size={20} />
@@ -132,7 +135,7 @@ export function CommissionRuleModal({ open, studioId, artists, rule, onClose, on
             </label>
 
             <label>
-              <span className="mb-2 block text-sm font-medium">Teto mensal (R$)</span>
+              <span className="mb-2 block text-sm font-medium">Teto mensal de comissão (R$)</span>
               <input
                 className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3 disabled:opacity-50"
                 disabled={!capEnabled}
