@@ -80,6 +80,30 @@ _Este documento registra decisões técnicas importantes, contexto e alternativa
 
 ### 8.3 Ausência de Testes de Hook
 
-## 9. Decisões Pendentes
+## 9. Segurança de Dependências
+
+### 9.1 Adiar a migração do React Router para a v7 — 27/08/2026
+
+`react-router` 6.x inteiro carrega duas advisories _moderate_: open redirect via
+contrabarra em `<Link>`/`useNavigate` (bypass do CVE-2025-68470) e injeção de
+construtor em `deserializeErrors()` na hidratação SSR. O `npm audit fix` só
+alcança 6.30.6; sair delas exige a v7, que é breaking.
+
+Auditoria antes de decidir:
+
+- nenhum `navigate()` ou `<Link to=>` recebe string controlada pelo usuário —
+  todos os destinos são caminho fixo, UUID, ou slug vindo do banco;
+- não existe parâmetro de redirecionamento (`?redirect=`, `?next=`) em rota
+  nenhuma;
+- `isValidPublicSlug` é `/^[a-z0-9-]+$/` ancorado, então slug não carrega
+  barra nem contrabarra;
+- o app é SPA, sem hidratação SSR, o que descarta a segunda advisory.
+
+Nenhuma das duas é explorável neste código. A migração para a v7 fica como
+tarefa própria, com a suíte como rede de segurança, e não como carona num
+commit de manutenção. **Reavaliar** se alguma rota passar a aceitar destino
+vindo de query string.
+
+## 10. Decisões Pendentes
 
 _Decisões que precisam ser tomadas: React Query vs cache manual, framework de teste E2E, API de pagamentos, etc._
