@@ -36,6 +36,11 @@ vi.mock("@/lib/logger", () => ({
   logger: mocks.logger,
 }));
 
+// ArtistModal adia onCreated em 900 ms para o usuario conseguir ler o aviso de
+// sucesso antes de a modal fechar. O timeout padrao do waitFor e 1000 ms, o que
+// deixa ~100 ms de margem e falha sob carga. A espera precisa superar o atraso.
+const ESPERA_CALLBACK_ADIADO = 3000;
+
 describe("ArtistModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -57,7 +62,9 @@ describe("ArtistModal", () => {
     fireEvent.click(screen.getByRole("button", { name: /salvar/i }));
 
     await waitFor(() => expect(screen.getByText("Tatuador salvo. Foto pode ser enviada depois.")).toBeInTheDocument());
-    await waitFor(() => expect(onCreated).toHaveBeenCalledWith("artist-1"));
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith("artist-1"), {
+      timeout: ESPERA_CALLBACK_ADIADO,
+    });
     expect(mocks.createArtist).toHaveBeenCalledTimes(1);
     expect(mocks.uploadArtistPhoto).toHaveBeenCalledTimes(1);
   });
@@ -76,6 +83,8 @@ describe("ArtistModal", () => {
     fireEvent.click(screen.getByRole("button", { name: /salvar/i }));
 
     expect(await screen.findByText("Tatuador salvo. Link de ativacao criado no perfil.")).toBeInTheDocument();
-    await waitFor(() => expect(onCreated).toHaveBeenCalledWith("artist-1"));
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith("artist-1"), {
+      timeout: ESPERA_CALLBACK_ADIADO,
+    });
   });
 });
