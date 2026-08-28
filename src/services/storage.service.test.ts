@@ -3,6 +3,9 @@ import {
   createBookingReferencePath,
   createStoragePath,
   getStoragePathFromPublicUrl,
+  getStoragePathFromUrl,
+  VALIDADE_PADRAO_URL_ASSINADA,
+  validadeAssinaturaAte,
   safeFileName,
   validateUploadFile,
 } from "@/services/storage.service";
@@ -66,5 +69,55 @@ describe("storage.service", () => {
     const url = "https://project.supabase.co/storage/v1/object/public/gallery/studio-1/foto.png";
 
     expect(getStoragePathFromPublicUrl(url, "gallery")).toBe("studio-1/foto.png");
+  });
+});
+
+describe("urls assinadas de bucket privado", () => {
+  const base = "https://project.supabase.co";
+
+  it("extrai path de url assinada, ignorando o token", () => {
+    const url = `${base}/storage/v1/object/sign/client-deliveries/studio-1/entrega-1/foto.png?token=abc.def.ghi`;
+
+    expect(getStoragePathFromUrl(url, "client-deliveries")).toBe("studio-1/entrega-1/foto.png");
+  });
+
+  it("continua extraindo path de url publica antiga", () => {
+    const url = `${base}/storage/v1/object/public/client-deliveries/studio-1/entrega-1/foto.png`;
+
+    expect(getStoragePathFromUrl(url, "client-deliveries")).toBe("studio-1/entrega-1/foto.png");
+  });
+
+  it("devolve null para url de outro bucket", () => {
+    const url = `${base}/storage/v1/object/sign/gallery/studio-1/foto.png?token=abc`;
+
+    expect(getStoragePathFromUrl(url, "client-deliveries")).toBeNull();
+  });
+
+  it("usa a validade padrao quando a entrega nao expira", () => {
+    expect(validadeAssinaturaAte(null)).toBe(VALIDADE_PADRAO_URL_ASSINADA);
+    expect(validadeAssinaturaAte(undefined)).toBe(VALIDADE_PADRAO_URL_ASSINADA);
+  });
+
+  it("usa a validade padrao quando a data e invalida", () => {
+    expect(validadeAssinaturaAte("nao e data")).toBe(VALIDADE_PADRAO_URL_ASSINADA);
+  });
+
+  it("encurta a assinatura para acompanhar a expiracao da entrega", () => {
+    const agora = Date.parse("2026-08-27T00:00:00.000Z");
+    const emTresDias = "2026-08-30T00:00:00.000Z";
+
+    expect(validadeAssinaturaAte(emTresDias, agora)).toBe(60 * 60 * 24 * 3);
+  });
+
+  it("nao assina por mais que o padrao, mesmo com expiracao distante", () => {
+    const agora = Date.parse("2026-08-27T00:00:00.000Z");
+
+    expect(validadeAssinaturaAte("2040-01-01T00:00:00.000Z", agora)).toBe(VALIDADE_PADRAO_URL_ASSINADA);
+  });
+
+  it("garante ao menos uma hora quando a entrega ja expirou", () => {
+    const agora = Date.parse("2026-08-27T00:00:00.000Z");
+
+    expect(validadeAssinaturaAte("2026-08-01T00:00:00.000Z", agora)).toBe(60 * 60);
   });
 });

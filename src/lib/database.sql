@@ -1255,10 +1255,12 @@ drop policy if exists "Public can read booking references" on storage.objects;
 drop policy if exists "Public can upload booking references" on storage.objects;
 drop policy if exists "Authenticated can delete booking references" on storage.objects;
 
-create policy "Public can read booking references"
+-- Leitura anônima removida em 27/08/2026: permitia enumerar o bucket inteiro.
+-- Quem lê referência de agendamento é o estúdio autenticado.
+create policy "Studio owner can read booking references"
 on storage.objects for select
-to anon, authenticated
-using (bucket_id = 'booking-references');
+to authenticated
+using (bucket_id = 'booking-references' and public.user_owns_storage_studio(name));
 
 create policy "Public can upload booking references"
 on storage.objects for insert
@@ -1328,10 +1330,13 @@ using (
   and public.user_owns_storage_studio(name)
 );
 
-create policy "Public can read client deliveries"
+-- Leitura anônima removida em 27/08/2026. O bucket passou a ser privado e o
+-- cliente final abre a entrega por URL assinada, validada pelo próprio serviço
+-- de Storage sem passar por esta policy.
+create policy "Studio owner can read client deliveries"
 on storage.objects for select
-to anon, authenticated
-using (bucket_id = 'client-deliveries');
+to authenticated
+using (bucket_id = 'client-deliveries' and public.user_owns_storage_studio(name));
 
 create policy "Authenticated can upload client deliveries"
 on storage.objects for insert

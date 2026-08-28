@@ -89,7 +89,7 @@ export function DeliveryModal({ clients, onClose, onCreated, open, studioId }: D
       });
 
       for (const item of files) {
-        await uploadDeliveryPhoto(item.file, studioId, delivery.id);
+        await uploadDeliveryPhoto(item.file, studioId, delivery.id, delivery.expires_at);
       }
 
       await onCreated();
