@@ -51,7 +51,12 @@ PostgreSQL / RLS / Storage
 - Não existe query cache global. Cada page/hook gerencia seu ciclo de dados.
 - `Settings.tsx` ainda acessa Supabase diretamente; tratar como exceção legada a remover em refactor futuro.
 - `src/lib/rls-policies.sql` foi removido em 27/08/2026. Auditoria por diff provou que era subconjunto puro e desatualizado de `database.sql`: 35 policies contra 47, nenhum `grant`/`revoke` exclusivo, nenhuma função exclusiva. As 12 policies ausentes eram todas do papel de tatuador e do ledger financeiro. A única contribuição real dele — restringir cinco policies de leitura pública a `to anon, authenticated` em vez de deixá-las abertas a todos os papéis — foi portada para `database.sql` antes da remoção.
-- `database.sql` é hoje a fonte de verdade do repositório, mas continua sem verificação contra o banco remoto, e as migrations cobrem apenas duas features. Reconstruir o banco só pelas migrations ainda não é possível.
+- `database.sql` é a fonte de verdade do repositório, mas **não descreve o banco de produção**. Verificação de 27/08/2026 contra o projeto `qpsykgrlplkspdadpmnp`, depois de restaurá-lo:
+  - existe a migration `20260730143000` aplicada no remoto sem arquivo correspondente no repositório;
+  - existe a tabela `artist_services` em produção, ausente de `database.sql`, das migrations e de todo o código do app;
+  - três funções declaradas em `database.sql` não existem no banco: `current_user_can_view_client`, `current_user_can_view_delivery` e `current_user_is_artist_for_appointment`. São as funções que as policies do papel de tatuador usam, então essas policies provavelmente também nunca foram aplicadas;
+  - os tipos gerados estavam 970 linhas atrás do schema real.
+- Reconstruir o banco só pelas migrations continua impossível. Gerar a baseline exige `supabase db pull`, que precisa de Docker — não instalado nesta máquina.
 
 ## 4. Estrutura dos Módulos
 
@@ -158,3 +163,21 @@ Evoluções aprovadas para futura decisão/planejamento:
 ## 10. Histórico
 
 - **Sprint 1:** estabilizou Onboarding, Configurações, Serviços, Agenda e Financeiro; introduziu domínios compartilhados, resiliência financeira e validações de agenda, elevando Inkora para MVP robusto. Aceite total de booking público permanece bloqueado pela limitação RPC + RLS documentada acima.
+
+## 11. Verificação de Segurança contra Produção — 27/08/2026
+
+Testes de comportamento real como usuário anônimo, usando a chave publicável que já vai no bundle do site. Só leitura e uma tentativa de escrita rejeitada; nada foi gravado nem baixado.
+
+### Confirmado seguro
+
+- Leitura anônima de `clients`, `appointments`, `payments`, `payment_commissions`, `artist_commission_rules`, `client_deliveries`, `client_delivery_photos`, `artist_access_invites` e `artist_services` retorna vazio. Não há vazamento entre estúdios pela API de tabelas.
+- Leitura anônima de `studios`, `tattoo_artists` e `services` funciona, como o produto exige.
+- Insert anônimo em `clients` com `studio_id` inexistente é rejeitado com `42501 new row violates row-level security policy`. A política existe e valida a referência.
+
+### Confirmado exposto
+
+**Os buckets de Storage aceitam listagem anônima.** `POST /storage/v1/object/list/<bucket>` responde para `client-deliveries`, `booking-references`, `logos`, `artists` e `gallery`. A listagem é recursiva: dá para descer de `client-deliveries` para `<studio_id>/` e daí para `<delivery_id>/`.
+
+Isso derruba a suposição de que o nome de arquivo aleatório protegia o conteúdo. Não é preciso adivinhar caminho: dá para enumerar a árvore inteira e depois baixar. `client-deliveries` guarda foto de tatuagem entregue a cliente — dado pessoal sob LGPD, exposto a qualquer visitante do site, já que a chave publicável está no JavaScript da página.
+
+Correção: tornar `client-deliveries` e `booking-references` privados e servir por signed URL de curta duração, emitida só depois de validar o token de entrega. É o item S4.05 do backlog, e a prioridade dele deve subir.
