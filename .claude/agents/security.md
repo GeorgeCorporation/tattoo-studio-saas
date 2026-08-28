@@ -70,4 +70,3 @@ Auditar e implementar segurança: 3 camadas de proteção, RLS, auth, rate limit
 - `src/lib/security-logger.ts`
 - `src/lib/errors.ts`
 - `src/lib/slugs.ts`
-- `src/lib/rls-policies.sql`

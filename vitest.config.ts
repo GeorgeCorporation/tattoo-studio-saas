@@ -1,7 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -17,5 +17,19 @@ export default defineConfig({
     globals: true,
     setupFiles: "./src/test/setup.ts",
     css: true,
+    // Worktrees do Git contêm uma cópia inteira do projeto. Sem esta exclusão o
+    // Vitest roda a suíte duplicada e estoura os workers.
+    exclude: [...configDefaults.exclude, "**/.worktrees/**"],
+    coverage: {
+      // Piso, não meta. Fixado logo abaixo da medição de 27/08/2026
+      // (71,17 / 61,41 / 68,54 / 74,92) para travar regressão sem quebrar o CI
+      // por variação de arredondamento. Subir junto com a cobertura real.
+      thresholds: {
+        statements: 70,
+        branches: 60,
+        functions: 67,
+        lines: 74,
+      },
+    },
   },
 });

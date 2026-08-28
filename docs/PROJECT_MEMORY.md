@@ -50,7 +50,8 @@ PostgreSQL / RLS / Storage
 - Estado global é mínimo; acesso autenticado é propagado por `Outlet context`.
 - Não existe query cache global. Cada page/hook gerencia seu ciclo de dados.
 - `Settings.tsx` ainda acessa Supabase diretamente; tratar como exceção legada a remover em refactor futuro.
-- `database.sql`, `rls-policies.sql` e migrations ainda não são uma fonte única de verdade do banco remoto.
+- `src/lib/rls-policies.sql` foi removido em 27/08/2026. Auditoria por diff provou que era subconjunto puro e desatualizado de `database.sql`: 35 policies contra 47, nenhum `grant`/`revoke` exclusivo, nenhuma função exclusiva. As 12 policies ausentes eram todas do papel de tatuador e do ledger financeiro. A única contribuição real dele — restringir cinco policies de leitura pública a `to anon, authenticated` em vez de deixá-las abertas a todos os papéis — foi portada para `database.sql` antes da remoção.
+- `database.sql` é hoje a fonte de verdade do repositório, mas continua sem verificação contra o banco remoto, e as migrations cobrem apenas duas features. Reconstruir o banco só pelas migrations ainda não é possível.
 
 ## 4. Estrutura dos Módulos
 
