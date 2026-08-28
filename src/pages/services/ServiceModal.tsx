@@ -1,6 +1,9 @@
 import { FormEvent, useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { ServiceTemplatePicker } from "@/components/services/ServiceTemplatePicker";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
 import { validateServiceInput } from "@/lib/service-domain";
 import type { ServiceTemplate } from "@/lib/service-templates";
 import type { ServiceFormData, StudioService } from "@/services/services.service";
@@ -98,72 +101,58 @@ export function ServiceModal({ open, service, studioId, onClose, onSave }: Servi
             />
           ) : null}
 
-          <label>
-            <span className="mb-2 block text-sm font-medium">Nome</span>
-            <input
-              className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-              value={name}
-              onChange={(event) => {
-                setName(event.target.value);
-                setTemplateFieldsCustomized(true);
-              }}
-              required
-            />
-          </label>
+          <Input
+            label="Nome"
+            required
+            value={name}
+            onChange={(event) => {
+              setName(event.target.value);
+              setTemplateFieldsCustomized(true);
+            }}
+          />
 
-          <label>
-            <span className="mb-2 block text-sm font-medium">Descrição</span>
-            <textarea
-              className="min-h-28 w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-              value={description}
-              onChange={(event) => {
-                setDescription(event.target.value);
-                setTemplateFieldsCustomized(true);
-              }}
-            />
-          </label>
+          <Textarea
+            label="Descrição"
+            value={description}
+            onChange={(event) => {
+              setDescription(event.target.value);
+              setTemplateFieldsCustomized(true);
+            }}
+          />
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <label>
-              <span className="mb-2 block text-sm font-medium">Preco inicial</span>
-              <div className="flex rounded-xl border border-white/10 bg-[#0f0f0f]">
-                <span className="border-r border-white/10 px-4 py-3 text-zinc-400">R$</span>
-                <input
-                  className="min-w-0 flex-1 bg-transparent px-4 py-3 outline-none"
-                  min="0"
-                  step="0.01"
-                  type="number"
-                  value={startingPrice}
-                  onChange={(event) => setStartingPrice(event.target.value)}
-                />
-              </div>
-            </label>
+            <Input
+              label="Preco inicial"
+              min="0"
+              prefix="R$"
+              step="0.01"
+              type="number"
+              value={startingPrice}
+              onChange={(event) => setStartingPrice(event.target.value)}
+            />
 
-            <label>
-              <span className="mb-2 block text-sm font-medium">Duracao media em minutos</span>
-              <input
-                className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                min="30"
-                step="1"
-                type="number"
-                value={avgDurationMinutes}
-                onChange={(event) => {
-                  setAvgDurationMinutes(event.target.value);
-                  setTemplateFieldsCustomized(true);
-                }}
-              />
-            </label>
+            <Input
+              label="Duracao media em minutos"
+              min="30"
+              step="1"
+              type="number"
+              value={avgDurationMinutes}
+              onChange={(event) => {
+                setAvgDurationMinutes(event.target.value);
+                setTemplateFieldsCustomized(true);
+              }}
+            />
           </div>
 
-          {error ? <p className="text-sm text-red-400">{error}</p> : null}
+          {error ? (
+            <p className="text-sm text-red-400" role="alert">
+              {error}
+            </p>
+          ) : null}
 
-          <button
-            className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold disabled:opacity-60"
-            disabled={saving}
-            type="submit"
-          >
+          <Button disabled={saving} type="submit">
             {saving ? "Salvando..." : "Salvar"}
-          </button>
+          </Button>
         </form>
       </section>
     </div>
