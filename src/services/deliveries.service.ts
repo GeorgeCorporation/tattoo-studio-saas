@@ -1,5 +1,10 @@
 import { supabase } from "@/lib/supabase";
-import { createStoragePath, getStoragePathFromPublicUrl, validateUploadFile } from "@/services/storage.service";
+import {
+  createStoragePath,
+  getStoragePathFromUrl,
+  validadeAssinaturaAte,
+  validateUploadFile,
+} from "@/services/storage.service";
 
 export type DeliveryClient = {
   id: string;
@@ -98,7 +103,12 @@ export async function createDelivery(data: CreateDeliveryData) {
   return delivery;
 }
 
-export async function uploadDeliveryPhoto(file: File, studioId: string, deliveryId: string) {
+export async function uploadDeliveryPhoto(
+  file: File,
+  studioId: string,
+  deliveryId: string,
+  deliveryExpiresAt?: string | null,
+) {
   validateUploadFile(file);
   const path = createStoragePath(studioId, file.name, [deliveryId]);
 
@@ -109,14 +119,26 @@ export async function uploadDeliveryPhoto(file: File, studioId: string, delivery
 
   if (uploadError) throw uploadError;
 
-  const { data: publicUrl } = supabase.storage.from("client-deliveries").getPublicUrl(path);
+  // O bucket é privado. Quem abre a entrega é anônimo e não tem permissão para
+  // assinar, então a URL é assinada aqui, pelo gestor autenticado que acabou de
+  // subir o arquivo. Diferente da URL pública anterior, esta não é adivinhável
+  // nem enumerável, e cai por terra se o segredo do Storage for rotacionado.
+  const { data: assinada, error: erroAssinatura } = await supabase.storage
+    .from("client-deliveries")
+    .createSignedUrl(path, validadeAssinaturaAte(deliveryExpiresAt));
+
+  if (erroAssinatura || !assinada?.signedUrl) {
+    // Não deixa arquivo órfão num bucket que o cliente não consegue abrir.
+    await supabase.storage.from("client-deliveries").remove([path]);
+    throw erroAssinatura ?? new Error("Não foi possível gerar o link da foto.");
+  }
 
   const { data, error } = await supabase
     .from("client_delivery_photos")
     .insert({
       delivery_id: deliveryId,
       studio_id: studioId,
-      url: publicUrl.publicUrl,
+      url: assinada.signedUrl,
       file_name: file.name,
     })
     .select("*")
@@ -127,7 +149,7 @@ export async function uploadDeliveryPhoto(file: File, studioId: string, delivery
 }
 
 export async function deleteDeliveryPhoto(id: string, url: string) {
-  const path = getStoragePathFromPublicUrl(url, "client-deliveries");
+  const path = getStoragePathFromUrl(url, "client-deliveries");
 
   if (path) {
     const { error: storageError } = await supabase.storage.from("client-deliveries").remove([path]);

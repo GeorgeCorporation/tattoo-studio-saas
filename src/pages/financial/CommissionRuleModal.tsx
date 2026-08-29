@@ -1,5 +1,9 @@
 import { FormEvent, useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Textarea } from "@/components/ui/Textarea";
 import type { Artist } from "@/services/artists.service";
 import { upsertCommissionRule, type CommissionRule } from "@/services/financial.service";
 
@@ -95,57 +99,42 @@ export function CommissionRuleModal({ open, studioId, artists, rule, onClose, on
 
         <form className="grid gap-4 p-5" onSubmit={handleSubmit}>
           <div className="grid gap-4 sm:grid-cols-2">
-            <label>
-              <span className="mb-2 block text-sm font-medium">Tatuador</span>
-              <select
-                className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                value={artistId}
-                onChange={(event) => setArtistId(event.target.value)}
-              >
-                {artists.map((artist) => (
-                  <option key={artist.id} value={artist.id}>
-                    {artist.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <Select label="Tatuador" value={artistId} onChange={(event) => setArtistId(event.target.value)}>
+              {artists.map((artist) => (
+                <option key={artist.id} value={artist.id}>
+                  {artist.name}
+                </option>
+              ))}
+            </Select>
 
-            <label>
-              <span className="mb-2 block text-sm font-medium">Data de início</span>
-              <input
-                className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                type="date"
-                value={startsAt}
-                onChange={(event) => setStartsAt(event.target.value)}
-              />
-            </label>
+            <Input
+              label="Data de início"
+              type="date"
+              value={startsAt}
+              onChange={(event) => setStartsAt(event.target.value)}
+            />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <label>
-              <span className="mb-2 block text-sm font-medium">Percentual (%)</span>
-              <input
-                className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                min="0"
-                step="0.01"
-                type="number"
-                value={percentage}
-                onChange={(event) => setPercentage(event.target.value)}
-              />
-            </label>
+            <Input
+              label="Percentual (%)"
+              min="0"
+              step="0.01"
+              type="number"
+              value={percentage}
+              onChange={(event) => setPercentage(event.target.value)}
+            />
 
-            <label>
-              <span className="mb-2 block text-sm font-medium">Teto mensal de comissão (R$)</span>
-              <input
-                className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3 disabled:opacity-50"
-                disabled={!capEnabled}
-                min="0"
-                step="0.01"
-                type="number"
-                value={monthlyCap}
-                onChange={(event) => setMonthlyCap(event.target.value)}
-              />
-            </label>
+            <Input
+              disabled={!capEnabled}
+              label="Teto mensal de comissão (R$)"
+              min="0"
+              prefix="R$"
+              step="0.01"
+              type="number"
+              value={monthlyCap}
+              onChange={(event) => setMonthlyCap(event.target.value)}
+            />
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -159,24 +148,22 @@ export function CommissionRuleModal({ open, studioId, artists, rule, onClose, on
             </label>
           </div>
 
-          <label>
-            <span className="mb-2 block text-sm font-medium">Observação</span>
-            <textarea
-              className="min-h-24 w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-            />
-          </label>
+          <Textarea
+            label="Observação"
+            textareaClassName="min-h-24"
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+          />
 
-          {error ? <p className="text-sm text-red-400">{error}</p> : null}
+          {error ? (
+            <p className="text-sm text-red-400" role="alert">
+              {error}
+            </p>
+          ) : null}
 
-          <button
-            className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold disabled:opacity-60"
-            disabled={saving || saved}
-            type="submit"
-          >
+          <Button disabled={saving || saved} type="submit">
             {saving ? "Salvando..." : saved ? "Regra salva" : "Salvar regra"}
-          </button>
+          </Button>
         </form>
       </section>
     </div>

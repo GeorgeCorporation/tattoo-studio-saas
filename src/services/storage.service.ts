@@ -51,3 +51,39 @@ export function getStoragePathFromPublicUrl(url: string, bucket: PublicBucket) {
   const [, path] = url.split(marker);
   return path ? decodeURIComponent(path) : null;
 }
+
+/**
+ * Extrai o path tanto de URL pública quanto de URL assinada.
+ *
+ * Necessário porque os buckets privados passaram a guardar URL assinada, mas
+ * os registros criados antes dessa mudança ainda guardam URL pública. As duas
+ * formas precisam continuar sendo apagáveis.
+ */
+export function getStoragePathFromUrl(url: string, bucket: PublicBucket) {
+  const doPublico = getStoragePathFromPublicUrl(url, bucket);
+  if (doPublico) return doPublico;
+
+  const marcadorAssinado = `/storage/v1/object/sign/${bucket}/`;
+  const [, resto] = url.split(marcadorAssinado);
+  if (!resto) return null;
+
+  const [caminho] = resto.split("?");
+  return caminho ? decodeURIComponent(caminho) : null;
+}
+
+/** Um ano. Entrega de cliente é material que a pessoa volta para rever. */
+export const VALIDADE_PADRAO_URL_ASSINADA = 60 * 60 * 24 * 365;
+
+/**
+ * Segundos entre agora e `expiresAt`, limitado ao padrão e nunca menor que uma
+ * hora — assinar com validade já vencida geraria link morto no ato.
+ */
+export function validadeAssinaturaAte(expiresAt: string | null | undefined, agora = Date.now()) {
+  if (!expiresAt) return VALIDADE_PADRAO_URL_ASSINADA;
+
+  const alvo = Date.parse(expiresAt);
+  if (Number.isNaN(alvo)) return VALIDADE_PADRAO_URL_ASSINADA;
+
+  const segundos = Math.floor((alvo - agora) / 1000);
+  return Math.min(VALIDADE_PADRAO_URL_ASSINADA, Math.max(60 * 60, segundos));
+}
