@@ -40,6 +40,8 @@ where id = 'client-deliveries';
 -- 2. Remove a leitura anônima que permitia enumerar os dois buckets.
 drop policy if exists "Public can read client deliveries" on storage.objects;
 drop policy if exists "Public can read booking references" on storage.objects;
+drop policy if exists "Studio owner can read client deliveries" on storage.objects;
+drop policy if exists "Studio owner can read booking references" on storage.objects;
 
 -- 3. Só o dono do estúdio lê os objetos de entrega. O cliente final não passa
 --    por aqui: ele abre a URL assinada, que é validada pelo próprio serviço de

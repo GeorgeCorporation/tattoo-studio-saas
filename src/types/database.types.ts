@@ -857,6 +857,18 @@ export type Database = {
         Returns: Json
       }
       current_user_artist_id: { Args: { p_studio_id: string }; Returns: string }
+      current_user_can_view_client: {
+        Args: { p_client_id: string; p_studio_id: string }
+        Returns: boolean
+      }
+      current_user_can_view_delivery: {
+        Args: { p_appointment_id: string; p_studio_id: string }
+        Returns: boolean
+      }
+      current_user_is_artist_for_appointment: {
+        Args: { p_artist_id: string; p_studio_id: string }
+        Returns: boolean
+      }
       get_artist_invite_by_token: { Args: { p_token: string }; Returns: Json }
       get_booked_appointment_times: {
         Args: { p_artist_id: string; p_date: string; p_studio_id: string }
