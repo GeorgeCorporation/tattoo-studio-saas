@@ -34,6 +34,13 @@ export default defineConfig({
     // Worktrees do Git contêm uma cópia inteira do projeto. Sem esta exclusão o
     // Vitest roda a suíte duplicada e estoura os workers.
     exclude: [...configDefaults.exclude, "**/.worktrees/**"],
+    // O padrão de 5 s é apertado demais para os testes que digitam campo por
+    // campo com userEvent. Dois deles (ServiceModal "allows every suggested
+    // field to be edited", OnboardingPage "preserves a customized opening
+    // time") estouram por volta de 5,2 s quando a suíte roda em paralelo em
+    // máquina carregada, e passam em ~3 s isolados. Não mascara defeito real:
+    // teste quebrado falha na asserção, não no relógio.
+    testTimeout: 15000,
     coverage: {
       // Piso, não meta. Fixado logo abaixo da medição de 27/08/2026
       // (71,17 / 61,41 / 68,54 / 74,92) para travar regressão sem quebrar o CI
