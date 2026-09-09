@@ -1,6 +1,10 @@
 import { Camera, Copy, Trash2, Upload, X } from "lucide-react";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { Button } from "@/components/ui/Button";
+import { campoBase } from "@/components/ui/field-styles";
+import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { useArtist } from "@/hooks/useArtist";
 
@@ -156,12 +160,14 @@ export function ArtistProfile() {
 
             <div className="grid gap-3">
               <input
-                className="rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3 text-2xl font-semibold"
+                aria-label="Nome do tatuador"
+                className={`${campoBase} text-2xl font-semibold`}
                 value={name}
                 onChange={(event) => setName(event.target.value)}
               />
               <input
-                className="rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3 text-sm text-zinc-300"
+                aria-label="Especialidade do tatuador"
+                className={`${campoBase} text-sm text-zinc-300`}
                 value={specialty}
                 onChange={(event) => setSpecialty(event.target.value)}
               />
@@ -222,28 +228,20 @@ export function ArtistProfile() {
             </div>
           </div>
 
-          <button
-            className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold disabled:opacity-60"
-            disabled={saving}
-            onClick={() => handleSave()}
-            type="button"
-          >
+          <Button disabled={saving} onClick={() => handleSave()}>
             {saving ? "Salvando..." : "Salvar alteracoes"}
-          </button>
+          </Button>
         </div>
       </section>
 
       <form className="rounded-xl border border-white/10 bg-[#1a1a1a] p-5" onSubmit={handleSave}>
         <h2 className="text-xl font-semibold">Dados pessoais</h2>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <label>
-            <span className="mb-2 block text-sm font-medium">Nome</span>
-            <input className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3" value={name} onChange={(event) => setName(event.target.value)} />
-          </label>
-          <label>
-            <span className="mb-2 block text-sm font-medium">Especialidade</span>
-            <input
-              className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
+          <Input label="Nome" value={name} onChange={(event) => setName(event.target.value)} />
+
+          <div>
+            <Input
+              label="Especialidade"
               list="artist-profile-specialty-suggestions"
               onChange={(event) => setSpecialty(event.target.value)}
               placeholder="Ex: Fine line, realismo, blackwork"
@@ -254,35 +252,36 @@ export function ArtistProfile() {
                 <option key={item} value={item} />
               ))}
             </datalist>
-          </label>
-          <label>
-            <span className="mb-2 block text-sm font-medium">Instagram</span>
-            <input className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3" value={instagram} onChange={(event) => setInstagram(event.target.value)} />
-          </label>
-          <label>
-            <span className="mb-2 block text-sm font-medium">WhatsApp</span>
-            <input className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3" value={whatsapp} onChange={(event) => setWhatsapp(event.target.value)} />
-          </label>
-          <label>
-            <span className="mb-2 block text-sm font-medium">E-mail para ativacao do tatuador</span>
-            <input className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3" type="email" value={accessEmail} onChange={(event) => setAccessEmail(event.target.value)} />
+          </div>
+
+          <Input label="Instagram" value={instagram} onChange={(event) => setInstagram(event.target.value)} />
+
+          <Input label="WhatsApp" value={whatsapp} onChange={(event) => setWhatsapp(event.target.value)} />
+
+          <div>
+            <Input
+              label="E-mail para ativacao do tatuador"
+              type="email"
+              value={accessEmail}
+              onChange={(event) => setAccessEmail(event.target.value)}
+            />
             <p className="mt-2 text-xs text-zinc-500">
               Sistema gera link de ativacao. Tatuador cria proprio acesso ao abrir convite.
             </p>
-          </label>
-          <label className="sm:col-span-2">
-            <span className="mb-2 block text-sm font-medium">Slug</span>
-            <input className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3" value={slug} onChange={(event) => setSlug(event.target.value)} />
+          </div>
+
+          <div className="sm:col-span-2">
+            <Input label="Slug" value={slug} onChange={(event) => setSlug(event.target.value)} />
             <p className="mt-2 text-xs text-yellow-300">Ao editar o slug, o link publico vai mudar.</p>
-          </label>
-          <label className="sm:col-span-2">
-            <span className="mb-2 block text-sm font-medium">Biografia</span>
-            <textarea className="min-h-32 w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3" value={bio} onChange={(event) => setBio(event.target.value)} />
-          </label>
+          </div>
+
+          <div className="sm:col-span-2">
+            <Textarea label="Biografia" textareaClassName="min-h-32" value={bio} onChange={(event) => setBio(event.target.value)} />
+          </div>
         </div>
-        <button className="mt-5 rounded-xl bg-[#E8650A] px-4 py-3 font-semibold" type="submit">
+        <Button buttonClassName="mt-5" type="submit">
           Salvar dados
-        </button>
+        </Button>
       </form>
 
       <section className="rounded-xl border border-white/10 bg-[#1a1a1a] p-5">

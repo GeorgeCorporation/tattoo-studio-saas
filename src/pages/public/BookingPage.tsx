@@ -1,5 +1,9 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Textarea } from "@/components/ui/Textarea";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import {
@@ -340,72 +344,60 @@ export function BookingPage() {
 
         {step === 1 ? (
           <form className="mt-6 space-y-5 rounded-xl border border-white/10 bg-[#1a1a1a] p-5" onSubmit={goToStepTwo}>
-            <div>
-              <label className="mb-2 block text-sm font-medium">Tatuador</label>
-              <select
-                className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                value={selectedArtistId}
-                onChange={(event) => setSelectedArtistId(event.target.value)}
-                required
-              >
-                {artists.length === 0 ? <option value="">Nenhum tatuador ativo</option> : null}
-                {artists.map((artist) => (
-                  <option key={artist.id} value={artist.id}>
-                    {artist.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              label="Tatuador"
+              onChange={(event) => setSelectedArtistId(event.target.value)}
+              required
+              value={selectedArtistId}
+            >
+              {artists.length === 0 ? <option value="">Nenhum tatuador ativo</option> : null}
+              {artists.map((artist) => (
+                <option key={artist.id} value={artist.id}>
+                  {artist.name}
+                </option>
+              ))}
+            </Select>
 
-            <div>
-              <label className="mb-2 block text-sm font-medium">Serviço</label>
-              <select
-                className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                value={selectedServiceId}
-                onChange={(event) => setSelectedServiceId(event.target.value)}
-                required
-              >
-                {services.length === 0 ? <option value="">Nenhum serviço ativo</option> : null}
-                {services.map((service) => (
-                  <option key={service.id} value={service.id}>
-                    {service.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Select
+              label="Serviço"
+              onChange={(event) => setSelectedServiceId(event.target.value)}
+              required
+              value={selectedServiceId}
+            >
+              {services.length === 0 ? <option value="">Nenhum serviço ativo</option> : null}
+              {services.map((service) => (
+                <option key={service.id} value={service.id}>
+                  {service.name}
+                </option>
+              ))}
+            </Select>
 
             <div className="grid gap-5 sm:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium">Data</label>
-                <input
-                  className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                  min={minimumDate}
-                  type="date"
-                  value={date}
-                  onChange={(event) => setDate(event.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium">Horário</label>
-                <select
-                  className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                  disabled={availabilityLoading || availableTimes.length === 0}
-                  value={time}
-                  onChange={(event) => setTime(event.target.value)}
-                  required
-                >
-                  {availabilityLoading ? <option value="">Carregando horários...</option> : null}
-                  {!availabilityLoading && availableTimes.length === 0 ? (
-                    <option value="">Nenhum horário disponível</option>
-                  ) : null}
-                  {availableTimes.map((slot) => (
-                    <option key={slot} value={slot}>
-                      {slot}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Input
+                label="Data"
+                min={minimumDate}
+                onChange={(event) => setDate(event.target.value)}
+                required
+                type="date"
+                value={date}
+              />
+              <Select
+                disabled={availabilityLoading || availableTimes.length === 0}
+                label="Horário"
+                onChange={(event) => setTime(event.target.value)}
+                required
+                value={time}
+              >
+                {availabilityLoading ? <option value="">Carregando horários...</option> : null}
+                {!availabilityLoading && availableTimes.length === 0 ? (
+                  <option value="">Nenhum horário disponível</option>
+                ) : null}
+                {availableTimes.map((slot) => (
+                  <option key={slot} value={slot}>
+                    {slot}
+                  </option>
+                ))}
+              </Select>
             </div>
 
             {availabilityError ? <p className="text-sm text-red-400">{availabilityError}</p> : null}
@@ -419,78 +411,56 @@ export function BookingPage() {
                 Esse dia está fechado ou todos os horários desse tatuador já foram ocupados.
               </p>
             ) : null}
-            {error ? <p className="text-sm text-red-400">{error}</p> : null}
+            {error ? (
+              <p className="text-sm text-red-400" role="alert">
+                {error}
+              </p>
+            ) : null}
 
-            <button className="w-full rounded-xl bg-[#E8650A] px-4 py-3 font-semibold" type="submit">
+            <Button fullWidth type="submit">
               Continuar
-            </button>
+            </Button>
           </form>
         ) : null}
 
         {step === 2 ? (
           <form className="mt-6 space-y-5 rounded-xl border border-white/10 bg-[#1a1a1a] p-5" onSubmit={handleSubmit}>
-            <div>
-              <label className="mb-2 block text-sm font-medium">Nome completo</label>
-              <input
-                className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                value={clientName}
-                onChange={(event) => setClientName(event.target.value)}
-                required
-              />
-            </div>
+            <Input
+              label="Nome completo"
+              onChange={(event) => setClientName(event.target.value)}
+              required
+              value={clientName}
+            />
 
             <div className="grid gap-5 sm:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium">WhatsApp</label>
-                <input
-                  className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                  value={whatsapp}
-                  onChange={(event) => setWhatsapp(event.target.value)}
-                  inputMode="numeric"
-                  placeholder="11999999999"
-                  required
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium">Instagram</label>
-                <input
-                  className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                  value={instagram}
-                  onChange={(event) => setInstagram(cleanInstagram(event.target.value))}
-                  placeholder="seuinstagram"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium">Email</label>
-              <input
-                className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium">Descrição da tatuagem</label>
-              <textarea
-                className="min-h-32 w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
+              <Input
+                inputMode="numeric"
+                label="WhatsApp"
+                onChange={(event) => setWhatsapp(event.target.value)}
+                placeholder="11999999999"
                 required
+                value={whatsapp}
+              />
+              <Input
+                label="Instagram"
+                onChange={(event) => setInstagram(cleanInstagram(event.target.value))}
+                placeholder="seuinstagram"
+                value={instagram}
               />
             </div>
 
+            <Input label="Email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
+
+            <Textarea
+              label="Descrição da tatuagem"
+              textareaClassName="min-h-32"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              required
+            />
+
             <div>
-              <label className="mb-2 block text-sm font-medium">Fotos de referência</label>
-              <input
-                accept="image/*"
-                className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                multiple
-                onChange={handleFiles}
-                type="file"
-              />
+              <Input accept="image/*" label="Fotos de referência" multiple onChange={handleFiles} type="file" />
               <p className="mt-2 text-xs text-zinc-500">Até 3 fotos.</p>
               {referencePreviews.length ? (
                 <div className="mt-3 grid grid-cols-3 gap-3">
@@ -506,23 +476,19 @@ export function BookingPage() {
               ) : null}
             </div>
 
-            {error ? <p className="text-sm text-red-400">{error}</p> : null}
+            {error ? (
+              <p className="text-sm text-red-400" role="alert">
+                {error}
+              </p>
+            ) : null}
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <button
-                className="rounded-xl border border-white/10 px-4 py-3 font-semibold"
-                onClick={() => setStep(1)}
-                type="button"
-              >
+              <Button onClick={() => setStep(1)} variant="secondary">
                 Voltar
-              </button>
-              <button
-                className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold disabled:opacity-60"
-                disabled={submitting}
-                type="submit"
-              >
+              </Button>
+              <Button disabled={submitting} type="submit">
                 {submitting ? "Salvando..." : "Finalizar"}
-              </button>
+              </Button>
             </div>
           </form>
         ) : null}
