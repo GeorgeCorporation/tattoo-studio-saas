@@ -1,5 +1,6 @@
 import { ImagePlus, Trash2, Upload, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { Select } from "@/components/ui/Select";
 import type { Artist } from "@/services/artists.service";
 import { uploadPhoto } from "@/services/gallery.service";
 
@@ -100,22 +101,16 @@ export function UploadModal({ artists, onClose, onUploaded, open, studioId }: Up
           </button>
         </div>
 
-        <label className="mt-5 block text-sm font-semibold" htmlFor="gallery-artist">
-          Tatuador
-        </label>
-        <select
-          className="mt-2 w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3 text-white outline-none focus:border-[#E8650A]"
-          id="gallery-artist"
-          onChange={(event) => setArtistId(event.target.value)}
-          value={artistId}
-        >
-          <option value="">Sem tatuador especifico</option>
-          {artists.map((artist) => (
-            <option key={artist.id} value={artist.id}>
-              {artist.name}
-            </option>
-          ))}
-        </select>
+        <div className="mt-5">
+          <Select label="Tatuador" onChange={(event) => setArtistId(event.target.value)} value={artistId}>
+            <option value="">Sem tatuador especifico</option>
+            {artists.map((artist) => (
+              <option key={artist.id} value={artist.id}>
+                {artist.name}
+              </option>
+            ))}
+          </Select>
+        </div>
 
         <label
           className={[

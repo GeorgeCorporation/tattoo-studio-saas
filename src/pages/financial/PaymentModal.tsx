@@ -1,5 +1,8 @@
 import { FormEvent, useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
 import {
   createPayment,
   getAppointmentsForPayment,
@@ -96,84 +99,55 @@ export function PaymentModal({ open, studioId, onClose, onCreated }: PaymentModa
         </header>
 
         <form className="grid gap-4 p-5" onSubmit={handleSubmit}>
-          <label>
-            <span className="mb-2 block text-sm font-medium">Agendamento</span>
-            <select
-              className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-              value={appointmentId}
-              onChange={(event) => setAppointmentId(event.target.value)}
-            >
-              {appointments.map((appointment) => (
-                <option key={appointment.id} value={appointment.id}>
-                  {appointment.date} {appointment.time.slice(0, 5)} - {appointment.clients?.name ?? "Cliente"}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Select label="Agendamento" value={appointmentId} onChange={(event) => setAppointmentId(event.target.value)}>
+            {appointments.map((appointment) => (
+              <option key={appointment.id} value={appointment.id}>
+                {appointment.date} {appointment.time.slice(0, 5)} - {appointment.clients?.name ?? "Cliente"}
+              </option>
+            ))}
+          </Select>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <label>
-              <span className="mb-2 block text-sm font-medium">Tipo</span>
-              <select
-                className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                value={type}
-                onChange={(event) => setType(event.target.value as PaymentType)}
-              >
-                <option value="signal">Sinal</option>
-                <option value="final">Pagamento final</option>
-              </select>
-            </label>
+            <Select label="Tipo" value={type} onChange={(event) => setType(event.target.value as PaymentType)}>
+              <option value="signal">Sinal</option>
+              <option value="final">Pagamento final</option>
+            </Select>
 
-            <label>
-              <span className="mb-2 block text-sm font-medium">Metodo</span>
-              <select
-                className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                value={method}
-                onChange={(event) => setMethod(event.target.value as PaymentMethod)}
-              >
-                <option value="pix">PIX</option>
-                <option value="cash">Dinheiro</option>
-                <option value="card">Cartao</option>
-              </select>
-            </label>
+            <Select label="Metodo" value={method} onChange={(event) => setMethod(event.target.value as PaymentMethod)}>
+              <option value="pix">PIX</option>
+              <option value="cash">Dinheiro</option>
+              <option value="card">Cartao</option>
+            </Select>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <label>
-              <span className="mb-2 block text-sm font-medium">Valor</span>
-              <div className="flex rounded-xl border border-white/10 bg-[#0f0f0f]">
-                <span className="border-r border-white/10 px-4 py-3 text-zinc-400">R$</span>
-                <input
-                  className="min-w-0 flex-1 bg-transparent px-4 py-3 outline-none"
-                  min="0"
-                  step="0.01"
-                  type="number"
-                  value={amount}
-                  onChange={(event) => setAmount(event.target.value)}
-                />
-              </div>
-            </label>
+            <Input
+              label="Valor"
+              min="0"
+              prefix="R$"
+              step="0.01"
+              type="number"
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+            />
 
-            <label>
-              <span className="mb-2 block text-sm font-medium">Data do pagamento</span>
-              <input
-                className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                type="date"
-                value={paidAt}
-                onChange={(event) => setPaidAt(event.target.value)}
-              />
-            </label>
+            <Input
+              label="Data do pagamento"
+              type="date"
+              value={paidAt}
+              onChange={(event) => setPaidAt(event.target.value)}
+            />
           </div>
 
-          {error ? <p className="text-sm text-red-400">{error}</p> : null}
+          {error ? (
+            <p className="text-sm text-red-400" role="alert">
+              {error}
+            </p>
+          ) : null}
 
-          <button
-            className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold disabled:opacity-60"
-            disabled={saving || created}
-            type="submit"
-          >
+          <Button disabled={saving || created} type="submit">
             {saving ? "Registrando..." : created ? "Pagamento registrado" : "Registrar pagamento"}
-          </button>
+          </Button>
         </form>
       </section>
     </div>

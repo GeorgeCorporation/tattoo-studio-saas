@@ -1,5 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { createArtist, slugify, updateArtist, uploadArtistPhoto } from "@/services/artists.service";
@@ -109,23 +111,19 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
         </header>
 
         <form className="grid gap-4 p-5" onSubmit={handleSubmit}>
-          <label>
-            <span className="mb-2 block text-sm font-medium">Nome</span>
-            <input
-              className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-              onChange={(event) => {
-                setName(event.target.value);
-                clearMessages();
-              }}
-              required
-              value={name}
-            />
-          </label>
+          <Input
+            label="Nome"
+            onChange={(event) => {
+              setName(event.target.value);
+              clearMessages();
+            }}
+            required
+            value={name}
+          />
 
-          <label>
-            <span className="mb-2 block text-sm font-medium">Especialidade</span>
-            <input
-              className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
+          <div>
+            <Input
+              label="Especialidade"
               list="artist-specialty-suggestions"
               onChange={(event) => {
                 setSpecialty(event.target.value);
@@ -139,37 +137,30 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
                 <option key={item} value={item} />
               ))}
             </datalist>
-          </label>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label>
-              <span className="mb-2 block text-sm font-medium">Instagram</span>
-              <input
-                className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                onChange={(event) => {
-                  setInstagram(event.target.value);
-                  clearMessages();
-                }}
-                value={instagram}
-              />
-            </label>
-            <label>
-              <span className="mb-2 block text-sm font-medium">WhatsApp</span>
-              <input
-                className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                onChange={(event) => {
-                  setWhatsapp(event.target.value);
-                  clearMessages();
-                }}
-                value={whatsapp}
-              />
-            </label>
           </div>
 
-          <label>
-            <span className="mb-2 block text-sm font-medium">E-mail para ativacao do tatuador</span>
-            <input
-              className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input
+              label="Instagram"
+              onChange={(event) => {
+                setInstagram(event.target.value);
+                clearMessages();
+              }}
+              value={instagram}
+            />
+            <Input
+              label="WhatsApp"
+              onChange={(event) => {
+                setWhatsapp(event.target.value);
+                clearMessages();
+              }}
+              value={whatsapp}
+            />
+          </div>
+
+          <div>
+            <Input
+              label="E-mail para ativacao do tatuador"
               onChange={(event) => {
                 setAccessEmail(event.target.value);
                 clearMessages();
@@ -181,43 +172,37 @@ export function ArtistModal({ open, studioId, onClose, onCreated }: ArtistModalP
             <p className="mt-2 text-xs text-zinc-500">
               Sistema gera link de ativacao para tatuador criar proprio acesso.
             </p>
-          </label>
+          </div>
 
-          <label>
-            <span className="mb-2 block text-sm font-medium">Slug</span>
-            <input
-              className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-              onChange={(event) => {
-                setSlug(event.target.value);
-                clearMessages();
-              }}
-              value={slug}
-            />
-          </label>
+          <Input
+            label="Slug"
+            onChange={(event) => {
+              setSlug(event.target.value);
+              clearMessages();
+            }}
+            value={slug}
+          />
 
-          <label>
-            <span className="mb-2 block text-sm font-medium">Foto</span>
-            <input
-              accept="image/*"
-              className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-              onChange={(event) => {
-                setPhoto(event.target.files?.[0] ?? null);
-                clearMessages();
-              }}
-              type="file"
-            />
-          </label>
+          <Input
+            accept="image/*"
+            label="Foto"
+            onChange={(event) => {
+              setPhoto(event.target.files?.[0] ?? null);
+              clearMessages();
+            }}
+            type="file"
+          />
 
-          {error ? <p className="text-sm text-red-400">{error}</p> : null}
+          {error ? (
+            <p className="text-sm text-red-400" role="alert">
+              {error}
+            </p>
+          ) : null}
           {notice ? <p className="text-sm text-yellow-300">{notice}</p> : null}
 
-          <button
-            className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold disabled:opacity-60"
-            disabled={saving}
-            type="submit"
-          >
+          <Button disabled={saving} type="submit">
             {saving ? "Salvando..." : "Salvar"}
-          </button>
+          </Button>
         </form>
       </section>
     </div>

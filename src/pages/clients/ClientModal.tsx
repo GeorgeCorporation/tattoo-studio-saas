@@ -1,5 +1,8 @@
 import { FormEvent, useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
 import type { ClientListItem } from "@/services/clients.service";
 
 type ClientModalProps = {
@@ -71,64 +74,26 @@ export function ClientModal({ open, client, onClose, onSave }: ClientModalProps)
         </header>
 
         <form className="grid gap-4 p-5" onSubmit={handleSubmit}>
-          <label>
-            <span className="mb-2 block text-sm font-medium">Nome</span>
-            <input
-              className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              required
-            />
-          </label>
+          <Input label="Nome" required value={name} onChange={(event) => setName(event.target.value)} />
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <label>
-              <span className="mb-2 block text-sm font-medium">WhatsApp</span>
-              <input
-                className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                value={phone}
-                onChange={(event) => setPhone(event.target.value)}
-              />
-            </label>
-
-            <label>
-              <span className="mb-2 block text-sm font-medium">Instagram</span>
-              <input
-                className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                value={instagram}
-                onChange={(event) => setInstagram(event.target.value)}
-              />
-            </label>
+            <Input label="WhatsApp" value={phone} onChange={(event) => setPhone(event.target.value)} />
+            <Input label="Instagram" value={instagram} onChange={(event) => setInstagram(event.target.value)} />
           </div>
 
-          <label>
-            <span className="mb-2 block text-sm font-medium">Email</span>
-            <input
-              className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-          </label>
+          <Input label="Email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
 
-          <label>
-            <span className="mb-2 block text-sm font-medium">Observacoes</span>
-            <textarea
-              className="min-h-28 w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-            />
-          </label>
+          <Textarea label="Observacoes" value={notes} onChange={(event) => setNotes(event.target.value)} />
 
-          {error ? <p className="text-sm text-red-400">{error}</p> : null}
+          {error ? (
+            <p className="text-sm text-red-400" role="alert">
+              {error}
+            </p>
+          ) : null}
 
-          <button
-            className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold disabled:opacity-60"
-            disabled={saving}
-            type="submit"
-          >
+          <Button disabled={saving} type="submit">
             {saving ? "Salvando..." : "Salvar"}
-          </button>
+          </Button>
         </form>
       </section>
     </div>

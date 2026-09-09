@@ -1,5 +1,9 @@
 import { ImagePlus, Trash2, Upload, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Textarea } from "@/components/ui/Textarea";
 import {
   createDelivery,
   uploadDeliveryPhoto,
@@ -115,39 +119,23 @@ export function DeliveryModal({ clients, onClose, onCreated, open, studioId }: D
         </header>
 
         <div className="mt-5 grid gap-4">
-          <label className="text-sm font-semibold">
-            Cliente
-            <select
-              className="mt-2 w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3 outline-none focus:border-[#E8650A]"
-              value={clientId}
-              onChange={(event) => setClientId(event.target.value)}
-            >
-              <option value="">Selecione cliente</option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {client.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Select label="Cliente" value={clientId} onChange={(event) => setClientId(event.target.value)}>
+            <option value="">Selecione cliente</option>
+            {clients.map((client) => (
+              <option key={client.id} value={client.id}>
+                {client.name}
+              </option>
+            ))}
+          </Select>
 
-          <label className="text-sm font-semibold">
-            Titulo
-            <input
-              className="mt-2 w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3 outline-none focus:border-[#E8650A]"
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-            />
-          </label>
+          <Input label="Titulo" value={title} onChange={(event) => setTitle(event.target.value)} />
 
-          <label className="text-sm font-semibold">
-            Mensagem
-            <textarea
-              className="mt-2 min-h-24 w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3 outline-none focus:border-[#E8650A]"
-              value={message}
-              onChange={(event) => setMessage(event.target.value)}
-            />
-          </label>
+          <Textarea
+            label="Mensagem"
+            textareaClassName="min-h-24"
+            value={message}
+            onChange={(event) => setMessage(event.target.value)}
+          />
 
           <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-[#0f0f0f] p-8 text-center">
             <ImagePlus className="text-[#E8650A]" size={34} />
@@ -186,18 +174,13 @@ export function DeliveryModal({ clients, onClose, onCreated, open, studioId }: D
         {error ? <p className="mt-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">{error}</p> : null}
 
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <button className="rounded-xl border border-white/10 px-4 py-3 font-semibold" onClick={onClose} type="button">
+          <Button onClick={onClose} variant="secondary">
             Cancelar
-          </button>
-          <button
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#E8650A] px-4 py-3 font-semibold disabled:opacity-50"
-            disabled={!canSave}
-            onClick={handleSave}
-            type="button"
-          >
+          </Button>
+          <Button disabled={!canSave} onClick={handleSave}>
             <Upload size={18} />
             {saving ? "Enviando..." : "Criar entrega"}
-          </button>
+          </Button>
         </div>
       </section>
     </div>

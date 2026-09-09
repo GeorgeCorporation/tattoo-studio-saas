@@ -1,5 +1,9 @@
 import { FormEvent, useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Textarea } from "@/components/ui/Textarea";
 import {
   AgendaAvailabilityError,
   AgendaWorkingHoursOverrideRequiredError,
@@ -187,110 +191,64 @@ export function NewAppointmentModal({
 
         <form className="grid gap-4 p-5" onSubmit={handleSubmit}>
           <div className="grid gap-4 sm:grid-cols-2">
-            <label>
-              <span className="mb-2 block text-sm font-medium">Cliente</span>
-              <select
-                className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                value={clientId}
-                onChange={(event) => setClientId(event.target.value)}
-              >
-                {clients.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              <span className="mb-2 block text-sm font-medium">Tatuador</span>
-              <select
-                className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                value={artistId}
-                onChange={(event) => setArtistId(event.target.value)}
-              >
-                {artists.map((artist) => (
-                  <option key={artist.id} value={artist.id}>
-                    {artist.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <label>
-            <span className="mb-2 block text-sm font-medium">Serviço</span>
-            <select
-              className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-              value={serviceId}
-              onChange={(event) => setServiceId(event.target.value)}
-            >
-              {services.map((service) => (
-                <option key={service.id} value={service.id}>
-                  {service.name}
+            <Select label="Cliente" value={clientId} onChange={(event) => setClientId(event.target.value)}>
+              {clients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.name}
                 </option>
               ))}
-            </select>
-          </label>
+            </Select>
+
+            <Select label="Tatuador" value={artistId} onChange={(event) => setArtistId(event.target.value)}>
+              {artists.map((artist) => (
+                <option key={artist.id} value={artist.id}>
+                  {artist.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <Select label="Serviço" value={serviceId} onChange={(event) => setServiceId(event.target.value)}>
+            {services.map((service) => (
+              <option key={service.id} value={service.id}>
+                {service.name}
+              </option>
+            ))}
+          </Select>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <label>
-              <span className="mb-2 block text-sm font-medium">Origem do cliente</span>
-              <select
-                className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                value={clientSource}
-                onChange={(event) => setClientSource(event.target.value as "artist_client" | "studio_referral")}
-              >
-                <option value="artist_client">Cliente do tatuador</option>
-                <option value="studio_referral">Indicação do estúdio</option>
-              </select>
-            </label>
+            <Select
+              label="Origem do cliente"
+              value={clientSource}
+              onChange={(event) => setClientSource(event.target.value as "artist_client" | "studio_referral")}
+            >
+              <option value="artist_client">Cliente do tatuador</option>
+              <option value="studio_referral">Indicação do estúdio</option>
+            </Select>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <label>
-              <span className="mb-2 block text-sm font-medium">Data</span>
-              <input
-                className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                type="date"
-                value={date}
-                onChange={(event) => setDate(event.target.value)}
-              />
-            </label>
-            <label>
-              <span className="mb-2 block text-sm font-medium">Horário</span>
-              <select
-                className="w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-                value={time}
-                onChange={(event) => setTime(event.target.value)}
-              >
-                {times.map((slot) => (
-                  <option key={slot} value={slot}>
-                    {slot}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <Input label="Data" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+            <Select label="Horário" value={time} onChange={(event) => setTime(event.target.value)}>
+              {times.map((slot) => (
+                <option key={slot} value={slot}>
+                  {slot}
+                </option>
+              ))}
+            </Select>
           </div>
 
-          <label>
-            <span className="mb-2 block text-sm font-medium">Descrição</span>
-            <textarea
-              className="min-h-28 w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3"
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-            />
-          </label>
+          <Textarea label="Descrição" value={description} onChange={(event) => setDescription(event.target.value)} />
 
-          {error ? <p className="text-sm text-red-400">{error}</p> : null}
+          {error ? (
+            <p className="text-sm text-red-400" role="alert">
+              {error}
+            </p>
+          ) : null}
 
-          <button
-            className="rounded-xl bg-[#E8650A] px-4 py-3 font-semibold disabled:opacity-60"
-            disabled={saving || !optionsReady}
-            type="submit"
-          >
+          <Button disabled={saving || !optionsReady} type="submit">
             {saving ? "Salvando..." : "Criar agendamento"}
-          </button>
+          </Button>
         </form>
       </section>
     </div>

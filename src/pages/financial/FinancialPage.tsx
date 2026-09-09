@@ -1,5 +1,6 @@
 import { Edit, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Select } from "@/components/ui/Select";
 import { useDashboardAccess } from "@/hooks/useDashboardAccess";
 import { useFinancialDashboard } from "@/hooks/useFinancialDashboard";
 import { paymentMethodLabels, paymentTypeLabels } from "@/lib/appointment-domain";
@@ -166,20 +167,15 @@ export function FinancialPage() {
       />
 
       <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-[#1a1a1a] p-4 sm:flex-row sm:items-center sm:justify-between">
-        <label className="text-sm font-medium">
-          Mês
-          <select
-            className="mt-2 block w-full rounded-xl border border-white/10 bg-[#0f0f0f] px-4 py-3 sm:w-56"
-            onChange={(event) => setMonth(Number(event.target.value))}
-            value={month}
-          >
+        <div className="sm:w-56">
+          <Select label="Mês" onChange={(event) => setMonth(Number(event.target.value))} value={month}>
             {monthNames.map((name, index) => (
               <option key={name} value={index + 1}>
                 {name} {year}
               </option>
             ))}
-          </select>
-        </label>
+          </Select>
+        </div>
         <p className="text-sm text-zinc-400">
           Total do período: <span className="font-semibold text-white">{currency.format(periodTotal)}</span>
         </p>

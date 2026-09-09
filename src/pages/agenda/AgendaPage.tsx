@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { campoBase } from "@/components/ui/field-styles";
 import { useDashboardAccess } from "@/hooks/useDashboardAccess";
 import { getFriendlyErrorMessage } from "@/lib/errors";
 import { logger } from "@/lib/logger";
@@ -127,7 +128,8 @@ export function AgendaPage() {
       </div>
 
       <input
-        className="w-full rounded-xl border border-white/10 bg-[#1a1a1a] px-4 py-3 sm:max-w-xs"
+        aria-label="Escolher data da agenda"
+        className={`${campoBase} bg-surface-raised sm:max-w-xs`}
         type="date"
         value={selectedDateInput}
         onChange={(event) => setSelectedDate(new Date(`${event.target.value}T12:00:00`))}
